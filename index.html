@@ -63,9 +63,9 @@
   body { padding-bottom: 58px; }
   #cats { position: fixed; left: 0; right: 0; bottom: 0; height: 200px; pointer-events: none; z-index: 5; overflow: hidden; }
   #cats[hidden] { display: none; }
-  .cat { position: absolute; left: 0; bottom: 2px; width: 52px; height: 36px; pointer-events: auto; cursor: pointer; will-change: transform; }
-  .cat .flip { width: 52px; height: 36px; }
-  .cat svg { width: 52px; height: 36px; overflow: visible; display: block; color: var(--c); }
+  .cat { position: absolute; left: 0; bottom: 2px; width: 64px; height: 44px; pointer-events: auto; cursor: pointer; will-change: transform; }
+  .cat .flip { width: 64px; height: 44px; }
+  .cat svg { width: 64px; height: 44px; overflow: visible; display: block; color: var(--c); }
   .cat svg .all { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .25s; }
   .cat.loaf svg .all, .cat.purr svg .all, .cat.sleep svg .all { transform: translateY(6px) scaleY(.8) scaleX(1.06); }
   .cat.crouch svg .all { transform: translateY(5px) scaleY(.86); }
@@ -105,6 +105,15 @@
   .cat .tailp { stroke: var(--tail); }
   .cat .tailst { stroke: var(--stripe); }
   .cat .leg { fill: var(--leg); }
+  .cat .l1, .cat .l2 { filter: brightness(.92); }
+  .cat .calico, .cat .ruff, .cat .coat-fluff { display: none; }
+  .cat.fluffy .calico, .cat.fluffy .ruff, .cat.fluffy .coat-fluff { display: inline; }
+  .cat.geonppang .blaze { transform: translateX(1.2px); }
+  .cat.tabby.bori .stripes, .cat.tabby.geonppang .stripes { opacity: 0; }
+  .cat.fluffy .tail-outline { stroke-width: 9.4; }
+  .cat.walking .head { animation: head-bob .5s ease-in-out infinite; }
+  .cat.fast.walking .head { animation-duration: .24s; }
+  @keyframes head-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1px) rotate(-2deg); } }
   .cat .body { fill: var(--body); }
   .cat .belly { fill: var(--belly); }
   .cat .patch { fill: var(--patch); }
@@ -122,13 +131,13 @@
   .cat.fluffy .cheek { display: inline; }
   .cat.fluffy .tailp, .cat.fluffy .tailst { stroke-width: 8; }
   .cat .eyec { display: none; }
-  .cat.sleep .eye { display: none; } .cat.sleep .eyec { display: inline; }
+  .cat.sleep .eyes { display: none; } .cat.sleep .eyec { display: inline; }
   .cat .ear { transform-box: fill-box; transform-origin: 50% 100%; }
   .cat.alert .ear { transform: scaleY(1.28); animation: perk .7s ease-out; }
   .cat.alert .tail { animation-duration: .5s; }
   @keyframes breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.06); } }
   @keyframes perk { 0% { transform: scaleY(1) rotate(0); } 25% { transform: scaleY(1.4) rotate(-9deg); } 55% { transform: scaleY(1.32) rotate(8deg); } 100% { transform: scaleY(1.28) rotate(0); } }
-  .cat .bubble { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+  .cat .bubble { position: absolute; left: 50%; bottom: 49px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
     font-size: 12px; padding: 2px 8px; border-radius: 8px; white-space: nowrap; animation: pop var(--d, 1.2s) forwards; }
   .cat .note { position: absolute; bottom: 34px; left: 22px; color: var(--c); font-size: 15px; animation: floatup 1.4s forwards; }
   .cat .leg { transform-box: fill-box; transform-origin: top center; }
@@ -248,7 +257,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '1.6.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '1.6.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -698,49 +707,69 @@ $('ver').textContent = 'v' + VERSION;
 // 상태: sleep 잠 / alert 귀 쫑긋 / walk 산책 / sit / loaf 식빵 / purr 골골송 / groom 그루밍
 //       goto→knead 쿠션 꾹꾹이 / goTower→jump→(sit·sleep·groom…) 캣타워 / dropoff 내려오기
 //       stalk→freeze→dash→pounce 마우스 사냥 / chase·flee 술래잡기
-const CAT_SVG = `<svg viewBox="0 0 64 44"><defs><clipPath id="catbody"><ellipse cx="26" cy="26" rx="18" ry="10"/></clipPath></defs><g class="all">
-  <g class="tail"><path class="tailp" d="M10 24 C-2 20 0 6 9 9" fill="none" stroke-width="5" stroke-linecap="round"/>
-    <path class="tailst" d="M10 24 C-2 20 0 6 9 9" fill="none" stroke-width="5" stroke-dasharray="2 3.6" stroke-linecap="butt"/></g>
-  <rect class="leg l1" x="13" y="30" width="6" height="11" rx="3" stroke="rgba(0,0,0,.2)"/>
-  <rect class="leg l2" x="21" y="30" width="6" height="11" rx="3" stroke="rgba(0,0,0,.2)"/>
-  <ellipse class="body" cx="26" cy="26" rx="18" ry="10" stroke="rgba(0,0,0,.2)"/>
-  <g clip-path="url(#catbody)">
-    <path class="patch" d="M4 24 C12 10 38 10 48 22 L42 27 C32 20 20 22 6 32 Z"/>
-    <ellipse class="belly" cx="28" cy="33" rx="17" ry="6.5"/>
-    <g class="stripes" fill="none" stroke-width="2.2" stroke-linecap="round">
-      <path d="M14 16 q2 6 0 12"/><path d="M21 15 q2 7 0 14"/><path d="M28 15 q2 7 0 14"/><path d="M35 16 q2 6 0 12"/></g>
+// 각 인스턴스마다 clipPath ID를 바꿔 여러 아이의 무늬가 섞이지 않게 한다.
+const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
+  <clipPath id="__CAT__-body"><ellipse cx="26" cy="28" rx="18.5" ry="11"/></clipPath>
+  <clipPath id="__CAT__-face"><path d="M34 18 C33 9 58 8 59 19 C63 33 33 36 34 18Z"/></clipPath>
+</defs>
+<ellipse class="ground-shadow" cx="31" cy="42" rx="23" ry="1.6" fill="#43382e" opacity=".12"/>
+<g class="all" stroke-linecap="round" stroke-linejoin="round">
+  <g class="tail"><path class="tail-outline" d="M12 29 C1 27 1 17 5 11 C7 8 9 9 8 12" fill="none" stroke="#54483e" stroke-opacity=".4" stroke-width="7"/>
+    <path class="tailp" d="M12 29 C1 27 1 17 5 11 C7 8 9 9 8 12" fill="none" stroke-width="5.8"/>
+    <path class="tailst" d="M12 29 C1 27 1 17 5 11 C7 8 9 9 8 12" fill="none" stroke-width="5.9" stroke-dasharray="2 4"/></g>
+  <g class="leg l1"><path d="M14 32V38Q14 42 19 41H21V32" fill="var(--leg)" stroke="#54483e" stroke-opacity=".3" stroke-width=".7"/></g>
+  <g class="leg l2"><path d="M28 32V38Q28 42 33 41H35V32" fill="var(--leg)" stroke="#54483e" stroke-opacity=".3" stroke-width=".7"/></g>
+  <path class="coat-fluff" d="M13 21 8 22 9 25 5 28 8 30 5 33 10 34 9 36 18 37Z" fill="var(--body)"/>
+  <ellipse class="body" cx="26" cy="28" rx="18.5" ry="11" stroke="#54483e" stroke-opacity=".4" stroke-width=".8"/>
+  <g clip-path="url(#__CAT__-body)">
+    <path class="patch" d="M4 17Q19 10 37 18L37 29Q29 35 20 28Q12 24 4 29Z"/>
+    <path class="calico" d="M8 25Q12 19 18 24L23 38H8Z" fill="#c99150"/>
+    <ellipse class="belly" cx="32" cy="38" rx="19" ry="9"/>
+    <g class="stripes" fill="none" stroke-width="2.1"><path d="M12 20q5 3 3 8m5-11q5 5 3 11m5-12q5 4 3 10m5-8 2 6"/></g>
+    <path d="M9 30Q12 39 31 38" fill="none" stroke="#54483e" stroke-opacity=".08" stroke-width="3"/>
+    <path d="M14 20Q21 16 29 19" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1.6"/>
   </g>
-  <rect class="leg l3" x="31" y="30" width="6" height="11" rx="3" stroke="rgba(0,0,0,.2)"/>
-  <rect class="leg l4" x="39" y="30" width="6" height="11" rx="3" stroke="rgba(0,0,0,.2)"/>
+  <path class="ruff" d="M32 22L29 26 32 27 28 31 33 32 31 35Q39 41 46 32L44 23Z" fill="var(--muzzle)"/>
+  <g class="leg l3"><path d="M12 33L11 38Q10 42 16 42H19Q21 41 20 38L21 33" fill="var(--leg)" stroke="#54483e" stroke-opacity=".32" stroke-width=".7"/><path d="M14 40v1m3-1v1" stroke="#54483e" stroke-opacity=".25" stroke-width=".6"/></g>
+  <g class="leg l4"><path d="M36 32L35 38Q34 42 40 42H43Q45 41 44 38V31" fill="var(--leg)" stroke="#54483e" stroke-opacity=".32" stroke-width=".7"/><path d="M38 40v1m3-1v1" stroke="#54483e" stroke-opacity=".25" stroke-width=".6"/></g>
   <g class="head">
-    <polygon class="ear" points="41,15 43,3 50,12" stroke="rgba(0,0,0,.2)"/>
-    <polygon class="ear" points="49,12 56,3 58,16" stroke="rgba(0,0,0,.2)"/>
-    <polygon points="43.2,12.5 43.8,6.5 47.2,11.5" fill="#e8b4b8" opacity=".75"/>
-    <polygon points="51.5,11.5 54.8,6.5 55.6,13" fill="#e8b4b8" opacity=".75"/>
-    <path class="cheek" d="M39.5 21 L35 25 L40 26 Z"/><path class="cheek" d="M58.5 21 L63 25 L58 26 Z"/>
-    <circle class="skull" cx="49" cy="21" r="10" stroke="rgba(0,0,0,.2)"/>
-    <path class="cap" d="M39.2 19.5 A10 10 0 0 1 58.8 19.5 Q49 14.5 39.2 19.5 Z"/>
-    <path class="blaze" d="M48.2 11.2 L49.8 11.2 L51 22 L47 22 Z"/>
-    <ellipse class="muzzle" cx="49" cy="25.2" rx="5.4" ry="3.6"/>
-    <g class="m" fill="none" stroke-width="1.2" stroke-linecap="round"><path d="M45.5 12.8v3M49 11.8v4M52.5 12.8v3"/></g>
-    <circle class="eye" cx="53" cy="19" r="2.1"/><circle class="eye" cx="46" cy="19" r="2.1"/>
-    <circle cx="53" cy="19" r="1" fill="#222"/><circle cx="46" cy="19" r="1" fill="#222"/>
-    <path class="eyec" d="M44 19.5 q2.2 2.2 4.4 0 M51 19.5 q2.2 2.2 4.4 0" fill="none" stroke="#222" stroke-width="1.4" stroke-linecap="round"/>
-    <polygon class="nose" points="48,23 50,23 49,24.8"/>
-  </g></g>
-</svg>`;
+    <path class="ear" d="M35 17Q31 2 35 3L44 12M49 12 57 3Q60 1 59 19" stroke="#54483e" stroke-opacity=".5" stroke-width=".8"/>
+    <path d="M35.5 7 37 15 41 12ZM56.5 7 53 12 57 16Z" fill="#dda6a0"/>
+    <path class="cheek" d="M35 19L30 23 33 24 30 27 37 29M57 19 63 23 60 24 63 27 56 29"/>
+    <path class="skull" d="M34 18 C33 9 58 8 59 19 C63 33 33 36 34 18Z" stroke="#54483e" stroke-opacity=".4" stroke-width=".8"/>
+    <g clip-path="url(#__CAT__-face)">
+      <path class="cap" d="M32 10H61V23Q55 21 51 17L47 19 43 16Q39 22 32 24Z"/>
+      <path class="calico" d="M33 9H46L43 21 35 25Z" fill="#c99150"/>
+      <path class="blaze" d="M47 11Q45 19 42 23L44 28H52L51 22Q48 18 48 11Z"/>
+      <g class="m" fill="none" stroke-width="1.25"><path d="M39 12 42 17 44 13m9-1-3 5-1-4M34 22l5 1m-4 3 4-1m20-3-4 1m4 3-4-1"/></g>
+      <ellipse class="muzzle" cx="47" cy="27" rx="8" ry="4.7"/>
+    </g>
+    <g class="eyes">
+      <ellipse cx="40.5" cy="21.2" rx="3.1" ry="3.5" fill="#fff9ec"/><ellipse cx="53" cy="21.2" rx="3.1" ry="3.5" fill="#fff9ec"/>
+      <ellipse class="eye" cx="40.8" cy="21.5" rx="2.5" ry="3"/><ellipse class="eye" cx="52.7" cy="21.5" rx="2.5" ry="3"/>
+      <ellipse cx="41.2" cy="21.5" rx="1.35" ry="2.6" fill="#302e28"/><ellipse cx="53.1" cy="21.5" rx="1.35" ry="2.6" fill="#302e28"/>
+      <path d="M38 19.3q2-1.5 4.7 0m7.8 0q2-1.5 4.7 0" fill="none" stroke="#51473d" stroke-width=".75"/>
+      <circle cx="40" cy="20" r="1" fill="white"/><circle cx="52" cy="20" r="1" fill="white"/>
+    </g>
+    <path class="eyec" d="M38 22q2.5-2.5 5 0m7.5 0q2.5-2.5 5 0" fill="none" stroke="#51473d" stroke-width="1.1"/>
+    <ellipse cx="37.8" cy="25.5" rx="2.6" ry="1.2" fill="#e4a69e" opacity=".3"/><ellipse cx="55.8" cy="25.5" rx="2.6" ry="1.2" fill="#e4a69e" opacity=".3"/>
+    <path class="nose" d="M45.2 25Q47 24.2 48.8 25L47 27Z"/>
+    <path d="M47 27v1m0 0q-1.4 1.5-2.7.1m2.7-.1q1.4 1.5 2.7.1" fill="none" stroke="#775e55" stroke-width=".65"/>
+    <path d="m37 27-6-1m6 3-5 1m24-3 6-1m-6 3 5 1" fill="none" stroke="#84756a" stroke-width=".55" opacity=".65"/>
+  </g>
+</g></svg>`;
 
 // 고양이 생김새: 사진을 참고해 이름별로 지정 (없는 아이는 자연스러운 털색으로 자동 배정)
 const NONE = 'transparent';
 const LOOKS = {
   '호야': { body: '#8e9094', stripe: '#33353a', leg: '#c3c5ca', head: '#8e9094', muzzle: '#a9abb0', ear: '#8e9094', tail: '#8e9094',
-            nose: '#c98f90', eye: '#b9a04a', belly: NONE, blaze: NONE, cap: NONE, patch: NONE, cls: 'tabby', scale: 1 },     // 은회색 고등어 태비
-  '건빵': { body: '#6e5b44', stripe: '#2f2a24', leg: '#f6f4f0', head: '#7b6750', muzzle: '#f6f4f0', ear: '#6e5b44', tail: '#6e5b44',
-            nose: '#b87f72', eye: '#92a45a', belly: '#f6f4f0', blaze: '#f6f4f0', cap: NONE, patch: NONE, cls: 'tabby', scale: 1.12 }, // 갈색 태비+흰색, 덩치 큼
+            nose: '#c98f90', eye: '#b9a04a', belly: NONE, blaze: NONE, cap: NONE, patch: NONE, cls: 'tabby hoya', scale: 1 },     // 은회색 고등어 태비
+  '건빵': { body: '#faf7ef', stripe: '#2f2a24', leg: '#f6f4f0', head: '#7b6750', muzzle: '#f6f4f0', ear: '#6e5b44', tail: '#6e5b44',
+            nose: '#b87f72', eye: '#92a45a', belly: '#f6f4f0', blaze: '#f6f4f0', cap: NONE, patch: '#625747', cls: 'tabby geonppang', scale: 1.12 }, // 갈색 태비+흰색, 덩치 큼
   '보리': { body: '#f3f0ea', stripe: '#2b2622', leg: '#f3f0ea', head: '#f3f0ea', muzzle: '#f3f0ea', ear: '#5a4a3a', tail: '#3b332c',
-            nose: '#e8a0a8', eye: '#9fb25f', belly: '#f3f0ea', blaze: NONE, cap: '#4b4036', patch: '#4b4036', cls: 'tabby', scale: 1 }, // 흰색+태비 무늬
-  '살구': { body: '#c9884a', stripe: '#6d5a47', leg: '#f4efe8', head: '#c9884a', muzzle: '#f4efe8', ear: '#8a7765', tail: '#a98456',
-            nose: '#e4a3ae', eye: '#b98a35', belly: '#f4efe8', blaze: NONE, cap: '#7a6a5a', patch: '#7e7062', cls: 'fluffy', scale: 1.05 }, // 장모 삼색
+            nose: '#e8a0a8', eye: '#9fb25f', belly: '#f3f0ea', blaze: NONE, cap: '#4b4036', patch: '#4b4036', cls: 'tabby bori', scale: 1 }, // 흰색+태비 무늬
+  '살구': { body: '#f4efe8', stripe: '#6d5a47', leg: '#f4efe8', head: '#f4efe8', muzzle: '#f4efe8', ear: '#8a7765', tail: '#706456',
+            nose: '#e4a3ae', eye: '#b98a35', belly: '#f4efe8', blaze: NONE, cap: '#7a6a5a', patch: '#7e7062', cls: 'fluffy salgu', scale: 1.05 }, // 장모 삼색
 };
 const FUR = ['#d9a066', '#4a4a4f', '#e8dcc6', '#a8793f', '#b9b9bd'];   // 사진이 없는 아이용 (생강, 검정, 크림, 갈색, 회색)
 function lookFor(p, i) {
@@ -749,7 +778,7 @@ function lookFor(p, i) {
   return { body: f, stripe: `color-mix(in srgb, ${f} 60%, black)`, leg: f, head: f, muzzle: `color-mix(in srgb, ${f} 65%, white)`, ear: f, tail: f,
            nose: '#e8a0a8', eye: '#8fae5a', belly: NONE, blaze: NONE, cap: NONE, patch: NONE, cls: '', scale: 1 };
 }
-const CAT_W = 52, G = 900, FOOT = 4.5;
+const CAT_W = 64, G = 900, FOOT = 4.5;
 const CUSHION_COLORS = ['#f4a6b8', '#a8d5ba', '#a9c4eb'];
 let cats = [], catSig = '', catsOn = true, lastT = 0;
 let platforms = [], towerX = 0, wheel = null;   // { x0, x1, h, xc, kind: 'cushion'|'tower', lvl }
@@ -834,7 +863,7 @@ function pickIdle(c, t) {
   else if (r < .60) { c.noteAt = 0; setMode(c, 'purr', t, rnd(3500, 6000)); say(c, '골골골~ ♪', 1500); }
   else if (r < .68) groomNow(c, t);
   else if (r < .74 && cushions.length) { const p = cushions[Math.floor(Math.random() * cushions.length)]; c.tx = p.xc; setMode(c, 'goto', t, 14000); }
-  else if (r < .80 && towerLevel(1)) { const p = towerLevel(1); c.tx = p.xc + (c.x + 26 < p.xc ? -62 : 62); setMode(c, 'goTower', t, 16000); }
+  else if (r < .80 && towerLevel(1)) { const p = towerLevel(1); c.tx = p.xc + (c.x + CAT_W / 2 < p.xc ? -62 : 62); setMode(c, 'goTower', t, 16000); }
   else if (r < .86 && towerLevel(1)) { c.tx = towerX + 74; setMode(c, 'goScratch', t, 16000); }
   else if (r < .93 && wheelFree) { c.tx = wheel.xc; setMode(c, 'goWheel', t, 16000); }
   else startPlay(c, t);
@@ -849,12 +878,12 @@ function pickPerch(c, t) {
   else if (r < .88) {   // 다른 층으로 점프
     const next = towerLevel(lvl + (lvl === 3 || (lvl > 1 && Math.random() < .5) ? -1 : 1));
     if (next) jumpTo(c, next, t); else setMode(c, 'sit', t, 1500);
-  } else { c.dir = c.x + 26 < c.stand.xc ? -1 : 1; setMode(c, 'dropoff', t, 6000); }
+  } else { c.dir = c.x + CAT_W / 2 < c.stand.xc ? -1 : 1; setMode(c, 'dropoff', t, 6000); }
 }
 function jumpTo(c, p, t) {
   const dy = p.h - c.y, vy = Math.sqrt(2 * G * (Math.max(dy, 0) + 16));
   const tf = (vy + Math.sqrt(Math.max(0, vy * vy - 2 * G * dy))) / G;
-  c.vx = Math.max(-260, Math.min(260, (p.xc - (c.x + 26)) / tf));
+  c.vx = Math.max(-260, Math.min(260, (p.xc - (c.x + CAT_W / 2)) / tf));
   c.dir = c.vx < 0 ? -1 : 1; c.vy = vy; c.y += .5; c.air = true; c.stand = null;
   setMode(c, 'jump', t, 5000);
 }
@@ -876,7 +905,7 @@ function pounce(c, t, h) {
 function leave(c, t) { if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
 function onLand(c, t) {
   if (c.mode === 'pounce') {
-    const hit = t - mouse.t < 2500 && Math.abs(mouse.x - (c.x + 26)) < 45;
+    const hit = t - mouse.t < 2500 && Math.abs(mouse.x - (c.x + CAT_W / 2)) < 45;
     say(c, hit ? '잡았다! 챱!' : '앗 놓쳤다…', 1300);
     setMode(c, 'sit', t, 1300);
   } else if (c.mode === 'jump') {
@@ -907,7 +936,7 @@ function renderCats() {
     c.el.style.setProperty('--c', p.color);
     for (const [k, v] of Object.entries(look)) if (k !== 'cls' && k !== 'scale') c.el.style.setProperty('--' + k, v);
     c.el.title = p.name;
-    c.el.innerHTML = `<div class="flip">${CAT_SVG}</div>`;
+    c.el.innerHTML = `<div class="flip">${CAT_SVG.replaceAll('__CAT__', 'cat-' + state.pets.indexOf(p))}</div>`;
     c.el.onclick = () => {   // 쓰다듬기: 골골송
       leave(c, performance.now());
       c.noteAt = 0; setMode(c, 'purr', performance.now(), 4500);
@@ -926,10 +955,10 @@ function tickCats(t) {
   const max = Math.max(0, innerWidth - CAT_W), still = reduceMotion;
   const mouseOn = t - mouse.t < 2500 && mouse.x >= 0;
   const ground = innerHeight - 38;
-  const hunters = mouseOn ? [...cats].sort((a, b) => Math.abs(a.x + 26 - mouse.x) - Math.abs(b.x + 26 - mouse.x)).slice(0, 2) : [];
+  const hunters = mouseOn ? [...cats].sort((a, b) => Math.abs(a.x + CAT_W / 2 - mouse.x) - Math.abs(b.x + CAT_W / 2 - mouse.x)).slice(0, 2) : [];
 
   for (const c of cats) {
-    const cx = c.x + 26;
+    const cx = c.x + CAT_W / 2;
     if (still) { c.mode = 'sleep'; }
     else if (c.mode === 'sleep' && mouseOn && t - mouse.t < 300) {
       // 자다가 마우스가 움직이면 귀를 쫑긋 (가까운 고양이일수록 잘 깬다)
@@ -1008,10 +1037,10 @@ function tickCats(t) {
       }
       case 'run':   // 제자리 달리기 (바퀴 안에서 앞뒤로 조금씩 흔들림)
         if (!wheel) { setMode(c, 'sit', t, 1000); break; }
-        c.x = wheel.xc - 26 + Math.sin(t / 160) * 6; pose = 'walking fast'; break;
+        c.x = wheel.xc - CAT_W / 2 + Math.sin(t / 160) * 6; pose = 'walking fast'; break;
       case 'goScratch': {   // 캣타워 기둥 앞으로 가서 스크래칭
         const dx = c.tx - cx;
-        if (Math.abs(dx) < 4) { c.x = c.tx - 26; c.noteAt = 0; setMode(c, 'scratch', t, rnd(4000, 7500)); say(c, '벅벅벅~', 1300); break; }
+        if (Math.abs(dx) < 4) { c.x = c.tx - CAT_W / 2; c.noteAt = 0; setMode(c, 'scratch', t, rnd(4000, 7500)); say(c, '벅벅벅~', 1300); break; }
         c.dir = dx < 0 ? -1 : 1; c.x += c.dir * 70 * dt; pose = 'walking'; break;
       }
       case 'scratch':
@@ -1038,7 +1067,7 @@ function tickCats(t) {
       case 'chase': case 'flee': {
         const p = c.partner;
         if (!p) { setMode(c, 'sit', t, 1000); break; }
-        const dx = (p.x + 26) - cx;
+        const dx = (p.x + CAT_W / 2) - cx;
         c.dir = (c.mode === 'chase' ? 1 : -1) * (dx < 0 ? -1 : 1);
         const atWall = c.mode === 'flee' && ((c.x <= 2 && c.dir < 0) || (c.x >= max - 2 && c.dir > 0));
         if (atWall) c.dir *= -1;   // 벽에 몰리면 반대로 빠져나감
@@ -1054,12 +1083,12 @@ function tickCats(t) {
     if (c.x < 0) { c.x = 0; if (c.mode === 'walk') c.dir = 1; } else if (c.x > max) { c.x = max; if (c.mode === 'walk') c.dir = -1; }
 
     // 물리: 점프/낙하와 발판(쿠션, 캣타워) 위에 서기
-    const fcx = c.x + 26;
+    const fcx = c.x + CAT_W / 2;
     if (c.air) {
       const prevY = c.y;
       c.vy -= G * dt; c.y += c.vy * dt; c.x = Math.max(0, Math.min(max, c.x + c.vx * dt));
       if (c.vy < 0) {
-        const p = floorAt(c.x + 26, prevY, 1), fy = p ? p.h : 0;
+        const p = floorAt(c.x + CAT_W / 2, prevY, 1), fy = p ? p.h : 0;
         if (c.y <= fy) { c.y = fy; c.vy = 0; c.vx = 0; c.air = false; c.stand = p; onLand(c, t); }
       }
     } else {
