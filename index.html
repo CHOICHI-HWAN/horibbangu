@@ -97,6 +97,10 @@
   @keyframes scr { 0%, 100% { transform: translateY(-3px); } 50% { transform: translateY(3px); } }
   @keyframes scrw { 0%, 100% { transform: translateX(-.8px); } 50% { transform: translateX(.8px); } }
   @keyframes fluff { from { opacity: 1; transform: translate(0, 0); } to { opacity: 0; transform: translate(var(--fx, -14px), 12px); } }
+  .wheel { position: absolute; bottom: 0; left: 14px; width: 120px; height: 124px; }
+  .wheel .ring { transform-origin: 60px 62px; }
+  .wheel.spin .ring { animation: wspin 1s linear infinite; }
+  @keyframes wspin { to { transform: rotate(360deg); } }
   .cat .eyec { display: none; }
   .cat.sleep .eye { display: none; } .cat.sleep .eyec { display: inline; }
   .cat .ear { transform-box: fill-box; transform-origin: 50% 100%; }
@@ -224,7 +228,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '1.4.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '1.5.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -693,7 +697,7 @@ const CAT_SVG = `<svg viewBox="0 0 64 44"><g class="all">
 const CAT_W = 52, G = 900, FOOT = 4.5;
 const CUSHION_COLORS = ['#f4a6b8', '#a8d5ba', '#a9c4eb'];
 let cats = [], catSig = '', catsOn = true, lastT = 0;
-let platforms = [], towerX = 0;   // { x0, x1, h, xc, kind: 'cushion'|'tower', lvl }
+let platforms = [], towerX = 0, wheel = null;   // { x0, x1, h, xc, kind: 'cushion'|'tower', lvl }
 const mouse = { x: -1, y: -1, t: -1e9 };
 try { catsOn = localStorage.getItem(KEY + ':cats') !== 'off'; } catch (e) {}
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -716,9 +720,26 @@ function layoutProps() {
     <circle cx="132" cy="${ty(76) - 28}" r="4" fill="#e45"/>
   </svg>`);
   levels.forEach(([x0, x1, h], i) => platforms.push({ x0: tx + x0 + 4, x1: tx + x1 - 4, h, xc: tx + (x0 + x1) / 2, kind: 'tower', lvl: i + 1 }));
-  const room = tx - 100, n = room >= 330 ? 3 : room >= 150 ? 2 : room >= 90 ? 1 : 0;
+  // 캣휠 (왼쪽): 안에 들어가 달리면 바퀴가 돈다
+  wheel = null;
+  if (tx >= 150) {
+    box.insertAdjacentHTML('beforeend', `<svg class="wheel" viewBox="0 0 120 124">
+      <path d="M60 62L20 124M60 62L100 124" stroke="#a98258" stroke-width="4"/>
+      <rect x="14" y="118" width="92" height="6" rx="3" fill="#a98258"/>
+      <g class="ring">
+        <circle cx="60" cy="62" r="56" fill="rgba(160,160,160,.12)" stroke="#8e9aa8" stroke-width="7"/>
+        <circle cx="60" cy="62" r="48" fill="none" stroke="#b6c0cc" stroke-width="2" stroke-dasharray="6 5"/>
+        <path d="M60 14V110M12 62H108M26 28L94 96M94 28L26 96" stroke="#b6c0cc" stroke-width="2"/>
+        <circle cx="60" cy="62" r="5" fill="#8e9aa8"/>
+        <circle cx="60" cy="20" r="3.5" fill="#e45"/><circle cx="60" cy="104" r="3.5" fill="#e45"/>
+      </g></svg>`);
+    wheel = { xc: 74, el: box.lastElementChild };
+    platforms.push({ x0: wheel.xc - 32, x1: wheel.xc + 32, h: 8, xc: wheel.xc, kind: 'wheel', lvl: -2 });
+  }
+  const start = wheel ? 150 : 14, usable = (tx - 100) - start;
+  const n = usable >= 250 ? 3 : usable >= 130 ? 2 : usable >= 64 ? 1 : 0;
   for (let i = 0; i < n; i++) {
-    const left = 14 + (room - 64 - 14) * (n === 1 ? .5 : i / (n - 1));
+    const left = start + (usable - 64) * (n === 1 ? .5 : i / (n - 1));
     const d = document.createElement('div');
     d.className = 'cushion'; d.style.left = left + 'px'; d.style.background = CUSHION_COLORS[i % 3];
     box.appendChild(d);
@@ -750,15 +771,17 @@ function pickIdle(c, t) {
   if (onTower(c)) return pickPerch(c, t);
   const r = Math.random();
   const cushions = platforms.filter(p => p.kind === 'cushion');
-  if (r < .42) sleepNow(c, t);
-  else if (r < .49) { c.dir = Math.random() < .5 ? -1 : 1; c.speed = rnd(22, 50); setMode(c, 'walk', t, rnd(2000, 5000)); }
-  else if (r < .54) setMode(c, 'sit', t, rnd(1500, 3500));
-  else if (r < .59) { c.willPurr = Math.random() < .6; setMode(c, 'loaf', t, rnd(2500, 5000)); }
-  else if (r < .63) { c.noteAt = 0; setMode(c, 'purr', t, rnd(3500, 6000)); say(c, '골골골~ ♪', 1500); }
-  else if (r < .72) groomNow(c, t);
-  else if (r < .79 && cushions.length) { const p = cushions[Math.floor(Math.random() * cushions.length)]; c.tx = p.xc; setMode(c, 'goto', t, 14000); }
-  else if (r < .86 && towerLevel(1)) { const p = towerLevel(1); c.tx = p.xc + (c.x + 26 < p.xc ? -62 : 62); setMode(c, 'goTower', t, 16000); }
-  else if (r < .93 && towerLevel(1)) { c.tx = towerX + 74; setMode(c, 'goScratch', t, 16000); }
+  const wheelFree = wheel && !cats.some(o => o.stand?.kind === 'wheel' || o.mode === 'goWheel' || o.mode === 'run');
+  if (r < .40) sleepNow(c, t);
+  else if (r < .46) { c.dir = Math.random() < .5 ? -1 : 1; c.speed = rnd(22, 50); setMode(c, 'walk', t, rnd(2000, 5000)); }
+  else if (r < .51) setMode(c, 'sit', t, rnd(1500, 3500));
+  else if (r < .56) { c.willPurr = Math.random() < .6; setMode(c, 'loaf', t, rnd(2500, 5000)); }
+  else if (r < .60) { c.noteAt = 0; setMode(c, 'purr', t, rnd(3500, 6000)); say(c, '골골골~ ♪', 1500); }
+  else if (r < .68) groomNow(c, t);
+  else if (r < .74 && cushions.length) { const p = cushions[Math.floor(Math.random() * cushions.length)]; c.tx = p.xc; setMode(c, 'goto', t, 14000); }
+  else if (r < .80 && towerLevel(1)) { const p = towerLevel(1); c.tx = p.xc + (c.x + 26 < p.xc ? -62 : 62); setMode(c, 'goTower', t, 16000); }
+  else if (r < .86 && towerLevel(1)) { c.tx = towerX + 74; setMode(c, 'goScratch', t, 16000); }
+  else if (r < .93 && wheelFree) { c.tx = wheel.xc; setMode(c, 'goWheel', t, 16000); }
   else startPlay(c, t);
 }
 // 캣타워 위에서의 행동
@@ -869,6 +892,7 @@ function tickCats(t) {
       else if (c.mode === 'stalk' || c.mode === 'dash') setMode(c, 'sit', t, 1000);
       else if (c.mode === 'freeze') setMode(c, 'dash', t, 1500);
       else if (c.mode === 'chase' || c.mode === 'flee') { const p = c.partner; endPlay(c, t); if (p) endPlay(p, t); }
+      else if (c.mode === 'run') { say(c, '헥헥…', 1500); setMode(c, 'sit', t, rnd(2000, 3500)); }
       else if (c.mode === 'pounce' || c.mode === 'jump') setMode(c, 'sit', t, 1000);
       else if (!c.air) pickIdle(c, t);
     }
@@ -918,6 +942,15 @@ function tickCats(t) {
         c.dir = dx < 0 ? -1 : 1; c.x += c.dir * 70 * dt; pose = 'walking'; break;
       }
       case 'dropoff': c.x += c.dir * 50 * dt; pose = 'walking'; break;
+      case 'goWheel': {   // 캣휠 안으로 들어가 달리기
+        const dx = c.tx - cx;
+        if (!wheel) { setMode(c, 'sit', t, 1000); break; }
+        if (Math.abs(dx) < 5 && c.stand?.kind === 'wheel') { c.dir = 1; setMode(c, 'run', t, rnd(6000, 12000)); say(c, '두두두두!', 1400); break; }
+        c.dir = dx < 0 ? -1 : 1; c.x += c.dir * 60 * dt; pose = 'walking'; break;
+      }
+      case 'run':   // 제자리 달리기 (바퀴 안에서 앞뒤로 조금씩 흔들림)
+        if (!wheel) { setMode(c, 'sit', t, 1000); break; }
+        c.x = wheel.xc - 26 + Math.sin(t / 160) * 6; pose = 'walking fast'; break;
       case 'goScratch': {   // 캣타워 기둥 앞으로 가서 스크래칭
         const dx = c.tx - cx;
         if (Math.abs(dx) < 4) { c.x = c.tx - 26; c.noteAt = 0; setMode(c, 'scratch', t, rnd(4000, 7500)); say(c, '벅벅벅~', 1300); break; }
@@ -979,6 +1012,7 @@ function tickCats(t) {
       c.stand = p;
     }
     if (c.air) pose = 'air';
+    if (wheel && c === cats[0]) wheel.el.classList.toggle('spin', cats.some(o => o.mode === 'run'));
 
     const cls = 'cat ' + (c.mode === 'sit' && !c.air ? '' : pose) + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
     if (cls !== c.cls) { c.cls = cls; c.el.className = cls; }
