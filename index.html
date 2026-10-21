@@ -69,7 +69,14 @@
   .cat svg .all { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .25s; }
   .cat.loaf svg .all, .cat.purr svg .all, .cat.sleep svg .all { transform: translateY(6px) scaleY(.8) scaleX(1.06); }
   .cat.crouch svg .all { transform: translateY(5px) scaleY(.86); }
-  .cat.air svg .all { transform: rotate(-12deg); }
+  .cat.air svg .all, .cat.land svg .all { transition-duration: .1s; }
+  .cat.air.rise svg .all { transform: rotate(-9deg) scaleX(1.07) scaleY(.94); }          /* 도약: 몸을 길게 뻗는다 */
+  .cat.air.rise .l2, .cat.air.rise .l4 { transform: rotate(-52deg); }                    /* 앞다리는 앞으로 */
+  .cat.air.rise .l1, .cat.air.rise .l3 { transform: rotate(46deg); }                     /* 뒷다리는 뒤로 */
+  .cat.air.fall svg .all { transform: rotate(2deg); }                                   /* 하강: 몸을 수평으로 */
+  .cat.air.fall .l2, .cat.air.fall .l4 { transform: rotate(-10deg); }                    /* 네 발을 아래로 모은다 */
+  .cat.air.fall .l1, .cat.air.fall .l3 { transform: rotate(9deg); }
+  .cat.land svg .all { transform: translateY(5px) scaleY(.85) scaleX(1.05); }           /* 착지: 네 발이 같이 닿으며 살짝 눌림 */
   .cat.loaf .leg, .cat.purr .leg, .cat.sleep .leg { opacity: 0; }
   .cat svg { transform-origin: 50% 100%; }
   .cat.purr svg { animation: buzz .14s infinite; }
@@ -321,7 +328,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '1.9.6';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '1.9.7';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -1435,7 +1442,11 @@ function tickCats(t) {
         } else {
           const { lx, tx } = e.plan;
           const dx = lx - cx;
-          if (Math.abs(dx) < .6) { jumpTo(c, to, tx, t); c.edge = null; break; }
+          if (Math.abs(dx) < .6) {
+            if (!c.wind) c.wind = t + 160;   // 뛰기 전에 잠깐 웅크린다
+            if (t < c.wind) { pose = 'crouch'; break; }
+            c.wind = 0; jumpTo(c, to, tx, t); c.edge = null; break;
+          }
           c.dir = dx < 0 ? -1 : 1; c.x += c.dir * Math.min(Math.abs(dx), (run ? 150 : 70) * dt); pose = run ? 'walking fast' : 'walking';
         }
         break;
@@ -1501,7 +1512,7 @@ function tickCats(t) {
       c.vy -= G * dt; c.y += c.vy * dt; c.x = Math.max(0, Math.min(max, c.x + c.vx * dt));
       if (c.vy < 0) {
         const p = floorAt(c.x + CAT_W / 2, prevY, 1), fy = p ? hOf(p, c.x + CAT_W / 2) : 0;
-        if (c.y <= fy) { c.y = fy; c.vy = 0; c.vx = 0; c.air = false; c.stand = p; onLand(c, t); }
+        if (c.y <= fy) { c.y = fy; c.vy = 0; c.vx = 0; c.air = false; c.stand = p; c.landT = t; onLand(c, t); }
       }
     } else {
       const p = floorAt(fcx, c.y, 14), fy = p ? hOf(p, fcx) : 0, d = fy - c.y;
@@ -1509,10 +1520,10 @@ function tickCats(t) {
       else { c.air = true; c.vy = 0; c.vx = 0; }   // 발판 가장자리를 벗어나면 떨어짐
       c.stand = p;
     }
-    if (c.air) pose = 'air';
+    if (c.air) pose = 'air ' + (c.vy > 0 ? 'rise' : 'fall');
     if (wheel && c === cats[0]) wheel.el.classList.toggle('spin', cats.some(o => o.mode === 'run'));
 
-    const cls = 'cat ' + c.lookCls + (c.cozy && c.mode === c.favorite ? ' at-cozy' : '') + ' ' + (c.mode === 'sit' && !c.air ? '' : pose) + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
+    const cls = 'cat ' + c.lookCls + (c.cozy && c.mode === c.favorite ? ' at-cozy' : '') + ' ' + (c.mode === 'sit' && !c.air ? '' : pose) + (t - (c.landT || -1e9) < 200 && !c.air ? ' land' : '') + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
     if (cls !== c.cls) { c.cls = cls; c.el.className = cls; }
     c.el.style.transform = `translate(${c.x.toFixed(1)}px, ${(-c.y).toFixed(1)}px)`;
     c.el.firstChild.style.transform = `scale(${(c.dir < 0 ? -1 : 1) * c.scale}, ${c.scale})`;
