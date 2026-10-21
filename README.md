@@ -18,6 +18,7 @@
 | `index.html` | 앱 전체 (HTML/CSS/JS, 빌드 없음) |
 | `config.js` | Firebase 웹 설정값 (비워두면 이 기기에만 저장) |
 | `firestore.rules` | 허용한 이메일만 읽기/쓰기 |
+| `CHANGELOG.md` | 버전별 변경 내역 |
 | `firebase.json` | Firebase Hosting / Firestore 설정 |
 
 ## 개발·배포
@@ -36,3 +37,14 @@ firebase deploy --only firestore:rules    # 접근 허용 이메일 변경
 계정을 추가하려면 목록을 수정하고 규칙을 다시 배포하세요.
 
 `config.js`의 Firebase 키는 공개되어도 되는 웹 설정값이며, 데이터는 위 규칙으로 보호됩니다.
+
+## 버전 관리
+
+버전 번호는 `MAJOR.MINOR.PATCH` 형식입니다. 새 버전을 낼 때는 아래 순서로 합니다.
+
+1. `index.html`의 `VERSION`과 `CHANGELOG.md`를 수정
+2. 커밋 후 태그 생성: `git tag -a v1.1.0 -m "v1.1.0"`
+3. `git push && git push --tags`
+4. `firebase deploy --only hosting`
+
+앱 화면 맨 아래에 현재 버전이 표시됩니다.

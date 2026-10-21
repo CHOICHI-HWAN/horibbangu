@@ -124,6 +124,8 @@
   </div>
 </div>
 
+<footer style="text-align:center;color:var(--muted);font-size:12px;padding:0 0 30px">호리빵구 체중기록 <span id="ver"></span></footer>
+
 <dialog id="recDlg">
   <form method="dialog" id="recForm">
     <h2 id="recTitle">기록 추가</h2>
@@ -161,6 +163,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
+const VERSION = '1.0.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -603,6 +606,8 @@ $('todayBox').onsubmit = e => {
   if (s.includes('?')) rec.q[sel] = true; else delete rec.q[sel];
   save(); renderAll();
 };
+
+$('ver').textContent = 'v' + VERSION;
 
 function renderAll() { renderSummary(); renderChips(); renderChart(); renderTable(); renderToday(); }
 renderAll();
