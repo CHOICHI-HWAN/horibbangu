@@ -131,7 +131,7 @@
   .cat .cheek { fill: var(--head); display: none; }
   .cat .stripes, .cat .m, .cat .tailst { opacity: 0; }
   .cat.tabby .stripes, .cat.tabby .m, .cat.tabby .tailst { opacity: .85; }
-  .cat.fluffy .cheek { display: inline; }
+  .cat.fluffy .cheek, .cat.dongle .cheek { display: inline; }
   .cat.fluffy .tailp, .cat.fluffy .tailst { stroke-width: 8; }
   .cat .eyec { display: none; }
   .cat.sleep .eyes { display: none; } .cat.sleep .eyec { display: inline; }
@@ -159,8 +159,8 @@
   .cat .head { transform-origin: 50% 65%; }
   .cat .eyes { animation: cat-blink 7s infinite; transform-box: fill-box; transform-origin: center; }
   .cat.dongle .head { transform: translate(-1px, 2px) scale(1.08, .91); }
-  .cat .folded-ears, .cat .flat-nose { display: none; }
-  .cat.dongle .folded-ears, .cat.dongle .flat-nose { display: inline; }
+  .cat .exotic-ears, .cat .flat-nose { display: none; }
+  .cat.dongle .exotic-ears, .cat.dongle .flat-nose { display: inline; }
   .cat.dongle .ear, .cat.dongle .ear-inner, .cat.dongle .nose { display: none; }
   .cat.dongle .mouth { transform: translateY(-2px); }
   .cat.dongle .m { opacity: 0; }
@@ -314,7 +314,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '1.9.2';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '1.9.3';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -803,9 +803,9 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
     <path class="ear" d="M32 17Q29 4 33 5L42 12M50 12 57 5Q61 4 60 19" stroke="#54483e" stroke-opacity=".5" stroke-width=".8"/>
     <path class="ear-inner" d="M33 8 34 16 39 12ZM57 8 53 13 58 17Z" fill="#dda6a0"/>
     <g class="norwegian-tufts" fill="var(--head)"><path d="M31.5 7 29-1 34.5 6ZM56 6 61-1 59.5 10Z"/></g>
-    <g class="folded-ears" fill="var(--ear)" stroke="#8a7b65" stroke-opacity=".5" stroke-width=".65">
-      <path d="M31 19Q26 16 27 10Q32 8 39 14L37 20Z"/><path d="M53 14Q60 9 65 11Q65 17 59 20L55 20Z"/>
-      <path d="M28 11Q32 11 35 15M63 12Q59 12 57 16" fill="none" stroke="#d6beaa"/>
+    <g class="exotic-ears" fill="var(--ear)" stroke="#8a7b65" stroke-opacity=".5" stroke-width=".65">
+      <path d="M30 19Q27 9 30 4Q32 2 35 6L40 15Z"/><path d="M52 15 58 5Q61 2 63 5Q66 10 61 20Z"/>
+      <path d="M30.5 7Q31 12 35 15M61 7Q61 12 57 15" fill="none" stroke="#d6beaa"/>
     </g>
     <path class="cheek" d="M32 18Q25 20 28 24Q23 28 30 30Q28 34 36 33M59 18Q65 20 63 24Q67 28 61 30Q63 34 56 33"/>
     <path class="skull" d="M30 19 C29 6 60 6 61 20 C65 38 27 38 30 19Z" stroke="#54483e" stroke-opacity=".28" stroke-width=".7"/>
@@ -853,7 +853,7 @@ const LOOKS = {
   '로이': { body: '#999389', stripe: '#68645c', leg: '#f6f1e6', head: '#a7a195', muzzle: '#f9f4e9', ear: '#969084', tail: '#878278',
             nose: '#b8967b', eye: '#99aa85', belly: '#f6f1e6', blaze: NONE, cap: NONE, patch: NONE, cls: 'fluffy tabby roy', scale: 1.14 },
   '동글이': { body: '#fffdf8', stripe: '#5b5042', leg: '#fffdf8', head: '#faf6ed', muzzle: '#fffaf2', ear: '#9c8d75', tail: '#625748',
-            nose: '#dfa6a5', eye: '#ccaa52', belly: '#fffdf8', blaze: '#faf6ed', cap: '#82745f', patch: NONE, cls: 'fluffy dongle', scale: 1.06 },
+            nose: '#dfa6a5', eye: '#ccaa52', belly: '#fffdf8', blaze: '#faf6ed', cap: '#82745f', patch: NONE, cls: 'exotic dongle', scale: 1.06 },
 };
 const FUR = ['#d9a066', '#4a4a4f', '#e8dcc6', '#a8793f', '#b9b9bd'];   // 사진이 없는 아이용 (생강, 검정, 크림, 갈색, 회색)
 function lookFor(p, i) {
