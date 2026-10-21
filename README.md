@@ -1,1 +1,38 @@
-# horibbangu
+# 🐾 호리빵구 체중기록
+
+반려동물(호야, 보리, 건빵, 살구, 로이, 삼식, 삼순)의 체중을 기록하고 추이를 보는 웹 앱입니다.
+배포 주소: https://horibbangu.web.app
+
+## 기능
+
+- **빠른 입력**: `호야, 4.40` 처럼 입력하면 오늘 날짜로 저장 (`호야 4.4, 보리 6.0`, `2026.10.20 호야 4.4`, `보리 5.76?` 도 가능)
+- **아이별 보기**: 카드를 누르면 그 아이의 그래프·기록만 표시, 오늘 체중을 바로 입력
+- **평균·이상치**: 아이별 평균선과 평균에서 많이 벗어난 값을 표시
+- **기록 관리**: 추가/수정/삭제, 아이 추가·이름·색 변경, CSV·JSON 내보내기, JSON 가져오기
+- **동기화**: Firebase 로그인(Google) + Firestore로 여러 기기에서 실시간 공유
+
+## 구조
+
+| 파일 | 설명 |
+|---|---|
+| `index.html` | 앱 전체 (HTML/CSS/JS, 빌드 없음) |
+| `config.js` | Firebase 웹 설정값 (비워두면 이 기기에만 저장) |
+| `firestore.rules` | 허용한 이메일만 읽기/쓰기 |
+| `firebase.json` | Firebase Hosting / Firestore 설정 |
+
+## 개발·배포
+
+빌드 과정이 없어 `index.html`을 브라우저로 열면 바로 동작합니다.
+
+```bash
+# 배포 (Firebase CLI 필요: npm install -g firebase-tools, firebase login)
+firebase deploy --only hosting            # 화면 변경
+firebase deploy --only firestore:rules    # 접근 허용 이메일 변경
+```
+
+## 접근 권한
+
+`firestore.rules`의 이메일 목록에 있는 Google 계정만 데이터를 읽고 쓸 수 있습니다.
+계정을 추가하려면 목록을 수정하고 규칙을 다시 배포하세요.
+
+`config.js`의 Firebase 키는 공개되어도 되는 웹 설정값이며, 데이터는 위 규칙으로 보호됩니다.
