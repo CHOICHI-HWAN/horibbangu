@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>호리빵구 체중기록</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --card: #ffffff; --ink: #2b2a27; --muted: #7b776e; --line: #e4e0d6;
+    --accent: #d9622b; --accent-ink: #fff; --danger: #c0392b; --grid: #ece8de;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17171a; --card: #202024; --ink: #ecebe7; --muted: #9a978f; --line: #33333a;
+      --accent: #f0794a; --accent-ink: #1a1a1a; --danger: #ef6b5b; --grid: #2b2b31;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 20px 16px 60px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { font-size: 22px; margin: 0; }
+  h1 small { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  button, .btn { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    padding: 7px 13px; border-radius: 8px; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button.danger { color: var(--danger); }
+  button.small { padding: 3px 9px; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .pets { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .pet { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; border-top: 4px solid var(--c); }
+  .pet .name { font-weight: 600; }
+  .pet .w { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pet .w span { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .pet .meta { font-size: 12px; color: var(--muted); }
+  .pet { cursor: pointer; transition: transform .1s; }
+  .pet:hover { transform: translateY(-2px); }
+  .pet.sel { outline: 2px solid var(--c); background: color-mix(in srgb, var(--c) 8%, var(--card)); }
+  .out { color: #d9534f; font-weight: 600; font-size: 12px; }
+  tr.outrow td { background: color-mix(in srgb, #d9534f 9%, transparent); }
+  .up { color: #d9534f; } .down { color: #2e86ab; }
+  .controls { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { border-radius: 99px; padding: 3px 12px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); display: inline-block; }
+  .chip.off { opacity: .45; }
+  .chip.off i { background: var(--muted); }
+  select, input { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; }
+  #chartBox { position: relative; }
+  svg { display: block; width: 100%; touch-action: pan-y; }
+  #tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); padding: 6px 10px;
+    border-radius: 8px; font-size: 12.5px; white-space: nowrap; display: none; transform: translate(-50%, -110%); z-index: 2; }
+  .quick { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px; }
+  .quick input { flex: 1; min-width: 200px; }
+  .quick .hint { flex-basis: 100%; margin: 0; min-height: 18px; }
+  #todayBox { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c) 10%, var(--card)); border: 1px solid var(--c); }
+  #todayBox input { width: 100px; }
+  #todayBox[hidden] { display: none; }
+  .empty { text-align: center; color: var(--muted); padding: 50px 0; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; position: sticky; top: 0; background: var(--card); }
+  th:first-child, td:first-child { text-align: left; }
+  td.note { text-align: left; white-space: normal; min-width: 140px; color: var(--muted); font-size: 13px; }
+  td.none { color: var(--line); }
+  td.q { color: var(--muted); font-style: italic; }
+  tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--card); color: var(--ink); padding: 20px; width: min(420px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  .field { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .field input { width: 100%; }
+  .field .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--c); }
+  .dlgbtns { display: flex; justify-content: space-between; margin-top: 14px; gap: 8px; }
+  .hint { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .petrow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .petrow input[type=color] { width: 34px; height: 30px; padding: 1px; }
+  .petrow input[type=text] { flex: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🐾 호리빵구 체중기록 <small id="count"></small> <small id="syncStatus"></small></h1>
+    <div class="btns">
+      <button class="primary" id="addBtn">+ 기록 추가</button>
+      <button id="petsBtn">아이들 관리</button>
+      <button id="exportBtn">내보내기</button>
+      <button id="importBtn">가져오기</button>
+      <input type="file" id="importFile" accept=".json,.csv" hidden>
+      <button id="logoutBtn" hidden>로그아웃</button>
+    </div>
+  </header>
+
+  <form class="card quick" id="quickForm" autocomplete="off">
+    <input type="text" id="quick" placeholder="예) 호야, 4.40   (여러 마리: 호야 4.4, 보리 6.0 / 날짜 지정: 2026.10.20 호야 4.4)">
+    <button type="submit" class="primary">입력</button>
+    <div id="quickMsg" class="hint"></div>
+  </form>
+
+  <div class="pets" id="summary"></div>
+
+  <div class="card" id="chartCard">
+    <div class="controls">
+      <div class="chips" id="chips"></div>
+      <select id="range">
+        <option value="180">최근 6개월</option>
+        <option value="365">최근 1년</option>
+        <option value="730">최근 2년</option>
+        <option value="0">전체</option>
+      </select>
+    </div>
+    <form id="todayBox" autocomplete="off" hidden></form>
+    <div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
+  </div>
+
+  <div class="card">
+    <h2 id="tableTitle">전체 기록</h2>
+    <div class="tablewrap"><table id="table"></table></div>
+  </div>
+</div>
+
+<dialog id="recDlg">
+  <form method="dialog" id="recForm">
+    <h2 id="recTitle">기록 추가</h2>
+    <div class="field"><label for="fDate">날짜</label><input type="date" id="fDate" required></div>
+    <div id="fWeights"></div>
+    <div class="field"><label for="fNote">비고</label><input type="text" id="fNote" placeholder="병원, 증상 등"></div>
+    <p class="hint">체중은 kg 단위, 측정 안 한 아이는 비워두세요. 숫자 뒤에 ?를 붙이면 불확실한 값으로 표시됩니다.</p>
+    <div class="dlgbtns">
+      <button type="button" class="danger" id="fDelete">삭제</button>
+      <span>
+        <button type="button" id="fCancel">취소</button>
+        <button type="submit" class="primary">저장</button>
+      </span>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="loginDlg">
+  <form id="loginForm">
+    <h2>🐾 호리빵구 로그인</h2>
+    <div class="field"><label for="lEmail">이메일</label><input type="email" id="lEmail" required autocomplete="username"></div>
+    <div class="field"><label for="lPw">비밀번호</label><input type="password" id="lPw" required autocomplete="current-password"></div>
+    <p class="hint" id="loginMsg"></p>
+    <div class="dlgbtns"><span></span><button type="submit" class="primary">로그인</button></div>
+  </form>
+</dialog>
+
+<dialog id="petDlg">
+  <h2>아이들 관리</h2>
+  <div id="petList"></div>
+  <button type="button" id="petAdd" class="small">+ 아이 추가</button>
+  <p class="hint" style="margin-top:12px">아이를 삭제하면 그 아이의 체중 기록도 함께 삭제됩니다.</p>
+  <div class="dlgbtns"><span></span><button type="button" class="primary" id="petClose">닫기</button></div>
+</dialog>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script>
+const KEY = 'horibbangu-weights-v1';
+const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+// ---------- 초기 데이터 ----------
+const SEED_PETS = ['호야', '보리', '건빵', '살구', '로이', '삼식', '삼순'];
+const SEED = `2022-09-02|4.45,5.81,8.86,3.63,-,2.7,2.3|
+2022-09-09|4.45,-,-,3.45,-,-,-|
+2022-09-11|4.43,5.66,8.64,3.5,-,2.81,2.41|
+2022-09-18|4.67,5.76,8.9,3.67,-,-,-|
+2023-01-26|4.8,5.8,8.9,4.2,7.2,-,-|
+2023-05-08|4.7,5.96,8.8,4.5,7.56,-,-|
+2023-08-02|4.6,5.8,8.6,-,7.4,-,-|
+2023-11-30|4.6,6.04,-,4.72,-,-,-|
+2024-08-16|-,5.9,-,4.98,-,-,-|
+2024-08-19|-,-,8.98,-,-,-,-|병원
+2024-10-10|4.72,5.98,9.14,5.02,-,-,-|
+2024-11-27|4.85,6.1,9.22,5.12,-,-,-|
+2024-12-02|-,-,9.3,-,-,-,-|
+2025-05-07|-,6.1,8.85,-,-,-,-|
+2025-05-09|-,-,8.91,-,-,-,-|고려메디컬센터
+2025-05-20|4.5,6.03,8.91,5.24,-,-,-|
+2025-06-16|4.28,-,-,-,-,-,-|
+2025-06-30|-,-,-,5.02,-,-,-|세종다온 / 췌장염, 담도염, ibd 의심
+2025-07-02|4.28,5.76?,-,-,-,-,-|세종다온 / 호야 체중감소, 보리 구토설사
+2025-07-05|4.36,-,-,-,-,-,-|
+2025-07-08|4.35,5.93,8.98,5.28,-,-,-|
+2025-07-09|-,-,9.06,-,-,-,-|고려
+2025-07-16|4.38,-,-,5.2,-,-,-|
+2025-07-19|4.38,-,-,-,-,-,-|
+2025-08-08|4.32,6.08,8.82,5.12,-,-,-|
+2025-08-13|4.26,-,-,-,-,-,-|
+2025-08-16|4.24,-,-,-,-,-,-|수액 후 4.28-4.29
+2025-08-17|4.26,-,8.89,-,-,-,-|
+2025-08-26|4.31,6.0,8.88,5.2,-,-,-|
+2025-08-30|4.38,-,-,5.27,-,-,-|
+2025-09-29|4.19,-,8.8,-,-,-,-|
+2025-10-29|4.28,6.14,8.94,5.19,-,-,-|
+2025-12-21|4.32,-,-,-,-,-,-|
+2025-12-25|4.36,-,-,-,-,-,-|
+2026-01-03|4.38,-,9.15,5.27,-,-,-|
+2026-02-09|4.47,-,-,-,-,-,-|
+2026-04-08|4.7,6.04,-,-,-,-,-|
+2026-06-19|4.41,-,-,-,-,-,-|
+2026-07-04|4.38,6.0,-,5.42,-,-,-|
+2026-07-09|4.36,-,-,-,-,-,-|
+2026-09-05|4.52,-,-,-,-,-,-|
+2026-09-21|4.47,5.56,8.55,-,-,-,-|
+2026-09-29|4.42,5.97,8.65,5.25,-,-,-|
+2026-10-17|4.46,6.0,8.66,-,-,-,-|`;
+
+function seedState() {
+  const pets = SEED_PETS.map((name, i) => ({ id: 'p' + (i + 1), name, color: COLORS[i % COLORS.length], on: true }));
+  const records = SEED.split('\n').map(line => {
+    const [date, ws, note] = line.split('|');
+    const w = {}, q = {};
+    ws.split(',').forEach((v, i) => {
+      if (v === '-') return;
+      w[pets[i].id] = parseFloat(v);
+      if (v.endsWith('?')) q[pets[i].id] = true;
+    });
+    return { id: uid(), date, w, q, note: note || '' };
+  });
+  return { pets, records };
+}
+
+let state;
+try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+if (!state || !state.pets || !state.records) state = seedState();
+let rangeDays = 365;
+try { rangeDays = +localStorage.getItem(KEY + ':range') || 365; } catch (e) {}
+$('range').value = String(rangeDays);
+
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  if (typeof schedulePush === 'function') schedulePush();
+}
+
+// ---------- 유틸 ----------
+const fmtDate = d => d.replace(/-/g, '.');
+const dayNum = d => Date.parse(d + 'T00:00:00Z') / 864e5;
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const sorted = () => [...state.records].sort((a, b) => a.date.localeCompare(b.date));
+const petSeries = id => sorted().filter(r => r.w[id] != null).map(r => ({ date: r.date, v: r.w[id], q: !!r.q?.[id], note: r.note, rid: r.id }));
+
+// ---------- 요약 카드 ----------
+let sel = null;
+function selectPet(id) {
+  sel = sel === id ? null : id;
+  renderAll();
+  renderToday(true);
+  if (sel) $('chartCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$('summary').onclick = e => { const c = e.target.closest('.pet'); if (c) selectPet(c.dataset.id); };
+
+function petStats(id) {
+  const s = petSeries(id), n = s.length;
+  if (!n) return null;
+  const vs = s.map(x => x.v), mean = vs.reduce((a, b) => a + b, 0) / n;
+  const sd = Math.sqrt(vs.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+  const th = Math.max(2 * sd, 0.15);
+  return { n, mean, sd, min: Math.min(...vs), max: Math.max(...vs), th, isOut: v => n >= 5 && Math.abs(v - mean) > th };
+}
+
+function renderSummary() {
+  $('count').textContent = state.records.length + '건의 기록';
+  $('summary').innerHTML = state.pets.map(p => {
+    const s = petSeries(p.id), st = petStats(p.id);
+    const cls = 'pet' + (sel === p.id ? ' sel' : '');
+    if (!s.length) return `<div class="${cls}" data-id="${p.id}" style="--c:${p.color}"><div class="name">${esc(p.name)}</div><div class="meta">기록 없음</div></div>`;
+    const last = s[s.length - 1], prev = s[s.length - 2];
+    let delta = '';
+    if (prev) {
+      const d = last.v - prev.v;
+      const dc = d > 0.004 ? 'up' : d < -0.004 ? 'down' : '';
+      delta = `<span class="${dc}">${d > 0 ? '▲' : d < 0 ? '▼' : '–'} ${Math.abs(d).toFixed(2)}kg</span> · `;
+    }
+    const outCount = s.filter(x => st.isOut(x.v)).length;
+    const flag = st.isOut(last.v) ? ' <span class="out">⚠ 평균과 차이</span>' : '';
+    return `<div class="${cls}" data-id="${p.id}" style="--c:${p.color}">
+      <div class="name">${esc(p.name)}</div>
+      <div class="w">${last.v}<span> kg${last.q ? '?' : ''}</span>${flag}</div>
+      <div class="meta">${delta}${fmtDate(last.date).slice(2)}</div>
+      <div class="meta">평균 <b>${st.mean.toFixed(2)}</b> · ${st.min}~${st.max}${outCount ? ` · <span class="out">이상치 ${outCount}</span>` : ''}</div></div>`;
+  }).join('');
+}
+
+// ---------- 그래프 ----------
+function renderChips() {
+  if (sel) {
+    const p = state.pets.find(x => x.id === sel);
+    $('chips').innerHTML = `<button class="chip" style="--c:${p.color}" data-back="1"><i></i>${esc(p.name)} · ✕ 전체 보기</button>`;
+    return;
+  }
+  $('chips').innerHTML =state.pets.map(p =>
+    `<button class="chip ${p.on === false ? 'off' : ''}" style="--c:${p.color}" data-id="${p.id}"><i></i>${esc(p.name)}</button>`).join('');
+}
+$('chips').onclick = e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  if (b.dataset.back) { selectPet(sel); return; }
+  const p = state.pets.find(x => x.id === b.dataset.id);
+  p.on = p.on === false; save(); renderChips(); renderChart();
+};
+$('range').onchange = () => {
+  rangeDays = +$('range').value;
+  try { localStorage.setItem(KEY + ':range', rangeDays); } catch (e) {}
+  renderChart();
+};
+
+function niceStep(span, n) {
+  const raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / mag;
+  return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+}
+
+let chartPoints = [];
+function renderChart() {
+  const svg = $('chart');
+  const W = Math.max(300, $('chartBox').clientWidth), H = W < 520 ? 280 : 360;
+  const m = { l: 44, r: 14, t: 12, b: 28 };
+  const cutoff = rangeDays ? dayNum(today()) - rangeDays : -Infinity;
+  const series = state.pets.filter(p => sel ? p.id === sel : p.on !== false).map(p => ({
+    p, pts: petSeries(p.id).filter(pt => dayNum(pt.date) >= cutoff)
+  })).filter(s => s.pts.length);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('height', H);
+  chartPoints = [];
+  if (!series.length) {
+    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="var(--muted)">표시할 기록이 없어요</text>`;
+    return;
+  }
+  const all = series.flatMap(s => s.pts);
+  let x0 = Math.min(...all.map(p => dayNum(p.date))), x1 = Math.max(...all.map(p => dayNum(p.date)));
+  if (rangeDays) { x0 = Math.min(x0, cutoff); x1 = Math.max(x1, dayNum(today())); }
+  if (x1 === x0) { x0 -= 7; x1 += 7; }
+  let lo = Math.min(...all.map(p => p.v)), hi = Math.max(...all.map(p => p.v));
+  if (hi - lo < 0.5) { const c = (hi + lo) / 2; lo = c - 0.25; hi = c + 0.25; }
+  const step = niceStep(hi - lo, 5);
+  const y0 = Math.floor((lo - step * 0.3) / step) * step, y1 = Math.ceil((hi + step * 0.3) / step) * step;
+  const X = d => m.l + (d - x0) / (x1 - x0) * (W - m.l - m.r);
+  const Y = v => H - m.b - (v - y0) / (y1 - y0) * (H - m.t - m.b);
+
+  let out = '';
+  for (let v = y0; v <= y1 + 1e-9; v += step) {
+    out += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/>`;
+    out += `<text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${+v.toFixed(2)}</text>`;
+  }
+  const nx = W < 520 ? 4 : 6;
+  for (let i = 0; i <= nx; i++) {
+    const d = x0 + (x1 - x0) * i / nx;
+    const dt = new Date(d * 864e5).toISOString().slice(0, 10);
+    const anchor = i === 0 ? 'start' : i === nx ? 'end' : 'middle';
+    out += `<text x="${X(d)}" y="${H - 8}" text-anchor="${anchor}" font-size="11" fill="var(--muted)">${fmtDate(dt).slice(2)}</text>`;
+  }
+  series.forEach(({ p }) => {
+    const st = petStats(p.id), ym = Y(st.mean);
+    if (sel) {
+      const top = Math.max(m.t, Y(st.mean + st.th)), bot = Math.min(H - m.b, Y(st.mean - st.th));
+      out += `<rect x="${m.l}" y="${top}" width="${W - m.l - m.r}" height="${bot - top}" fill="${p.color}" opacity=".10"/>`;
+    }
+    out += `<line x1="${m.l}" x2="${W - m.r}" y1="${ym}" y2="${ym}" stroke="${p.color}" stroke-width="1.5" stroke-dasharray="6 4" opacity=".7"/>`;
+    if (sel) out += `<text x="${W - m.r - 4}" y="${ym - 5}" text-anchor="end" font-size="11" fill="${p.color}">평균 ${st.mean.toFixed(2)}kg</text>`;
+  });
+  series.forEach(({ p, pts }) => {
+    const st = petStats(p.id);
+    const d = pts.map((pt, i) => `${i ? 'L' : 'M'}${X(dayNum(pt.date)).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
+    out += `<path d="${d}" fill="none" stroke="${p.color}" stroke-width="2" stroke-linejoin="round" opacity=".85"/>`;
+    pts.forEach(pt => {
+      const x = X(dayNum(pt.date)), y = Y(pt.v);
+      const bad = st.isOut(pt.v);
+      chartPoints.push({ x, y, p, pt, bad, mean: st.mean });
+      if (bad) out += `<circle cx="${x}" cy="${y}" r="8" fill="none" stroke="#d9534f" stroke-width="2"/>`;
+      out += pt.note
+        ? `<rect x="${x - 4}" y="${y - 4}" width="8" height="8" transform="rotate(45 ${x} ${y})" fill="var(--card)" stroke="${p.color}" stroke-width="2"/>`
+        : `<circle cx="${x}" cy="${y}" r="3.2" fill="${p.color}"/>`;
+    });
+  });
+  out += `<circle id="hover" r="6" fill="none" stroke="var(--ink)" stroke-width="2" style="display:none"/>`;
+  svg.innerHTML = out;
+}
+
+const tip = $('tip');
+$('chart').addEventListener('pointermove', e => {
+  if (!chartPoints.length) return;
+  const r = $('chart').getBoundingClientRect(), sx = $('chart').viewBox.baseVal.width / r.width;
+  const mx = (e.clientX - r.left) * sx, my = (e.clientY - r.top) * sx;
+  let best = null, bd = Infinity;
+  for (const c of chartPoints) { const d = (c.x - mx) ** 2 + (c.y - my) ** 2; if (d < bd) { bd = d; best = c; } }
+  const h = $('hover');
+  if (!best || bd > 40 * 40) { tip.style.display = 'none'; h.style.display = 'none'; return; }
+  h.setAttribute('cx', best.x); h.setAttribute('cy', best.y); h.style.display = '';
+  tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}`;
+  tip.style.left = best.x / sx + 'px'; tip.style.top = best.y / sx + 'px'; tip.style.display = 'block';
+});
+$('chart').addEventListener('pointerleave', () => { tip.style.display = 'none'; const h = $('hover'); if (h) h.style.display = 'none'; });
+$('chart').addEventListener('click', e => {
+  const r = $('chart').getBoundingClientRect(), sx = $('chart').viewBox.baseVal.width / r.width;
+  const mx = (e.clientX - r.left) * sx, my = (e.clientY - r.top) * sx;
+  let best = null, bd = Infinity;
+  for (const c of chartPoints) { const d = (c.x - mx) ** 2 + (c.y - my) ** 2; if (d < bd) { bd = d; best = c; } }
+  if (best && bd <= 20 * 20) openRecord(best.pt.rid);
+});
+new ResizeObserver(() => renderChart()).observe($('chartBox'));
+
+// ---------- 표 ----------
+function renderTable() {
+  if (sel) {
+    const p = state.pets.find(x => x.id === sel);
+    const s = petSeries(sel), st = petStats(sel);
+    $('tableTitle').innerHTML = `${esc(p.name)} 체중 기록 (${s.length}건) · 평균 <b>${st.mean.toFixed(2)}kg</b> · 최저 ${st.min} · 최고 ${st.max} <span class="out">⚠ 평균에서 ±${st.th.toFixed(2)}kg 넘게 벗어나면 이상치</span>`;
+    $('table').innerHTML = `<tr><th>날짜</th><th style="color:${p.color}">체중(kg)</th><th>증감</th><th>평균 대비</th><th style="text-align:left">비고</th><th></th></tr>` +
+      s.map((pt, i) => {
+        const d = i ? pt.v - s[i - 1].v : null;
+        const dc = d == null ? '' : d > 0.004 ? 'up' : d < -0.004 ? 'down' : '';
+        const ds = d == null ? '–' : (d > 0 ? '+' : '') + d.toFixed(2);
+        const dm = pt.v - st.mean, bad = st.isOut(pt.v);
+        return `<tr class="${bad ? 'outrow' : ''}"><td>${fmtDate(pt.date)}</td><td class="${pt.q ? 'q' : ''}"><b>${pt.v}${pt.q ? '?' : ''}</b></td><td class="${dc}">${ds}</td><td class="${bad ? 'out' : ''}">${bad ? '⚠ ' : ''}${dm > 0 ? '+' : ''}${dm.toFixed(2)}</td><td class="note">${esc(pt.note)}</td><td><button class="small" data-edit="${pt.rid}">수정</button></td></tr>`;
+      }).reverse().join('');
+    return;
+  }
+  $('tableTitle').textContent = '전체 기록';
+  const head = `<tr><th>날짜</th>${state.pets.map(p => `<th style="color:${p.color}">${esc(p.name)}</th>`).join('')}<th style="text-align:left">비고</th><th></th></tr>`;
+  const rows = sorted().reverse().map(r => {
+    const cells = state.pets.map(p => {
+      const v = r.w[p.id];
+      const bad = v != null && petStats(p.id).isOut(v);
+      return v == null ? `<td class="none">–</td>` : `<td class="${r.q?.[p.id] ? 'q' : ''} ${bad ? 'out' : ''}">${bad ? '⚠' : ''}${v}${r.q?.[p.id] ? '?' : ''}</td>`;
+    }).join('');
+    return `<tr><td>${fmtDate(r.date)}</td>${cells}<td class="note">${esc(r.note)}</td><td><button class="small" data-edit="${r.id}">수정</button></td></tr>`;
+  }).join('');
+  $('table').innerHTML = head + rows;
+}
+$('table').onclick = e => { const b = e.target.closest('[data-edit]'); if (b) openRecord(b.dataset.edit); };
+
+// ---------- 기록 추가/수정 ----------
+let editing = null;
+function openRecord(id) {
+  editing = id ? state.records.find(r => r.id === id) : null;
+  $('recTitle').textContent = editing ? '기록 수정' : '기록 추가';
+  $('fDate').value = editing ? editing.date : today();
+  $('fNote').value = editing ? editing.note : '';
+  $('fDelete').style.display = editing ? '' : 'none';
+  $('fWeights').innerHTML = state.pets.map(p => {
+    const v = editing?.w[p.id];
+    const val = v == null ? '' : v + (editing.q?.[p.id] ? '?' : '');
+    return `<div class="field" style="--c:${p.color}"><label><span class="dot"></span>${esc(p.name)}</label>
+      <input type="text" inputmode="decimal" data-pet="${p.id}" value="${val}" placeholder="kg"></div>`;
+  }).join('');
+  $('recDlg').showModal();
+}
+$('addBtn').onclick = () => openRecord(null);
+$('fCancel').onclick = () => $('recDlg').close();
+$('recForm').onsubmit = e => {
+  const w = {}, q = {};
+  document.querySelectorAll('#fWeights input').forEach(inp => {
+    const s = inp.value.trim();
+    if (!s) return;
+    const n = parseFloat(s.replace(/[^\d.]/g, ''));
+    if (isNaN(n)) return;
+    w[inp.dataset.pet] = n;
+    if (s.includes('?')) q[inp.dataset.pet] = true;
+  });
+  if (!Object.keys(w).length) { e.preventDefault(); alert('체중을 한 마리 이상 입력해주세요.'); return; }
+  const rec = { id: editing?.id || uid(), date: $('fDate').value, w, q, note: $('fNote').value.trim() };
+  if (editing) state.records[state.records.indexOf(editing)] = rec; else state.records.push(rec);
+  save(); renderAll();
+};
+$('fDelete').onclick = () => {
+  if (editing && confirm(fmtDate(editing.date) + ' 기록을 삭제할까요?')) {
+    state.records = state.records.filter(r => r !== editing);
+    save(); renderAll(); $('recDlg').close();
+  }
+};
+
+// ---------- 아이들 관리 ----------
+function renderPetList() {
+  $('petList').innerHTML = state.pets.map(p => `<div class="petrow">
+    <input type="color" value="${p.color}" data-color="${p.id}">
+    <input type="text" value="${esc(p.name)}" data-name="${p.id}">
+    <button class="small danger" data-del="${p.id}">삭제</button></div>`).join('');
+}
+$('petsBtn').onclick = () => { renderPetList(); $('petDlg').showModal(); };
+$('petClose').onclick = () => $('petDlg').close();
+$('petDlg').addEventListener('close', renderAll);
+$('petList').oninput = e => {
+  const t = e.target;
+  if (t.dataset.color) state.pets.find(p => p.id === t.dataset.color).color = t.value;
+  if (t.dataset.name) state.pets.find(p => p.id === t.dataset.name).name = t.value.trim() || '이름없음';
+  save();
+};
+$('petList').onclick = e => {
+  const id = e.target.dataset.del; if (!id) return;
+  const p = state.pets.find(x => x.id === id);
+  if (!confirm(`${p.name}와(과) 모든 체중 기록을 삭제할까요?`)) return;
+  state.pets = state.pets.filter(x => x.id !== id);
+  state.records.forEach(r => { delete r.w[id]; delete r.q?.[id]; });
+  state.records = state.records.filter(r => Object.keys(r.w).length);
+  save(); renderPetList();
+};
+$('petAdd').onclick = () => {
+  state.pets.push({ id: 'p' + uid(), name: '새 아이', color: COLORS[state.pets.length % COLORS.length], on: true });
+  save(); renderPetList();
+};
+
+// ---------- 내보내기 / 가져오기 ----------
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+$('exportBtn').onclick = () => {
+  const fmt = prompt('내보낼 형식을 입력하세요: csv (엑셀용) 또는 json (백업용)', 'csv');
+  if (!fmt) return;
+  const stamp = today();
+  if (fmt.toLowerCase() === 'json') {
+    download(`weights-${stamp}.json`, JSON.stringify(state, null, 2), 'application/json');
+  } else {
+    const q = s => `"${String(s).replace(/"/g, '""')}"`;
+    const lines = [['날짜', ...state.pets.map(p => p.name), '비고'].map(q).join(',')];
+    sorted().forEach(r => lines.push([fmtDate(r.date),
+      ...state.pets.map(p => r.w[p.id] == null ? '' : r.w[p.id] + (r.q?.[p.id] ? '?' : '')), r.note].map(q).join(',')));
+    download(`weights-${stamp}.csv`, '﻿' + lines.join('\n'), 'text/csv');
+  }
+};
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const text = await f.text();
+    if (f.name.endsWith('.json')) {
+      const d = JSON.parse(text);
+      if (!d.pets || !d.records) throw 0;
+      if (!confirm('현재 데이터를 가져온 데이터로 교체할까요?')) return;
+      state = d;
+    } else {
+      throw new Error('csv');
+    }
+    save(); renderAll();
+  } catch (err) {
+    alert('JSON 백업 파일(내보내기로 만든 .json)만 가져올 수 있어요.');
+  }
+};
+
+// ---------- 빠른 입력: "호야, 4.40" ----------
+$('quickForm').onsubmit = e => {
+  e.preventDefault();
+  const msg = $('quickMsg');
+  let text = $('quick').value.trim();
+  if (!text) return;
+  let date = today();
+  const dm = text.match(/^(\d{4})[.\-/]\s*(\d{1,2})[.\-/]\s*(\d{1,2})\.?[\s,]*/);
+  if (dm) {
+    date = `${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`;
+    text = text.slice(dm[0].length);
+  }
+  const found = [], unknown = [];
+  for (const m of text.matchAll(/([^\d\s,:;]+)[\s,:]+(\d+(?:\.\d+)?)(\?)?/g)) {
+    const pet = state.pets.find(p => p.name === m[1]);
+    if (pet) found.push({ pet, v: parseFloat(m[2]), q: !!m[3] }); else unknown.push(m[1]);
+  }
+  if (unknown.length || !found.length) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = unknown.length ? `등록되지 않은 이름: ${unknown.join(', ')}` : '"호야, 4.40" 형식으로 입력해주세요.';
+    return;
+  }
+  let rec = state.records.find(r => r.date === date);
+  if (!rec) { rec = { id: uid(), date, w: {}, q: {}, note: '' }; state.records.push(rec); }
+  rec.q = rec.q || {};
+  found.forEach(({ pet, v, q }) => { rec.w[pet.id] = v; if (q) rec.q[pet.id] = true; else delete rec.q[pet.id]; });
+  save(); renderAll();
+  $('quick').value = '';
+  msg.style.color = 'var(--muted)';
+  msg.textContent = `✔ ${fmtDate(date)} ` + found.map(f => `${f.pet.name} ${f.v}kg`).join(', ') + ' 저장됨';
+};
+
+// ---------- 선택한 아이: 오늘 체중 입력 ----------
+function renderToday(focus) {
+  const box = $('todayBox');
+  if (!sel) { box.hidden = true; return; }
+  const p = state.pets.find(x => x.id === sel), t = today();
+  const rec = state.records.find(r => r.date === t), cur = rec?.w[sel];
+  box.hidden = false;
+  box.style.setProperty('--c', p.color);
+  box.innerHTML = `<b>${esc(p.name)}</b> 오늘(${fmtDate(t)}) 체중
+    <input type="text" inputmode="decimal" id="todayVal" placeholder="예) 4.40" value="${cur == null ? '' : cur + (rec.q?.[sel] ? '?' : '')}">kg
+    <button type="submit" class="primary">${cur == null ? '기록' : '수정'}</button>`;
+  if (focus) $('todayVal').focus({ preventScroll: true });
+}
+$('todayBox').onsubmit = e => {
+  e.preventDefault();
+  const s = $('todayVal').value.trim(), n = parseFloat(s.replace(/[^\d.]/g, ''));
+  if (isNaN(n)) { $('todayVal').focus(); return; }
+  const t = today();
+  let rec = state.records.find(r => r.date === t);
+  if (!rec) { rec = { id: uid(), date: t, w: {}, q: {}, note: '' }; state.records.push(rec); }
+  rec.q = rec.q || {};
+  rec.w[sel] = n;
+  if (s.includes('?')) rec.q[sel] = true; else delete rec.q[sel];
+  save(); renderAll();
+};
+
+function renderAll() { renderSummary(); renderChips(); renderChart(); renderTable(); renderToday(); }
+renderAll();
+
+// ---------- 클라우드 동기화 (Firebase) ----------
+const CFG = window.APP_CONFIG || {};
+const cloud = CFG.apiKey && CFG.projectId && window.firebase ? firebase.initializeApp(CFG) : null;
+const auth = cloud && firebase.auth(), db = cloud && firebase.firestore();
+const petRow = (p, i) => ({ id: p.id, name: p.name, color: p.color, sort: i });
+const recRow = r => ({ id: r.id, date: r.date, w: r.w, q: r.q || {}, note: r.note || '' });
+let snap = { pets: {}, records: {} };   // 서버에 마지막으로 반영된 JSON
+let pushTimer = null, pushing = false, synced = false, unsubs = [];
+let petsSnap = null, recsSnap = null, uploaded = false;
+
+function setStatus(t, bad) {
+  const el = $('syncStatus');
+  el.textContent = t; el.style.color = bad ? 'var(--danger)' : 'var(--muted)';
+}
+function takeSnap() {
+  snap = { pets: {}, records: {} };
+  state.pets.forEach((p, i) => { const r = petRow(p, i); snap.pets[r.id] = JSON.stringify(r); });
+  state.records.forEach(x => { const r = recRow(x); snap.records[r.id] = JSON.stringify(r); });
+}
+function schedulePush() {
+  if (!cloud || !synced) return;
+  setStatus('☁ 저장 중…');
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(push, 600);
+}
+async function push() {
+  pushTimer = null;
+  if (pushing) { schedulePush(); return; }
+  pushing = true;
+  try {
+    const batch = db.batch();
+    let ops = 0;
+    for (const [col, rows, old] of [
+      ['pets', state.pets.map(petRow), snap.pets],
+      ['records', state.records.map(recRow), snap.records]]) {
+      rows.filter(r => old[r.id] !== JSON.stringify(r)).forEach(({ id, ...data }) => { batch.set(db.collection(col).doc(id), data); ops++; });
+      const alive = new Set(rows.map(r => r.id));
+      Object.keys(old).filter(id => !alive.has(id)).forEach(id => { batch.delete(db.collection(col).doc(id)); ops++; });
+    }
+    if (ops) await batch.commit();
+    takeSnap();
+    setStatus('☁ 동기화됨');
+  } catch (err) {
+    console.error(err);
+    setStatus('⚠ 동기화 실패 (다음 저장 때 재시도)', true);
+  } finally { pushing = false; }
+}
+// 서버 변경이 들어오면 화면 상태를 서버 기준으로 갱신한다.
+function applyRemote() {
+  if (!petsSnap || !recsSnap) return;
+  if (petsSnap.empty && recsSnap.empty) {
+    // 서버가 비어 있는 첫 사용: 현재 데이터를 서버로 업로드
+    if (!petsSnap.metadata.fromCache && !uploaded) { uploaded = true; synced = true; snap = { pets: {}, records: {} }; push(); }
+    return;
+  }
+  synced = true;
+  if (petsSnap.metadata.hasPendingWrites || recsSnap.metadata.hasPendingWrites || pushTimer || pushing) return;
+  const on = Object.fromEntries(state.pets.map(p => [p.id, p.on]));
+  state.pets = petsSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.sort - b.sort)
+    .map(p => ({ id: p.id, name: p.name, color: p.color, on: on[p.id] !== false }));
+  state.records = recsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  takeSnap();
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  renderAll();
+  setStatus('☁ 동기화됨');
+}
+function startSync() {
+  $('logoutBtn').hidden = false;
+  setStatus('☁ 불러오는 중…');
+  const fail = err => { console.error(err); setStatus('⚠ 서버 연결 실패 — 이 기기의 데이터만 보입니다', true); };
+  unsubs.push(
+    db.collection('pets').onSnapshot({ includeMetadataChanges: true }, s => { petsSnap = s; applyRemote(); }, fail),
+    db.collection('records').onSnapshot({ includeMetadataChanges: true }, s => { recsSnap = s; applyRemote(); }, fail));
+}
+function stopSync() {
+  unsubs.forEach(u => u()); unsubs = [];
+  petsSnap = recsSnap = null; synced = false; uploaded = false;
+}
+function showLogin() {
+  stopSync(); $('logoutBtn').hidden = true;
+  if (!$('loginDlg').open) $('loginDlg').showModal();
+}
+$('loginDlg').addEventListener('cancel', e => e.preventDefault());
+$('loginForm').onsubmit = async e => {
+  e.preventDefault();
+  $('loginMsg').style.color = 'var(--muted)';
+  $('loginMsg').textContent = '로그인 중…';
+  try {
+    await auth.signInWithEmailAndPassword($('lEmail').value.trim(), $('lPw').value);
+  } catch (err) {
+    $('loginMsg').style.color = 'var(--danger)';
+    $('loginMsg').textContent = '로그인 실패: 이메일/비밀번호를 확인해주세요.';
+    return;
+  }
+  $('lPw').value = ''; $('loginMsg').textContent = '';
+};
+$('logoutBtn').onclick = () => auth.signOut();
+function initCloud() {
+  if (!cloud) return;
+  auth.onAuthStateChanged(user => {
+    if (user) { if ($('loginDlg').open) $('loginDlg').close(); stopSync(); startSync(); }
+    else showLogin();
+  });
+}
+initCloud();
+</script>
+</body>
+</html>
