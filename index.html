@@ -101,6 +101,26 @@
   .wheel .ring { transform-origin: 60px 62px; }
   .wheel.spin .ring { animation: wspin 1s linear infinite; }
   @keyframes wspin { to { transform: rotate(360deg); } }
+  .cat .flip { transform-origin: 50% 100%; }
+  .cat .tailp { stroke: var(--tail); }
+  .cat .tailst { stroke: var(--stripe); }
+  .cat .leg { fill: var(--leg); }
+  .cat .body { fill: var(--body); }
+  .cat .belly { fill: var(--belly); }
+  .cat .patch { fill: var(--patch); }
+  .cat .stripes path, .cat .m path { stroke: var(--stripe); }
+  .cat .ear { fill: var(--ear); }
+  .cat .skull { fill: var(--head); }
+  .cat .cap { fill: var(--cap); }
+  .cat .muzzle { fill: var(--muzzle); }
+  .cat .blaze { fill: var(--blaze); }
+  .cat .nose { fill: var(--nose); }
+  .cat .eye { fill: var(--eye); }
+  .cat .cheek { fill: var(--head); display: none; }
+  .cat .stripes, .cat .m, .cat .tailst { opacity: 0; }
+  .cat.tabby .stripes, .cat.tabby .m, .cat.tabby .tailst { opacity: .85; }
+  .cat.fluffy .cheek { display: inline; }
+  .cat.fluffy .tailp, .cat.fluffy .tailst { stroke-width: 8; }
   .cat .eyec { display: none; }
   .cat.sleep .eye { display: none; } .cat.sleep .eyec { display: inline; }
   .cat .ear { transform-box: fill-box; transform-origin: 50% 100%; }
@@ -228,7 +248,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '1.5.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '1.6.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -678,22 +698,57 @@ $('ver').textContent = 'v' + VERSION;
 // 상태: sleep 잠 / alert 귀 쫑긋 / walk 산책 / sit / loaf 식빵 / purr 골골송 / groom 그루밍
 //       goto→knead 쿠션 꾹꾹이 / goTower→jump→(sit·sleep·groom…) 캣타워 / dropoff 내려오기
 //       stalk→freeze→dash→pounce 마우스 사냥 / chase·flee 술래잡기
-const CAT_SVG = `<svg viewBox="0 0 64 44"><g class="all">
-  <g class="tail"><path d="M10 24 C-2 20 0 6 9 9" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></g>
-  <rect class="leg l1" x="13" y="30" width="6" height="11" rx="3" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-  <rect class="leg l2" x="21" y="30" width="6" height="11" rx="3" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-  <ellipse cx="26" cy="26" rx="18" ry="10" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-  <rect class="leg l3" x="31" y="30" width="6" height="11" rx="3" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-  <rect class="leg l4" x="39" y="30" width="6" height="11" rx="3" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
+const CAT_SVG = `<svg viewBox="0 0 64 44"><defs><clipPath id="catbody"><ellipse cx="26" cy="26" rx="18" ry="10"/></clipPath></defs><g class="all">
+  <g class="tail"><path class="tailp" d="M10 24 C-2 20 0 6 9 9" fill="none" stroke-width="5" stroke-linecap="round"/>
+    <path class="tailst" d="M10 24 C-2 20 0 6 9 9" fill="none" stroke-width="5" stroke-dasharray="2 3.6" stroke-linecap="butt"/></g>
+  <rect class="leg l1" x="13" y="30" width="6" height="11" rx="3" stroke="rgba(0,0,0,.2)"/>
+  <rect class="leg l2" x="21" y="30" width="6" height="11" rx="3" stroke="rgba(0,0,0,.2)"/>
+  <ellipse class="body" cx="26" cy="26" rx="18" ry="10" stroke="rgba(0,0,0,.2)"/>
+  <g clip-path="url(#catbody)">
+    <path class="patch" d="M4 24 C12 10 38 10 48 22 L42 27 C32 20 20 22 6 32 Z"/>
+    <ellipse class="belly" cx="28" cy="33" rx="17" ry="6.5"/>
+    <g class="stripes" fill="none" stroke-width="2.2" stroke-linecap="round">
+      <path d="M14 16 q2 6 0 12"/><path d="M21 15 q2 7 0 14"/><path d="M28 15 q2 7 0 14"/><path d="M35 16 q2 6 0 12"/></g>
+  </g>
+  <rect class="leg l3" x="31" y="30" width="6" height="11" rx="3" stroke="rgba(0,0,0,.2)"/>
+  <rect class="leg l4" x="39" y="30" width="6" height="11" rx="3" stroke="rgba(0,0,0,.2)"/>
   <g class="head">
-    <polygon class="ear" points="41,15 43,3 50,12" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-    <polygon class="ear" points="49,12 56,3 58,16" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-    <circle cx="49" cy="21" r="10" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-    <circle class="eye" cx="53" cy="19" r="1.8" fill="#222"/><circle class="eye" cx="46" cy="19" r="1.8" fill="#222"/>
+    <polygon class="ear" points="41,15 43,3 50,12" stroke="rgba(0,0,0,.2)"/>
+    <polygon class="ear" points="49,12 56,3 58,16" stroke="rgba(0,0,0,.2)"/>
+    <polygon points="43.2,12.5 43.8,6.5 47.2,11.5" fill="#e8b4b8" opacity=".75"/>
+    <polygon points="51.5,11.5 54.8,6.5 55.6,13" fill="#e8b4b8" opacity=".75"/>
+    <path class="cheek" d="M39.5 21 L35 25 L40 26 Z"/><path class="cheek" d="M58.5 21 L63 25 L58 26 Z"/>
+    <circle class="skull" cx="49" cy="21" r="10" stroke="rgba(0,0,0,.2)"/>
+    <path class="cap" d="M39.2 19.5 A10 10 0 0 1 58.8 19.5 Q49 14.5 39.2 19.5 Z"/>
+    <path class="blaze" d="M48.2 11.2 L49.8 11.2 L51 22 L47 22 Z"/>
+    <ellipse class="muzzle" cx="49" cy="25.2" rx="5.4" ry="3.6"/>
+    <g class="m" fill="none" stroke-width="1.2" stroke-linecap="round"><path d="M45.5 12.8v3M49 11.8v4M52.5 12.8v3"/></g>
+    <circle class="eye" cx="53" cy="19" r="2.1"/><circle class="eye" cx="46" cy="19" r="2.1"/>
+    <circle cx="53" cy="19" r="1" fill="#222"/><circle cx="46" cy="19" r="1" fill="#222"/>
     <path class="eyec" d="M44 19.5 q2.2 2.2 4.4 0 M51 19.5 q2.2 2.2 4.4 0" fill="none" stroke="#222" stroke-width="1.4" stroke-linecap="round"/>
-    <polygon points="49,23 51,23 50,25" fill="#e38"/>
+    <polygon class="nose" points="48,23 50,23 49,24.8"/>
   </g></g>
 </svg>`;
+
+// 고양이 생김새: 사진을 참고해 이름별로 지정 (없는 아이는 자연스러운 털색으로 자동 배정)
+const NONE = 'transparent';
+const LOOKS = {
+  '호야': { body: '#8e9094', stripe: '#33353a', leg: '#c3c5ca', head: '#8e9094', muzzle: '#a9abb0', ear: '#8e9094', tail: '#8e9094',
+            nose: '#c98f90', eye: '#b9a04a', belly: NONE, blaze: NONE, cap: NONE, patch: NONE, cls: 'tabby', scale: 1 },     // 은회색 고등어 태비
+  '건빵': { body: '#6e5b44', stripe: '#2f2a24', leg: '#f6f4f0', head: '#7b6750', muzzle: '#f6f4f0', ear: '#6e5b44', tail: '#6e5b44',
+            nose: '#b87f72', eye: '#92a45a', belly: '#f6f4f0', blaze: '#f6f4f0', cap: NONE, patch: NONE, cls: 'tabby', scale: 1.12 }, // 갈색 태비+흰색, 덩치 큼
+  '보리': { body: '#f3f0ea', stripe: '#2b2622', leg: '#f3f0ea', head: '#f3f0ea', muzzle: '#f3f0ea', ear: '#5a4a3a', tail: '#3b332c',
+            nose: '#e8a0a8', eye: '#9fb25f', belly: '#f3f0ea', blaze: NONE, cap: '#4b4036', patch: '#4b4036', cls: 'tabby', scale: 1 }, // 흰색+태비 무늬
+  '살구': { body: '#c9884a', stripe: '#6d5a47', leg: '#f4efe8', head: '#c9884a', muzzle: '#f4efe8', ear: '#8a7765', tail: '#a98456',
+            nose: '#e4a3ae', eye: '#b98a35', belly: '#f4efe8', blaze: NONE, cap: '#7a6a5a', patch: '#7e7062', cls: 'fluffy', scale: 1.05 }, // 장모 삼색
+};
+const FUR = ['#d9a066', '#4a4a4f', '#e8dcc6', '#a8793f', '#b9b9bd'];   // 사진이 없는 아이용 (생강, 검정, 크림, 갈색, 회색)
+function lookFor(p, i) {
+  if (LOOKS[p.name]) return LOOKS[p.name];
+  const f = FUR[i % FUR.length];
+  return { body: f, stripe: `color-mix(in srgb, ${f} 60%, black)`, leg: f, head: f, muzzle: `color-mix(in srgb, ${f} 65%, white)`, ear: f, tail: f,
+           nose: '#e8a0a8', eye: '#8fae5a', belly: NONE, blaze: NONE, cap: NONE, patch: NONE, cls: '', scale: 1 };
+}
 const CAT_W = 52, G = 900, FOOT = 4.5;
 const CUSHION_COLORS = ['#f4a6b8', '#a8d5ba', '#a9c4eb'];
 let cats = [], catSig = '', catsOn = true, lastT = 0;
@@ -845,9 +900,12 @@ function renderCats() {
       until: performance.now() + rnd(4000, 20000) };
     if (!['walk', 'sit', 'loaf', 'purr', 'sleep', 'alert', 'groom'].includes(c.mode)) c.mode = 'sit';
     c.cls = ''; c.partner = null;
+    const look = lookFor(p, state.pets.indexOf(p));
+    c.lookCls = look.cls; c.scale = look.scale;
     c.el = document.createElement('div');
-    c.el.className = 'cat';
+    c.el.className = 'cat ' + c.lookCls;
     c.el.style.setProperty('--c', p.color);
+    for (const [k, v] of Object.entries(look)) if (k !== 'cls' && k !== 'scale') c.el.style.setProperty('--' + k, v);
     c.el.title = p.name;
     c.el.innerHTML = `<div class="flip">${CAT_SVG}</div>`;
     c.el.onclick = () => {   // 쓰다듬기: 골골송
@@ -1014,10 +1072,10 @@ function tickCats(t) {
     if (c.air) pose = 'air';
     if (wheel && c === cats[0]) wheel.el.classList.toggle('spin', cats.some(o => o.mode === 'run'));
 
-    const cls = 'cat ' + (c.mode === 'sit' && !c.air ? '' : pose) + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
+    const cls = 'cat ' + c.lookCls + ' ' + (c.mode === 'sit' && !c.air ? '' : pose) + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
     if (cls !== c.cls) { c.cls = cls; c.el.className = cls; }
     c.el.style.transform = `translate(${c.x.toFixed(1)}px, ${(-c.y).toFixed(1)}px)`;
-    c.el.firstChild.style.transform = c.dir < 0 ? 'scaleX(-1)' : '';
+    c.el.firstChild.style.transform = `scale(${(c.dir < 0 ? -1 : 1) * c.scale}, ${c.scale})`;
   }
 }
 $('catBtn').onclick = () => {
