@@ -367,20 +367,29 @@ function layoutProps() {
     box.insertAdjacentHTML('beforeend', `<svg class="bridges" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`);
   }
 
-  // 타워 꼭대기부터 화면 상단까지 이어지는 벽면 캣워크.
-  // 60px 높이 차와 짧은 틈으로 실제 점프 경로를 확보한다.
-  const towerTop = hs[n - 1], ceiling = H - FOOT - 78;
+  // 가운데 여백을 남긴 벽면 산책길: 엇갈린 징검 발판과 상단 연결 다리.
+  const towerTop = hs[n - 1], ceiling = H - FOOT - 100;
+  const levels = Math.max(0, Math.ceil((ceiling - towerTop) / 80));
   let catwalkArt = '';
-  const levels = Math.max(0, Math.floor((ceiling - towerTop) / 60));
+  function wallShelf(x0, span, h, top = false) {
+    const x1 = x0 + span, sy = y(h);
+    platforms.push({ x0, x1, h, xc: (x0 + x1) / 2, kind: 'bridge', type: 'catwalk', node: true });
+    catwalkArt += `<g class="catwalk-shelf"><path d="M${x0 + 16} ${sy + 5}v12l16-12M${x1 - 16} ${sy + 5}v12l-16-12" fill="none" stroke="#b59b7e" stroke-width="1.5" opacity=".5"/><rect x="${x0}" y="${sy}" width="${span}" height="6" rx="3" fill="#c8ad8d"/><path d="M${x0 + 6} ${sy + 1.5}H${x1 - 6}" stroke="#ead7bc" stroke-width="1.5"/></g>`;
+    if (top) {
+      catwalkArt += `<path d="M${x0 + 6} ${sy - 17}Q${(x0 + x1) / 2} ${sy - 9} ${x1 - 6} ${sy - 17}" fill="none" stroke="#b7a28a" stroke-width="1.3"/>`;
+      for (const px of [x0 + 6, x0 + span * .33, x0 + span * .67, x1 - 6]) catwalkArt += `<path d="M${px} ${sy}v-15" stroke="#b7a28a" stroke-width="1.2"/>`;
+    }
+  }
   for (let row = 1; row <= levels; row++) {
-    const h = towerTop + row * 60;
-    const count = Math.max(2, Math.min(5, Math.ceil(W / 300)));
-    const margin = 22, gap = 24, span = (W - margin * 2 - gap * (count - 1)) / count;
-    for (let col = 0; col < count; col++) {
-      const x0 = margin + col * (span + gap), x1 = x0 + span;
-      platforms.push({ x0, x1, h, xc: (x0 + x1) / 2, kind: 'bridge', type: 'catwalk', node: true });
-      const sy = y(h), tone = (row + col) % 2 ? '#c9ab87' : '#bfa181';
-      catwalkArt += `<g class="catwalk-shelf"><path d="M${x0 + 14} ${sy + 5}v15l20-15M${x1 - 14} ${sy + 5}v15l-20-15" fill="none" stroke="#b59b7e" stroke-width="2" opacity=".65"/><rect x="${x0}" y="${sy}" width="${span}" height="7" rx="3.5" fill="${tone}" stroke="#a98a67"/><path d="M${x0 + 8} ${sy + 2}H${x1 - 8}" stroke="#ead7bc" stroke-width="1.5"/></g>`;
+    const h = towerTop + (ceiling - towerTop) * row / levels;
+    if (row === levels) {
+      wallShelf(40, (W - 132) / 2, h, true);
+      wallShelf(W / 2 + 26, (W - 132) / 2, h, true);
+    } else {
+      const span = W < 560 ? 105 : 132 + (row % 2) * 22;
+      const inset = row % 2 ? (W < 560 ? 73 : 88) : 25;
+      wallShelf(W - inset - span, span, h);
+      if (hasA) wallShelf(inset, span, h - 16);
     }
   }
   box.insertAdjacentHTML('beforeend', `<svg class="bridges catwalks" aria-hidden="true" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${catwalkArt}</svg>`);
