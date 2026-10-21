@@ -258,7 +258,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '1.7.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '1.8.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -910,7 +910,7 @@ function layoutProps() {
     if (P === Q) continue;
     if (walkLinked(P, Q)) { P.out.push({ from: P, to: Q, type: 'walk' }); continue; }
     const gx = Math.max(0, Q.x0 - P.x1, P.x0 - Q.x1), dy = Q.h - P.h;
-    if (gx <= 120 && dy <= 60 && dy >= -260 && P.kind !== 'ramp' && Q.kind !== 'ramp') P.out.push({ from: P, to: Q, type: 'jump' });
+    if (gx <= 130 && dy <= 92 && dy >= -260 && P.kind !== 'ramp' && Q.kind !== 'ramp') P.out.push({ from: P, to: Q, type: 'jump' });
   }
 }
 // 목표 칸까지 몇 단계인지 (역방향 BFS)
@@ -926,9 +926,9 @@ function distTo(goal) {
 const nodeOf = c => (c.stand && c.stand.node) ? c.stand : GROUND;
 const isHigh = c => !!(c.stand && c.stand.node);
 function launchX(P, Q, cx) {
-  const lo = Math.max(P.x0, Q.x0), hi = Math.min(P.x1, Q.x1);
+  const lo = Math.max(P.x0, Q.x0, CAT_W / 2 + 2), hi = Math.min(P.x1, Q.x1, innerWidth - CAT_W / 2 - 2);
   if (hi - lo >= 16) return Math.min(hi - 8, Math.max(lo + 8, cx));     // 위아래로 겹치면 그 자리에서 점프
-  return Q.xc > P.xc ? P.x1 - 12 : P.x0 + 12;                           // 옆 칸이면 가장자리에서 도약
+  return Math.max(CAT_W / 2 + 2, Math.min(innerWidth - CAT_W / 2 - 2, Q.xc > P.xc ? P.x1 - 12 : P.x0 + 12));   // 옆 칸이면 가장자리에서 도약
 }
 
 function say(c, text, ms = 1200) {
@@ -942,40 +942,58 @@ const setMode = (c, mode, t, dur) => { c.mode = mode; c.until = t + dur; };
 const onTower = c => c.stand?.kind === 'tower';
 const grounded = c => !c.air && !c.stand;
 
-function sleepNow(c, t) { c.noteAt = 0; setMode(c, 'sleep', t, rnd(9000, 22000)); }
+function sleepNow(c, t) { c.noteAt = 0; setMode(c, 'sleep', t, rnd(6000, 14000)); }
 function groomNow(c, t) { setMode(c, 'groom', t, rnd(3000, 5500)); }
 function travelTo(c, goal, t) {
   if (!goal || goal === nodeOf(c)) { setMode(c, 'sit', t, 1200); return; }
   c.goal = goal; c.edge = null; setMode(c, 'travel', t, 45000);
 }
 const highSpots = () => nodes.filter(n => n.kind === 'tower' || n.kind === 'bridge');
+const SHOUTS = ['우다다다!', '야호~', '냥냥!', '다다다!'];
+function zoomGoal(c, here) {
+  const spots = highSpots().filter(n => n !== here);
+  if (!spots.length) return null;
+  if (Math.random() < .12) return GROUND;
+  // 멀리 있는 곳을 더 좋아한다 (왔다갔다 달리기)
+  const a = spots[Math.floor(Math.random() * spots.length)], b = spots[Math.floor(Math.random() * spots.length)];
+  return Math.abs(a.xc - here.xc) + Math.abs(a.h - here.h) > Math.abs(b.xc - here.xc) + Math.abs(b.h - here.h) ? a : b;
+}
+function startZoom(c, t) {
+  const g = zoomGoal(c, nodeOf(c));
+  if (!g) { setMode(c, 'sit', t, 1200); return; }
+  c.zoom = 3 + Math.floor(rnd(0, 4)); c.goal = g; c.edge = null;
+  say(c, SHOUTS[Math.floor(Math.random() * SHOUTS.length)], 1000);
+  setMode(c, 'travel', t, 90000);
+}
 function pickIdle(c, t) {
-  c.goal = null; c.edge = null;
+  c.goal = null; c.edge = null; c.zoom = 0;
   if (isHigh(c) && c.stand.kind !== 'ramp') return pickPerch(c, t);
   const r = Math.random();
   const cushions = platforms.filter(p => p.kind === 'cushion');
   const wheelFree = wheel && !cats.some(o => o.stand?.kind === 'wheel' || o.mode === 'goWheel' || o.mode === 'run');
   const spots = highSpots();
-  if (r < .34) sleepNow(c, t);
-  else if (r < .40) { c.dir = Math.random() < .5 ? -1 : 1; c.speed = rnd(22, 50); setMode(c, 'walk', t, rnd(2000, 5000)); }
-  else if (r < .44) setMode(c, 'sit', t, rnd(1500, 3500));
-  else if (r < .48) { c.willPurr = Math.random() < .6; setMode(c, 'loaf', t, rnd(2500, 5000)); }
-  else if (r < .51) { c.noteAt = 0; setMode(c, 'purr', t, rnd(3500, 6000)); say(c, '골골골~ ♪', 1500); }
-  else if (r < .58) groomNow(c, t);
-  else if (r < .63 && cushions.length) { const p = cushions[Math.floor(Math.random() * cushions.length)]; c.tx = p.xc; setMode(c, 'goto', t, 14000); }
-  else if (r < .80 && spots.length) travelTo(c, spots[Math.floor(Math.random() * spots.length)], t);   // 높은 곳으로 탐험
-  else if (r < .85 && posts.length) { c.tx = posts.reduce((b, x) => Math.abs(x - c.x - CAT_W / 2) < Math.abs(b - c.x - CAT_W / 2) ? x : b); setMode(c, 'goScratch', t, 16000); }
-  else if (r < .91 && wheelFree) { c.tx = wheel.xc; setMode(c, 'goWheel', t, 16000); }
+  if (r < .22) sleepNow(c, t);
+  else if (r < .27) { c.dir = Math.random() < .5 ? -1 : 1; c.speed = rnd(22, 50); setMode(c, 'walk', t, rnd(2000, 5000)); }
+  else if (r < .30) setMode(c, 'sit', t, rnd(1500, 3500));
+  else if (r < .33) { c.willPurr = Math.random() < .6; setMode(c, 'loaf', t, rnd(2500, 5000)); }
+  else if (r < .35) { c.noteAt = 0; setMode(c, 'purr', t, rnd(3500, 6000)); say(c, '골골골~ ♪', 1500); }
+  else if (r < .40) groomNow(c, t);
+  else if (r < .44 && cushions.length) { const p = cushions[Math.floor(Math.random() * cushions.length)]; c.tx = p.xc; setMode(c, 'goto', t, 14000); }
+  else if (r < .76 && spots.length) startZoom(c, t);   // 타워와 다리를 뛰어다니며 놀기
+  else if (r < .81 && spots.length) travelTo(c, spots[Math.floor(Math.random() * spots.length)], t);
+  else if (r < .86 && posts.length) { c.tx = posts.reduce((b, x) => Math.abs(x - c.x - CAT_W / 2) < Math.abs(b - c.x - CAT_W / 2) ? x : b); setMode(c, 'goScratch', t, 16000); }
+  else if (r < .92 && wheelFree) { c.tx = wheel.xc; setMode(c, 'goWheel', t, 16000); }
   else startPlay(c, t);
 }
 // 높은 곳(타워·다리)에서의 행동
 function pickPerch(c, t) {
   const r = Math.random(), spots = highSpots();
-  if (r < .30) sleepNow(c, t);
-  else if (r < .45) groomNow(c, t);
-  else if (r < .55) setMode(c, 'sit', t, rnd(2000, 4500));
-  else if (r < .62) { c.willPurr = false; setMode(c, 'loaf', t, rnd(2500, 5000)); }
-  else if (r < .90 && spots.length) travelTo(c, spots[Math.floor(Math.random() * spots.length)], t);   // 다른 높은 곳으로
+  if (r < .16) sleepNow(c, t);
+  else if (r < .26) groomNow(c, t);
+  else if (r < .32) setMode(c, 'sit', t, rnd(1500, 3500));
+  else if (r < .36) { c.willPurr = false; setMode(c, 'loaf', t, rnd(2500, 5000)); }
+  else if (r < .84 && spots.length) startZoom(c, t);   // 다른 높은 곳으로 달려가 놀기
+  else if (r < .92 && spots.length) travelTo(c, spots[Math.floor(Math.random() * spots.length)], t);
   else travelTo(c, GROUND, t);   // 내려가기
 }
 function jumpTo(c, p, tx, t) {
@@ -1024,7 +1042,7 @@ function renderCats() {
   cats = state.pets.map(p => {
     const c = old[p.id] || { id: p.id, x: Math.random() * Math.max(0, innerWidth - CAT_W), y: 0, vy: 0, vx: 0, air: false, stand: null,
       dir: Math.random() < .5 ? 1 : -1, speed: rnd(22, 50), mode: Math.random() < .85 ? 'sleep' : 'sit',
-      until: performance.now() + rnd(4000, 20000) };
+      until: performance.now() + rnd(2500, 9000) };
     if (!['walk', 'sit', 'loaf', 'purr', 'sleep', 'alert', 'groom'].includes(c.mode)) c.mode = 'sit';
     c.cls = ''; c.partner = null;
     const look = lookFor(p, state.pets.indexOf(p));
@@ -1069,6 +1087,7 @@ function tickCats(t) {
     if (t > c.until && !still) {
       if (c.mode === 'alert') {
         if (mouseOn && hunters.includes(c) && c.y < 20 && Math.random() < .35) startHunt(c, t);
+        else if (Math.random() < .3 && highSpots().length) startZoom(c, t);
         else if (mouseOn && Math.random() < .5) setMode(c, 'alert', t, rnd(1200, 2000));
         else sleepNow(c, t);
       }
@@ -1120,28 +1139,48 @@ function tickCats(t) {
           h.style.left = rnd(30, 44) + 'px'; c.el.appendChild(h); setTimeout(() => h.remove(), 1400);
         }
         break;
-      case 'travel': {   // 목표 칸까지 걷거나 점프로 이동
+      case 'travel': {   // 목표 칸까지 걷거나 달리고 점프로 이동 (우다다 중이면 쉬지 않고 다음 칸으로)
         if (c.air) break;
-        const here = nodeOf(c), goal = c.goal;
-        if (!goal || here === goal) { c.goal = null; setMode(c, 'sit', t, rnd(600, 1400)); break; }
+        let here = nodeOf(c);
+        if (!c.goal || here === c.goal) {
+          if (c.zoom > 1) {
+            c.zoom--; const g = zoomGoal(c, here);
+            if (g) { c.goal = g; c.edge = null; if (Math.random() < .3) say(c, SHOUTS[Math.floor(Math.random() * SHOUTS.length)], 900); }
+          }
+          if (!c.goal || here === c.goal) {
+            if (c.zoom) say(c, '헥헥…', 1300);
+            c.goal = null; c.zoom = 0; setMode(c, 'sit', t, rnd(900, 2200)); break;
+          }
+        }
+        const goal = c.goal, run = c.zoom ? 1 : 0;
         if (!c.edge || c.edge.from !== here) {
           const d = distTo(goal), mine = d.get(here);
           const opts = mine == null ? [] : here.out.filter(e => d.get(e.to) < mine);
-          if (!opts.length) { c.goal = null; setMode(c, 'sit', t, 1000); break; }
-          c.edge = opts[Math.floor(Math.random() * opts.length)];
+          if (!opts.length) { c.goal = null; c.zoom = 0; setMode(c, 'sit', t, 1000); break; }
+          const e = c.edge = { ...opts[Math.floor(Math.random() * opts.length)], t0: t };
+          e.dirj = Math.random() < .5 ? -1 : 1; e.run = rnd(50, 130); e.span = rnd(70, 130);
         }
         const e = c.edge, to = e.to;
+        if (t - e.t0 > 9000) { c.goal = null; c.edge = null; c.zoom = 0; setMode(c, 'sit', t, 1000); break; }   // 한 구간에서 막히면 포기
         if (e.type === 'walk') {
           const dx = (to === GROUND ? (here.lowDir || 1) * 1e3 : to.xc - cx);
-          c.dir = dx < 0 ? -1 : 1; c.x += c.dir * 55 * dt; pose = 'walking';
+          c.dir = dx < 0 ? -1 : 1; c.x += c.dir * (run ? 135 : 55) * dt; pose = run ? 'walking fast' : 'walking';
         } else {
-          const lx = launchX(here, to, cx), dx = lx - cx;
-          if (Math.abs(dx) < 4) {
-            const over = Math.min(here.x1, to.x1) - Math.max(here.x0, to.x0) >= 16;
-            const tx = over ? lx : (to.xc > here.xc ? to.x0 + 12 : to.x1 - 12);
-            jumpTo(c, to, Math.max(to.x0 + 8, Math.min(to.x1 - 8, tx)), t); c.edge = null; break;
+          const lo = Math.max(here.x0, to.x0, CAT_W / 2 + 2) + 8, hi = Math.min(here.x1, to.x1, innerWidth - CAT_W / 2 - 2) - 8, over = hi - lo >= 24;
+          let lx, tx;
+          if (over) {   // 위아래로 겹치는 칸: 옆으로 달려가 도움닫기해서 비스듬히 뛴다
+            if (e.jx == null) e.jx = cx + e.dirj * e.run;
+            lx = Math.max(lo, Math.min(hi, e.jx));
+            tx = Math.max(to.x0 + 8, Math.min(to.x1 - 8, lx + e.dirj * e.span));
+          } else {   // 옆 칸: 칸의 반대쪽 끝까지 달려가 도움닫기해서 멀리 뛴다
+            const dj = to.xc > here.xc ? 1 : -1, cl = x => Math.max(CAT_W / 2 + 2, Math.min(innerWidth - CAT_W / 2 - 2, x));
+            const farL = cl(dj > 0 ? here.x0 + 14 : here.x1 - 14), farT = dj > 0 ? to.x1 - 12 : to.x0 + 12;
+            if (Math.abs(farT - farL) <= 140) { lx = farL; tx = farT; }
+            else { lx = launchX(here, to, cx); tx = dj > 0 ? to.x0 + 12 : to.x1 - 12; }
           }
-          c.dir = dx < 0 ? -1 : 1; c.x += c.dir * 70 * dt; pose = 'walking';
+          const dx = lx - cx;
+          if (Math.abs(dx) < 4) { jumpTo(c, to, Math.max(to.x0 + 8, Math.min(to.x1 - 8, tx)), t); c.edge = null; break; }
+          c.dir = dx < 0 ? -1 : 1; c.x += c.dir * (run ? 150 : 70) * dt; pose = run ? 'walking fast' : 'walking';
         }
         break;
       }
