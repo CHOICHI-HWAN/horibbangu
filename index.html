@@ -61,7 +61,7 @@
   #todayBox input { width: 100px; }
   #todayBox[hidden] { display: none; }
   body { padding-bottom: 58px; }
-  #cats { position: fixed; left: 0; right: 0; bottom: 0; height: 140px; pointer-events: none; z-index: 5; overflow: hidden; }
+  #cats { position: fixed; left: 0; right: 0; bottom: 0; height: 200px; pointer-events: none; z-index: 5; overflow: hidden; }
   #cats[hidden] { display: none; }
   .cat { position: absolute; left: 0; bottom: 2px; width: 52px; height: 36px; pointer-events: auto; cursor: pointer; will-change: transform; }
   .cat .flip { width: 52px; height: 36px; }
@@ -74,6 +74,21 @@
   .cat svg { transform-origin: 50% 100%; }
   .cat.purr svg { animation: buzz .14s infinite; }
   .cat.sleep svg { animation: breathe 3.2s ease-in-out infinite; }
+  #props { position: absolute; inset: 0; pointer-events: none; }
+  .cushion { position: absolute; bottom: 3px; width: 64px; height: 15px; border-radius: 12px 12px 7px 7px;
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,.13), 0 1px 0 rgba(0,0,0,.18); }
+  .cushion::after { content: ''; position: absolute; left: 7px; right: 7px; top: 5px; border-top: 1.5px dashed rgba(255,255,255,.65); }
+  .tower { position: absolute; bottom: 0; width: 150px; height: 134px; }
+  .cat .head { transform-box: fill-box; transform-origin: 40% 100%; transition: transform .2s; }
+  .cat.groom .head { transform: rotate(32deg); animation: lick .5s ease-in-out infinite; }
+  .cat.groom .l4 { transform: rotate(-68deg); animation: lickleg .5s ease-in-out infinite; }
+  .cat.knead .l3 { animation: press .55s ease-in-out infinite; }
+  .cat.knead .l4 { animation: press .55s ease-in-out infinite reverse; }
+  .cat.knead svg { animation: bob .55s ease-in-out infinite; }
+  @keyframes lick { 0%, 100% { transform: rotate(28deg); } 50% { transform: rotate(40deg); } }
+  @keyframes lickleg { 0%, 100% { transform: rotate(-72deg); } 50% { transform: rotate(-58deg); } }
+  @keyframes press { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-2px) scaleY(.55); } }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1.5px); } }
   .cat .eyec { display: none; }
   .cat.sleep .eye { display: none; } .cat.sleep .eyec { display: inline; }
   .cat .ear { transform-box: fill-box; transform-origin: 50% 100%; }
@@ -161,7 +176,7 @@
   </div>
 </div>
 
-<div id="cats" aria-hidden="true"></div>
+<div id="cats" aria-hidden="true"><div id="props"></div></div>
 <footer style="text-align:center;color:var(--muted);font-size:12px;padding:0 0 30px">호리빵구 체중기록 <span id="ver"></span></footer>
 
 <dialog id="recDlg">
@@ -201,7 +216,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '1.2.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '1.3.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -648,7 +663,9 @@ $('todayBox').onsubmit = e => {
 $('ver').textContent = 'v' + VERSION;
 
 // ---------- 돌아다니는 고양이 ----------
-// 상태: walk 산책 / sit 앉기 / loaf 식빵 / purr 골골송 / stalk·freeze·dash·pounce 마우스 사냥 / chase·flee 잡기놀이
+// 상태: sleep 잠 / alert 귀 쫑긋 / walk 산책 / sit / loaf 식빵 / purr 골골송 / groom 그루밍
+//       goto→knead 쿠션 꾹꾹이 / goTower→jump→(sit·sleep·groom…) 캣타워 / dropoff 내려오기
+//       stalk→freeze→dash→pounce 마우스 사냥 / chase·flee 술래잡기
 const CAT_SVG = `<svg viewBox="0 0 64 44"><g class="all">
   <g class="tail"><path d="M10 24 C-2 20 0 6 9 9" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></g>
   <rect class="leg l1" x="13" y="30" width="6" height="11" rx="3" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
@@ -656,19 +673,57 @@ const CAT_SVG = `<svg viewBox="0 0 64 44"><g class="all">
   <ellipse cx="26" cy="26" rx="18" ry="10" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
   <rect class="leg l3" x="31" y="30" width="6" height="11" rx="3" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
   <rect class="leg l4" x="39" y="30" width="6" height="11" rx="3" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-  <polygon class="ear" points="41,15 43,3 50,12" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-  <polygon class="ear" points="49,12 56,3 58,16" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-  <circle cx="49" cy="21" r="10" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
-  <circle class="eye" cx="53" cy="19" r="1.8" fill="#222"/><circle class="eye" cx="46" cy="19" r="1.8" fill="#222"/>
-  <path class="eyec" d="M44 19.5 q2.2 2.2 4.4 0 M51 19.5 q2.2 2.2 4.4 0" fill="none" stroke="#222" stroke-width="1.4" stroke-linecap="round"/>
-  <polygon points="49,23 51,23 50,25" fill="#e38"/></g>
+  <g class="head">
+    <polygon class="ear" points="41,15 43,3 50,12" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
+    <polygon class="ear" points="49,12 56,3 58,16" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
+    <circle cx="49" cy="21" r="10" fill="currentColor" stroke="rgba(0,0,0,.25)"/>
+    <circle class="eye" cx="53" cy="19" r="1.8" fill="#222"/><circle class="eye" cx="46" cy="19" r="1.8" fill="#222"/>
+    <path class="eyec" d="M44 19.5 q2.2 2.2 4.4 0 M51 19.5 q2.2 2.2 4.4 0" fill="none" stroke="#222" stroke-width="1.4" stroke-linecap="round"/>
+    <polygon points="49,23 51,23 50,25" fill="#e38"/>
+  </g></g>
 </svg>`;
-const CAT_W = 52, G = 900;
+const CAT_W = 52, G = 900, FOOT = 4.5;
+const CUSHION_COLORS = ['#f4a6b8', '#a8d5ba', '#a9c4eb'];
 let cats = [], catSig = '', catsOn = true, lastT = 0;
+let platforms = [];   // { x0, x1, h, xc, kind: 'cushion'|'tower', lvl }
 const mouse = { x: -1, y: -1, t: -1e9 };
 try { catsOn = localStorage.getItem(KEY + ':cats') !== 'off'; } catch (e) {}
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.t = performance.now(); });
+
+// 쿠션과 캣타워 배치 (화면 너비에 맞춰 다시 계산)
+function layoutProps() {
+  const W = innerWidth, box = $('props');
+  box.innerHTML = ''; platforms = [];
+  const tx = W - 150 - Math.min(40, W * .05);
+  const levels = [   // 타워 SVG 좌표(150x134)의 발판: [x0, x1, 높이h]
+    [8, 70, 38], [80, 142, 76], [8, 70, 114]];
+  const ty = h => 134 - (FOOT + h);
+  box.insertAdjacentHTML('beforeend', `<svg class="tower" style="left:${tx}px" viewBox="0 0 150 134">
+    <rect x="0" y="129" width="150" height="5" rx="2" fill="#a98258"/>
+    <rect x="66" y="14" width="16" height="116" rx="3" fill="#d8c3a5"/>
+    <path d="M66 24h16M66 36h16M66 48h16M66 60h16M66 72h16M66 84h16M66 96h16M66 108h16M66 120h16" stroke="#b79d7a" stroke-width="1.5"/>
+    ${levels.map(([x0, x1, h]) => `<rect x="${x0}" y="${ty(h)}" width="${x1 - x0}" height="8" rx="3" fill="#c9a27a" stroke="#a98258"/>`).join('')}
+    <line x1="132" y1="${ty(76)}" x2="132" y2="${ty(76) - 24}" stroke="#999"/>
+    <circle cx="132" cy="${ty(76) - 28}" r="4" fill="#e45"/>
+  </svg>`);
+  levels.forEach(([x0, x1, h], i) => platforms.push({ x0: tx + x0 + 4, x1: tx + x1 - 4, h, xc: tx + (x0 + x1) / 2, kind: 'tower', lvl: i + 1 }));
+  const room = tx - 100, n = room >= 330 ? 3 : room >= 150 ? 2 : room >= 90 ? 1 : 0;
+  for (let i = 0; i < n; i++) {
+    const left = 14 + (room - 64 - 14) * (n === 1 ? .5 : i / (n - 1));
+    const d = document.createElement('div');
+    d.className = 'cushion'; d.style.left = left + 'px'; d.style.background = CUSHION_COLORS[i % 3];
+    box.appendChild(d);
+    platforms.push({ x0: left + 8, x1: left + 56, h: 13, xc: left + 32, kind: 'cushion', lvl: -1 });
+  }
+}
+const towerLevel = l => platforms.find(p => p.kind === 'tower' && p.lvl === l);
+// cx 위치에서 y 높이의 발 아래 발판 (tol: 올라설 수 있는 단차)
+function floorAt(cx, y, tol) {
+  let best = null;
+  for (const p of platforms) if (cx >= p.x0 && cx <= p.x1 && p.h <= y + tol && (!best || p.h > best.h)) best = p;
+  return best;
+}
 
 function say(c, text, ms = 1200) {
   const b = document.createElement('span');
@@ -676,23 +731,49 @@ function say(c, text, ms = 1200) {
   c.el.querySelectorAll('.bubble').forEach(x => x.remove());
   c.el.appendChild(b); setTimeout(() => b.remove(), ms);
 }
-const petName = c => state.pets.find(p => p.id === c.id)?.name || '';
 const rnd = (a, b) => a + Math.random() * (b - a);
+const setMode = (c, mode, t, dur) => { c.mode = mode; c.until = t + dur; };
+const onTower = c => c.stand?.kind === 'tower';
+const grounded = c => !c.air && !c.stand;
 
-function setMode(c, mode, t, dur) { c.mode = mode; c.until = t + dur; c.t0 = t; }
 function sleepNow(c, t) { c.noteAt = 0; setMode(c, 'sleep', t, rnd(9000, 22000)); }
+function groomNow(c, t) { setMode(c, 'groom', t, rnd(3000, 5500)); }
 function pickIdle(c, t) {
+  if (onTower(c)) return pickPerch(c, t);
   const r = Math.random();
-  if (r < .6) sleepNow(c, t);
-  else if (r < .72) { c.dir = Math.random() < .5 ? -1 : 1; c.speed = rnd(22, 50); setMode(c, 'walk', t, rnd(2000, 5000)); }
-  else if (r < .80) setMode(c, 'sit', t, rnd(1500, 3500));
-  else if (r < .88) { c.willPurr = Math.random() < .6; setMode(c, 'loaf', t, rnd(2500, 5000)); }
-  else if (r < .93) { c.noteAt = 0; setMode(c, 'purr', t, rnd(3500, 6000)); say(c, '골골골~ ♪', 1500); }
+  const cushions = platforms.filter(p => p.kind === 'cushion');
+  if (r < .45) sleepNow(c, t);
+  else if (r < .53) { c.dir = Math.random() < .5 ? -1 : 1; c.speed = rnd(22, 50); setMode(c, 'walk', t, rnd(2000, 5000)); }
+  else if (r < .58) setMode(c, 'sit', t, rnd(1500, 3500));
+  else if (r < .64) { c.willPurr = Math.random() < .6; setMode(c, 'loaf', t, rnd(2500, 5000)); }
+  else if (r < .68) { c.noteAt = 0; setMode(c, 'purr', t, rnd(3500, 6000)); say(c, '골골골~ ♪', 1500); }
+  else if (r < .78) groomNow(c, t);
+  else if (r < .86 && cushions.length) { const p = cushions[Math.floor(Math.random() * cushions.length)]; c.tx = p.xc; setMode(c, 'goto', t, 14000); }
+  else if (r < .94 && towerLevel(1)) { const p = towerLevel(1); c.tx = p.xc + (c.x + 26 < p.xc ? -62 : 62); setMode(c, 'goTower', t, 16000); }
   else startPlay(c, t);
 }
+// 캣타워 위에서의 행동
+function pickPerch(c, t) {
+  const r = Math.random(), lvl = c.stand.lvl;
+  if (r < .4) sleepNow(c, t);
+  else if (r < .55) groomNow(c, t);
+  else if (r < .65) setMode(c, 'sit', t, rnd(2000, 4500));
+  else if (r < .72) { c.willPurr = false; setMode(c, 'loaf', t, rnd(2500, 5000)); }
+  else if (r < .88) {   // 다른 층으로 점프
+    const next = towerLevel(lvl + (lvl === 3 || (lvl > 1 && Math.random() < .5) ? -1 : 1));
+    if (next) jumpTo(c, next, t); else setMode(c, 'sit', t, 1500);
+  } else { c.dir = c.x + 26 < c.stand.xc ? -1 : 1; setMode(c, 'dropoff', t, 6000); }
+}
+function jumpTo(c, p, t) {
+  const dy = p.h - c.y, vy = Math.sqrt(2 * G * (Math.max(dy, 0) + 16));
+  const tf = (vy + Math.sqrt(Math.max(0, vy * vy - 2 * G * dy))) / G;
+  c.vx = Math.max(-260, Math.min(260, (p.xc - (c.x + 26)) / tf));
+  c.dir = c.vx < 0 ? -1 : 1; c.vy = vy; c.y += .5; c.air = true; c.stand = null;
+  setMode(c, 'jump', t, 5000);
+}
 function startPlay(c, t) {
-  const idle = cats.filter(o => o !== c && ['walk', 'sit', 'loaf'].includes(o.mode));
-  if (!idle.length) { setMode(c, 'sit', t, 1500); return; }
+  const idle = cats.filter(o => o !== c && grounded(o) && ['walk', 'sit', 'loaf'].includes(o.mode));
+  if (!idle.length || !grounded(c)) { setMode(c, 'sit', t, 1500); return; }
   const o = idle[Math.floor(Math.random() * idle.length)];
   const dur = rnd(6000, 9000);
   c.partner = o; o.partner = c;
@@ -700,12 +781,22 @@ function startPlay(c, t) {
   say(c, '잡는다!', 1000); say(o, '꺄악~', 1000);
 }
 function endPlay(c, t) { c.partner = null; setMode(c, 'sit', t, rnd(1200, 2500)); }
-function startHunt(c, t) { setMode(c, 'stalk', t, 6000); c.speed = 45; }
+function startHunt(c, t) { setMode(c, 'stalk', t, 6000); }
 function pounce(c, t, h) {
   c.vy = Math.sqrt(2 * G * Math.max(25, Math.min(110, h) + 15));
-  c.vx = c.dir * 130; c.y = 0.1; c.mode = 'pounce'; c.until = t + 3000;
+  c.vx = c.dir * 130; c.y += .5; c.air = true; c.stand = null; setMode(c, 'pounce', t, 3000);
 }
 function leave(c, t) { if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
+function onLand(c, t) {
+  if (c.mode === 'pounce') {
+    const hit = t - mouse.t < 2500 && Math.abs(mouse.x - (c.x + 26)) < 45;
+    say(c, hit ? '잡았다! 챱!' : '앗 놓쳤다…', 1300);
+    setMode(c, 'sit', t, 1300);
+  } else if (c.mode === 'jump') {
+    if (onTower(c) && Math.random() < .4) say(c, '야옹!', 900);
+    setMode(c, 'sit', t, rnd(1200, 2500));
+  } else if (c.mode === 'dropoff') setMode(c, 'sit', t, 1000);
+}
 
 function renderCats() {
   $('cats').hidden = !catsOn;
@@ -715,13 +806,13 @@ function renderCats() {
   catSig = sig;
   const old = Object.fromEntries(cats.map(c => [c.id, c]));
   cats.forEach(c => leave(c, 0));
-  $('cats').innerHTML = '';
+  $('cats').querySelectorAll('.cat').forEach(e => e.remove());
   cats = state.pets.map(p => {
-    const c = old[p.id] || { id: p.id, x: Math.random() * Math.max(0, innerWidth - CAT_W), y: 0, vy: 0, vx: 0,
+    const c = old[p.id] || { id: p.id, x: Math.random() * Math.max(0, innerWidth - CAT_W), y: 0, vy: 0, vx: 0, air: false, stand: null,
       dir: Math.random() < .5 ? 1 : -1, speed: rnd(22, 50), mode: Math.random() < .85 ? 'sleep' : 'sit',
       until: performance.now() + rnd(4000, 20000) };
-    if (!['walk', 'sit', 'loaf', 'purr', 'sleep', 'alert'].includes(c.mode)) c.mode = 'sit';
-    c.cls = ''; c.partner = null; c.y = 0;
+    if (!['walk', 'sit', 'loaf', 'purr', 'sleep', 'alert', 'groom'].includes(c.mode)) c.mode = 'sit';
+    c.cls = ''; c.partner = null;
     c.el = document.createElement('div');
     c.el.className = 'cat';
     c.el.style.setProperty('--c', p.color);
@@ -755,7 +846,7 @@ function tickCats(t) {
       const near = Math.abs(cx - mouse.x) < 420;
       if (Math.random() < dt * (near ? 2.2 : .5)) { c.dir = mouse.x < cx ? -1 : 1; setMode(c, 'alert', t, rnd(1500, 2400)); }
     }
-    else if (['walk', 'sit', 'loaf'].includes(c.mode) && hunters.includes(c) && Math.random() < dt * .3) { startHunt(c, t); }
+    else if (['walk', 'sit', 'loaf'].includes(c.mode) && hunters.includes(c) && !c.air && Math.random() < dt * .3) { startHunt(c, t); }
 
     // 시간이 다 되면 다음 행동
     if (t > c.until && !still) {
@@ -765,17 +856,19 @@ function tickCats(t) {
         else sleepNow(c, t);
       }
       else if (c.mode === 'loaf' && c.willPurr) { c.willPurr = false; c.noteAt = 0; setMode(c, 'purr', t, rnd(3500, 6000)); say(c, '골골골~ ♪', 1500); }
+      else if (c.mode === 'knead') { if (Math.random() < .55) sleepNow(c, t); else pickIdle(c, t); }
       else if (c.mode === 'stalk' || c.mode === 'dash') setMode(c, 'sit', t, 1000);
       else if (c.mode === 'freeze') setMode(c, 'dash', t, 1500);
       else if (c.mode === 'chase' || c.mode === 'flee') { const p = c.partner; endPlay(c, t); if (p) endPlay(p, t); }
-      else if (c.mode === 'pounce') { c.y = 0; setMode(c, 'sit', t, 1000); }
-      else pickIdle(c, t);
+      else if (c.mode === 'pounce' || c.mode === 'jump') setMode(c, 'sit', t, 1000);
+      else if (!c.air) pickIdle(c, t);
     }
 
     let pose = '';
     switch (c.mode) {
       case 'walk': c.x += c.dir * c.speed * dt; pose = 'walking'; break;
       case 'loaf': pose = 'loaf'; break;
+      case 'groom': pose = 'groom'; break;
       case 'sleep':
         pose = 'sleep';
         if (t > (c.noteAt || 0)) {
@@ -796,6 +889,26 @@ function tickCats(t) {
           n.style.left = rnd(12, 36) + 'px'; c.el.appendChild(n); setTimeout(() => n.remove(), 1400);
         }
         break;
+      case 'goto': {   // 쿠션으로 가서 꾹꾹이
+        const dx = c.tx - cx;
+        if (Math.abs(dx) < 5) { c.noteAt = 0; setMode(c, 'knead', t, rnd(4500, 8000)); say(c, '꾹꾹꾹~', 1400); break; }
+        c.dir = dx < 0 ? -1 : 1; c.x += c.dir * 60 * dt; pose = 'walking'; break;
+      }
+      case 'knead':
+        pose = 'knead';
+        if (t > (c.noteAt || 0)) {
+          c.noteAt = t + 1100;
+          const h = document.createElement('span'); h.className = 'note'; h.textContent = '♡';
+          h.style.left = rnd(30, 44) + 'px'; c.el.appendChild(h); setTimeout(() => h.remove(), 1400);
+        }
+        break;
+      case 'goTower': {   // 타워 1층 점프 지점까지 걸어가서 뛰어오름
+        const dx = c.tx - cx, p1 = towerLevel(1);
+        if (!p1) { setMode(c, 'sit', t, 1000); break; }
+        if (Math.abs(dx) < 6 && !c.air) { jumpTo(c, p1, t); break; }
+        c.dir = dx < 0 ? -1 : 1; c.x += c.dir * 70 * dt; pose = 'walking'; break;
+      }
+      case 'dropoff': c.x += c.dir * 50 * dt; pose = 'walking'; break;
       case 'stalk': {
         if (!mouseOn) { setMode(c, 'sit', t, 1000); break; }
         const dx = mouse.x - cx; c.dir = dx < 0 ? -1 : 1;
@@ -805,18 +918,8 @@ function tickCats(t) {
       case 'freeze': pose = 'crouch'; if (mouseOn) c.dir = mouse.x < cx ? -1 : 1; break;
       case 'dash': {
         const dx = mouse.x - cx; c.dir = dx < 0 ? -1 : 1;
-        if (!mouseOn || Math.abs(dx) < 30) { pounce(c, t, ground - mouse.y); break; }
+        if (!mouseOn || Math.abs(dx) < 30) { pounce(c, t, ground - mouse.y - c.y); break; }
         c.x += c.dir * 190 * dt; pose = 'walking fast'; break;
-      }
-      case 'pounce': {
-        c.x += c.vx * dt; c.y += c.vy * dt; c.vy -= G * dt; pose = 'air';
-        if (c.y <= 0) {
-          c.y = 0;
-          const hit = mouseOn && Math.abs(mouse.x - (c.x + 26)) < 45;
-          say(c, hit ? '잡았다! 챱!' : '앗 놓쳤다…', 1300);
-          setMode(c, 'sit', t, 1300);
-        }
-        break;
       }
       case 'chase': case 'flee': {
         const p = c.partner;
@@ -829,13 +932,32 @@ function tickCats(t) {
         if (c.mode === 'chase' && Math.abs(dx) < 26) {   // 잡았다! 술래 교대
           say(c, '잡았다!', 900); say(p, '으앗!', 900);
           c.mode = 'flee'; p.mode = 'chase';
-          c.x += c.dir * -40; c.y = 0;
+          c.x += c.dir * -40;
         }
         break;
       }
     }
     if (c.x < 0) { c.x = 0; if (c.mode === 'walk') c.dir = 1; } else if (c.x > max) { c.x = max; if (c.mode === 'walk') c.dir = -1; }
-    const cls = 'cat ' + (c.mode === 'sit' ? '' : pose) + (c.mode === 'freeze' || pose.includes('crouch') ? ' crouch' : '');
+
+    // 물리: 점프/낙하와 발판(쿠션, 캣타워) 위에 서기
+    const fcx = c.x + 26;
+    if (c.air) {
+      const prevY = c.y;
+      c.vy -= G * dt; c.y += c.vy * dt; c.x = Math.max(0, Math.min(max, c.x + c.vx * dt));
+      if (c.vy < 0) {
+        const p = floorAt(c.x + 26, prevY, 1), fy = p ? p.h : 0;
+        if (c.y <= fy) { c.y = fy; c.vy = 0; c.vx = 0; c.air = false; c.stand = p; onLand(c, t); }
+      }
+    } else {
+      const p = floorAt(fcx, c.y, 14), fy = p ? p.h : 0;
+      if (fy > c.y) c.y = Math.min(fy, c.y + 160 * dt);
+      else if (fy < c.y - .5) { c.air = true; c.vy = 0; c.vx = 0; }   // 발판 가장자리를 벗어나면 떨어짐
+      else c.y = fy;
+      c.stand = p;
+    }
+    if (c.air) pose = 'air';
+
+    const cls = 'cat ' + (c.mode === 'sit' && !c.air ? '' : pose) + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
     if (cls !== c.cls) { c.cls = cls; c.el.className = cls; }
     c.el.style.transform = `translate(${c.x.toFixed(1)}px, ${(-c.y).toFixed(1)}px)`;
     c.el.firstChild.style.transform = c.dir < 0 ? 'scaleX(-1)' : '';
@@ -846,6 +968,9 @@ $('catBtn').onclick = () => {
   try { localStorage.setItem(KEY + ':cats', catsOn ? 'on' : 'off'); } catch (e) {}
   renderCats();
 };
+let resizeT;
+addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(layoutProps, 200); });
+layoutProps();
 requestAnimationFrame(tickCats);
 
 function renderAll() { renderSummary(); renderChips(); renderChart(); renderTable(); renderToday(); renderCats(); }
