@@ -142,13 +142,10 @@
 </dialog>
 
 <dialog id="loginDlg">
-  <form id="loginForm">
-    <h2>🐾 호리빵구 로그인</h2>
-    <div class="field"><label for="lEmail">이메일</label><input type="email" id="lEmail" required autocomplete="username"></div>
-    <div class="field"><label for="lPw">비밀번호</label><input type="password" id="lPw" required autocomplete="current-password"></div>
-    <p class="hint" id="loginMsg"></p>
-    <div class="dlgbtns"><button type="button" id="googleBtn">Google(Gmail)로 로그인</button><button type="submit" class="primary">로그인</button></div>
-  </form>
+  <h2>🐾 호리빵구 로그인</h2>
+  <p class="hint">허용된 Google 계정으로 로그인할 수 있어요.</p>
+  <button type="button" class="primary" id="googleBtn" style="width:100%;padding:10px">Google로 로그인</button>
+  <p class="hint" id="loginMsg" style="margin-top:10px"></p>
 </dialog>
 
 <dialog id="petDlg">
@@ -693,19 +690,6 @@ function showLogin() {
   if (!$('loginDlg').open) $('loginDlg').showModal();
 }
 $('loginDlg').addEventListener('cancel', e => e.preventDefault());
-$('loginForm').onsubmit = async e => {
-  e.preventDefault();
-  $('loginMsg').style.color = 'var(--muted)';
-  $('loginMsg').textContent = '로그인 중…';
-  try {
-    await auth.signInWithEmailAndPassword($('lEmail').value.trim(), $('lPw').value);
-  } catch (err) {
-    $('loginMsg').style.color = 'var(--danger)';
-    $('loginMsg').textContent = '로그인 실패: 이메일/비밀번호를 확인해주세요.';
-    return;
-  }
-  $('lPw').value = ''; $('loginMsg').textContent = '';
-};
 $('googleBtn').onclick = async () => {
   $('loginMsg').style.color = 'var(--muted)';
   $('loginMsg').textContent = 'Google 로그인 중…';
