@@ -6,7 +6,8 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.email_verified == true
         && request.auth.token.email in [
-          'c.mario8609@gmail.com'
+          'c.mario8609@gmail.com',
+          'ssa8813@gmail.com'
         ];
     }
     match /{document=**} {
