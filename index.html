@@ -314,7 +314,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '1.9.3';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '1.9.4';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -946,6 +946,24 @@ function layoutProps() {
     }
     box.insertAdjacentHTML('beforeend', `<svg class="bridges" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`);
   }
+
+  // 타워 꼭대기부터 화면 상단까지 이어지는 벽면 캣워크.
+  // 60px 높이 차와 짧은 틈으로 실제 점프 경로를 확보한다.
+  const towerTop = hs[n - 1], ceiling = H - FOOT - 78;
+  let catwalkArt = '';
+  const levels = Math.max(0, Math.floor((ceiling - towerTop) / 60));
+  for (let row = 1; row <= levels; row++) {
+    const h = towerTop + row * 60;
+    const count = Math.max(2, Math.min(5, Math.ceil(W / 300)));
+    const margin = 22, gap = 24, span = (W - margin * 2 - gap * (count - 1)) / count;
+    for (let col = 0; col < count; col++) {
+      const x0 = margin + col * (span + gap), x1 = x0 + span;
+      platforms.push({ x0, x1, h, xc: (x0 + x1) / 2, kind: 'bridge', type: 'catwalk', node: true });
+      const sy = y(h), tone = (row + col) % 2 ? '#c9ab87' : '#bfa181';
+      catwalkArt += `<g class="catwalk-shelf"><path d="M${x0 + 14} ${sy + 5}v15l20-15M${x1 - 14} ${sy + 5}v15l-20-15" fill="none" stroke="#b59b7e" stroke-width="2" opacity=".65"/><rect x="${x0}" y="${sy}" width="${span}" height="7" rx="3.5" fill="${tone}" stroke="#a98a67"/><path d="M${x0 + 8} ${sy + 2}H${x1 - 8}" stroke="#ead7bc" stroke-width="1.5"/></g>`;
+    }
+  }
+  box.insertAdjacentHTML('beforeend', `<svg class="bridges catwalks" aria-hidden="true" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${catwalkArt}</svg>`);
 
   // 경사로 (왼쪽 타워 1층 ↔ 바닥)
   let gx0 = (hasA ? xA + TW : 0) + 14;

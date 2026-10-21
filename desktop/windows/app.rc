@@ -4,8 +4,8 @@
 1 24 "app.manifest"
 2 10 "playground.html"
 1 VERSIONINFO
- FILEVERSION 1,9,3,0
- PRODUCTVERSION 1,9,3,0
+ FILEVERSION 1,9,4,0
+ PRODUCTVERSION 1,9,4,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS 0x40004L
@@ -17,11 +17,11 @@ BEGIN
   BLOCK "041204b0"
   BEGIN
    VALUE "FileDescription", "호리빵구 작은 친구들\0"
-   VALUE "FileVersion", "1.9.3.0\0"
+   VALUE "FileVersion", "1.9.4.0\0"
    VALUE "InternalName", "Horibbangu\0"
    VALUE "OriginalFilename", "호리빵구.exe\0"
    VALUE "ProductName", "호리빵구\0"
-   VALUE "ProductVersion", "1.9.3\0"
+   VALUE "ProductVersion", "1.9.4\0"
   END
  END
  BLOCK "VarFileInfo"
