@@ -1,9 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 로그인한 사용자만 읽기/쓰기 (가족이 같은 데이터를 공유)
+    // 허용한 계정(이메일)만 읽기/쓰기. 가족 Gmail을 아래 목록에 추가하세요.
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'c.mario8609@gmail.com'
+        ];
+    }
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if allowed();
     }
   }
 }

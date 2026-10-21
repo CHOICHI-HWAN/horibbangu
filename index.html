@@ -147,7 +147,7 @@
     <div class="field"><label for="lEmail">이메일</label><input type="email" id="lEmail" required autocomplete="username"></div>
     <div class="field"><label for="lPw">비밀번호</label><input type="password" id="lPw" required autocomplete="current-password"></div>
     <p class="hint" id="loginMsg"></p>
-    <div class="dlgbtns"><span></span><button type="submit" class="primary">로그인</button></div>
+    <div class="dlgbtns"><button type="button" id="googleBtn">Google(Gmail)로 로그인</button><button type="submit" class="primary">로그인</button></div>
   </form>
 </dialog>
 
@@ -705,6 +705,19 @@ $('loginForm').onsubmit = async e => {
     return;
   }
   $('lPw').value = ''; $('loginMsg').textContent = '';
+};
+$('googleBtn').onclick = async () => {
+  $('loginMsg').style.color = 'var(--muted)';
+  $('loginMsg').textContent = 'Google 로그인 중…';
+  try {
+    await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    $('loginMsg').textContent = '';
+  } catch (err) {
+    console.error(err);
+    $('loginMsg').style.color = 'var(--danger)';
+    $('loginMsg').textContent = err.code === 'auth/operation-not-allowed'
+      ? 'Firebase 콘솔에서 Google 로그인이 아직 켜지지 않았어요.' : 'Google 로그인 실패: ' + (err.code || err.message);
+  }
 };
 $('logoutBtn').onclick = () => auth.signOut();
 function initCloud() {
