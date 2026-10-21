@@ -59,7 +59,7 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 ## Windows 고양이 놀이터
 
-`downloads/호리빵구.exe`는 체중기록 기능이 없는 오프라인 고양이 놀이터입니다.
+로컬 `downloads/호리빵구.exe`는 체중기록 기능이 없는 오프라인 고양이 놀이터입니다. 실행 파일과 ZIP은 로컬 폴더에만 보관하며 GitHub 및 Firebase 배포에서 제외합니다.
 Windows 바탕화면에 저장하고 더블클릭하면 됩니다. Edge/Chrome/Brave가 있으면 별도 창으로 열립니다.
 고양이와 가구·투명해먹·날개 비행만 포함하며 Firebase와 체중 데이터는 포함하지 않습니다.
 Windows x64 GUI 파일이며, 서명되지 않은 개인용 빌드입니다. Windows 실기기 실행은 아직 미확인입니다.
