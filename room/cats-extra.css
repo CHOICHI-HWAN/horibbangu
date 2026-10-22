@@ -31,7 +31,7 @@
 .cat.tunnel .leg,.cat.tunnel .tail { opacity:0; }
 .cat.house-low .all,.cat.house-top .all { transform:translateY(5px) scale(1.02,.8); }
 .cat.house-low .leg,.cat.house-top .leg { opacity:0; }
-.cat.bus-passenger { visibility:hidden; }
+
 #cats.motion-paused .cat * { animation:none!important; }
 
 .cat.tunnel .head { animation:peek-hole 8s ease-in-out infinite; }
@@ -46,3 +46,10 @@
 .cat.fluffy.paw-wrap .tail-scarf path:nth-child(2) { stroke-width:8; }
 
 .cat .eyes { animation-delay:var(--blink-delay,0s); }
+
+/* Soft cel-painted shading retains each cat's actual markings. */
+.cat .body {fill:var(--coat-paint,var(--body));}
+.cat .skull {fill:var(--face-paint,var(--head));}
+.cat .body,.cat .skull {stroke:#6f6856;stroke-opacity:.34;stroke-width:.8;stroke-linejoin:round;}
+.cat .mouth {stroke:#786854;stroke-linecap:round;stroke-width:.75;}
+.cat .ground-shadow {opacity:.1;fill:#6c704e;}

@@ -24,7 +24,7 @@ looks=s[s.index('const LOOKS ='):s.index('const FUR =')]
 bases={name:float(value) for name,value in re.findall(r"'([^']+)': \{.*?scale: ([0-9.]+) \}",looks,re.S)}
 sizes={name:round(max(.82,min(1.42,bases.get(name,1)*(weight/5)**(1/3))),4) for name,weight in latest.items() if name not in ['로이','동글이']}
 html=(root/'room/shell.html').read_text()
-for token,text in {'/*ROOM_CSS*/':(root/'room/room.css').read_text(),'/*CAT_CSS*/':s[a:b],'/*EXTRA_CSS*/':(root/'room/cats-extra.css').read_text(),'/*PETS*/':json.dumps(pets,ensure_ascii=False),'/*ROOM_JS*/':(root/'room/room.js').read_text(),'/*CAT_JS*/':s[c:d],'/*ROOM_SIZES*/':json.dumps(sizes,ensure_ascii=False),'/*HALLSTATT_IMAGE*/':'data:image/webp;base64,'+base64.b64encode((root/'room/assets/hallstatt.webp').read_bytes()).decode('ascii')}.items():html=html.replace(token,text)
+for token,text in {'/*ROOM_CSS*/':(root/'room/room.css').read_text(),'/*CAT_CSS*/':s[a:b],'/*EXTRA_CSS*/':(root/'room/cats-extra.css').read_text(),'/*PETS*/':json.dumps(pets,ensure_ascii=False),'/*ROOM_JS*/':(root/'room/room.js').read_text(),'/*CAT_JS*/':s[c:d],'/*ROOM_SIZES*/':json.dumps(sizes,ensure_ascii=False),'/*HALLSTATT_IMAGE*/':'data:image/webp;base64,'+base64.b64encode((root/'room/assets/hallstatt-painted.webp').read_bytes()).decode('ascii')}.items():html=html.replace(token,text)
 assert 'state.records' not in html and 'firebase' not in html.lower()
 (root/'index.html').write_text(html)
 print('Built public cat room (no authentication, weight data, or external requests).')

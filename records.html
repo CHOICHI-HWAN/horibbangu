@@ -244,6 +244,12 @@
   .petrow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .petrow input[type=color] { width: 34px; height: 30px; padding: 1px; }
   .petrow input[type=text] { flex: 1; }
+
+  :root {--bg:#f3efdf;--card:#fffdf3;--ink:#4f5948;--muted:#898775;--line:#ded9bf;--accent:#728368;--grid:#e6e1cf;}
+  .card,.pet {box-shadow:0 3px 12px #75644309;border-radius:13px;}
+  .wrap>header h1 {font-family:Georgia,'Apple SD Gothic Neo',serif;font-weight:500;}
+  button,.btn {border-color:var(--line);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#212b28;--card:#2a3530;--ink:#eee8d7;--muted:#b1b4a1;--line:#475145;--accent:#a8b08a;--accent-ink:#202a24;--grid:#3d473d;}}
 </style>
 </head>
 <body>
@@ -329,7 +335,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '2.1.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '2.2.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -802,6 +808,8 @@ $('ver').textContent = 'v' + VERSION;
 //       stalk→freeze→dash→pounce 마우스 사냥 / chase·flee 술래잡기
 // 각 인스턴스마다 clipPath ID를 바꿔 여러 아이의 무늬가 섞이지 않게 한다.
 const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
+  <linearGradient id="__CAT__-coat" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="color-mix(in srgb,var(--body) 90%,#fff4d4)"/><stop offset=".55" stop-color="var(--body)"/><stop offset="1" stop-color="color-mix(in srgb,var(--body) 87%,#887c5e)"/></linearGradient>
+  <radialGradient id="__CAT__-face-paint" cx="36%" cy="27%" r="85%"><stop stop-color="color-mix(in srgb,var(--head) 92%,#fff7db)"/><stop offset=".6" stop-color="var(--head)"/><stop offset="1" stop-color="color-mix(in srgb,var(--head) 90%,#8d8063)"/></radialGradient>
   <clipPath id="__CAT__-body"><ellipse cx="26" cy="28" rx="19.5" ry="13"/></clipPath>
   <clipPath id="__CAT__-face"><path d="M30 19 C29 6 60 6 61 20 C65 38 27 38 30 19Z"/></clipPath>
 </defs>
@@ -1348,7 +1356,7 @@ function installCatPointer(c) {
   let press = null;
   c.el.style.touchAction = 'none';
   c.el.onpointerdown = e => {
-    if (e.button !== 0 || c.mode === 'busRide') return;
+    if (e.button !== 0) return;
     press = { x: e.clientX, y: e.clientY, dx: e.clientX - c.x, dy: e.clientY + c.y, dragging: false, pointerId: e.pointerId };
     c.el.setPointerCapture(e.pointerId);
   };
@@ -1395,6 +1403,8 @@ function renderCats() {
     c.name = p.name; c.lookCls = look.cls; c.scale = catScaleFor(p,look);
     c.el = document.createElement('div');
     c.el.className = 'cat ' + c.lookCls;
+    c.el.style.setProperty('--coat-paint',`url(#cat-${i}-coat)`);
+    c.el.style.setProperty('--face-paint',`url(#cat-${i}-face-paint)`);
     c.el.style.setProperty('--c', p.color);
     c.el.style.setProperty('--blink-delay',(-i*.83)+'s');
     for (const [k, v] of Object.entries(look)) if (k !== 'cls' && k !== 'scale') c.el.style.setProperty('--' + k, v);
@@ -1425,7 +1435,7 @@ function tickCats(t) {
 
   for (const c of cats) {
     const cx = c.x + CAT_W / 2;
-    if (c.mode === 'bubble' || c.mode === 'busRide') { renderCatPosition(c); continue; }
+    if (c.mode === 'bubble') { renderCatPosition(c); continue; }
     if (still) { c.mode = 'sleep'; }
     else if (['sleep','chin','house-low','house-top','hammock','sofa','bed'].includes(c.mode) && mouseOn && t - mouse.t < 300) {
       // 자다가 마우스가 움직이면 귀를 쫑긋 (가까운 고양이일수록 잘 깬다)
