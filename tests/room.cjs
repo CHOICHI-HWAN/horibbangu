@@ -18,9 +18,9 @@ const roomURL = pathToFileURL(path.join(__dirname, '../index.html')).href;
         furniture:cozySpots.map(p=>p.kind),wheelFrame:nodes.some(p=>p.type==='wheel-frame'),
         routes:nodes.filter(p=>p.node).every(p=>distTo(p).has(GROUND)&&distTo(GROUND).has(p)),
         overflow:document.documentElement.scrollWidth>innerWidth,
-        art:document.querySelectorAll('.painting').length
+        art:document.querySelectorAll('.painting').length,clock:!!document.getElementById('clockHour'),guests:document.querySelectorAll('#visitors .guest-eyes').length,blink:getComputedStyle(cats[0].el.querySelector('.eyes')).animationName
       }));
-      assert.equal(result.cats,8);assert(result.noData&&result.noAuth&&result.routes&&!result.overflow);assert.equal(result.link,'records.html');assert.equal(result.art,4);assert(result.wheelFrame);assert.equal(result.furniture.filter(k=>k==='house-top').length,2);assert(result.furniture.includes('tunnel'));
+      assert.equal(result.cats,8);assert(result.noData&&result.noAuth&&result.routes&&!result.overflow);assert.equal(result.link,'records.html');assert.equal(result.art,4);assert(result.clock&&result.guests===3);assert.notEqual(result.blink,'none');assert(result.wheelFrame);assert.equal(result.furniture.filter(k=>k==='house-top').length,2);assert(result.furniture.includes('tunnel'));
       assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);
       console.log('room',width,height,'routes and public view passed');await page.close();
     }
@@ -28,7 +28,7 @@ const roomURL = pathToFileURL(path.join(__dirname, '../index.html')).href;
     await page.addInitScript(()=>window.requestAnimationFrame=()=>0);await page.goto(roomURL);
     const scenes=await page.evaluate(()=>{
       updateRoomTime(new Date(2026,9,22,8,0));const morning={x:$('sun').style.left,night:getComputedStyle(document.documentElement).getPropertyValue('--night')};
-      updateRoomTime(new Date(2026,9,22,16,0));const afternoon=$('sun').style.left;
+      updateRoomTime(new Date(2026,9,22,16,0));const afternoon=$('sun').style.left;const clock=$('clockHour').getAttribute('transform');
       updateRoomTime(new Date(2026,9,22,23,0));const night={moon:!$('moon').hidden,shade:getComputedStyle(document.documentElement).getPropertyValue('--night')};
       const weather=['clear','rain','snow','hail'].map(w=>{setRoomWeather(w,new Date(2026,9,22,14,5));return document.body.dataset.weather;});
       let t=performance.now();lastT=t;
@@ -47,15 +47,18 @@ const roomURL = pathToFileURL(path.join(__dirname, '../index.html')).href;
       tickRoomEvents(mealStart+33000);const mealEnded=eventState===null&&!$('orangeDoor').classList.contains('open');
       const now=mealStart+34000;beginBus(now);tickRoomEvents(now+7000);const boarded=cats.filter(c=>c.mode==='busRide').length;tickRoomEvents(now+27000);const returned=cats.every(c=>c.mode!=='busRide'&&!c.el.classList.contains('bus-passenger'));tickRoomEvents(now+38000);
       const c=cats[0];c.mode='watch';c.until=t+5000;c.el.click();const kiss=c.mode==='kiss';
-      return{morning,afternoon,night,weather,shared,early,meal,bowls,mealEnded,boarded,returned,kiss};
+      return{morning,afternoon,clock,night,weather,shared,early,meal,bowls,mealEnded,boarded,returned,kiss};
     });
-    assert.notEqual(scenes.morning.x,scenes.afternoon);assert(scenes.night.moon&&+scenes.night.shade===1);assert.deepEqual(scenes.weather,['clear','rain','snow','hail']);assert(scenes.early&&scenes.meal==='meal'&&scenes.bowls&&scenes.mealEnded);assert(scenes.boarded>0&&scenes.returned&&scenes.kiss);assert.equal(scenes.shared[0].kind,'house-top');assert.equal(scenes.shared[1].kind,'house-top');assert.notEqual(scenes.shared[0].x,scenes.shared[1].x);assert.equal(scenes.shared[2].kind,'house-low');
+    assert.notEqual(scenes.morning.x,scenes.afternoon);assert.equal(scenes.clock,'rotate(120 60 78)');assert(scenes.night.moon&&+scenes.night.shade===1);assert.deepEqual(scenes.weather,['clear','rain','snow','hail']);assert(scenes.early&&scenes.meal==='meal'&&scenes.bowls&&scenes.mealEnded);assert(scenes.boarded>0&&scenes.returned&&scenes.kiss);assert.equal(scenes.shared[0].kind,'house-top');assert.equal(scenes.shared[1].kind,'house-top');assert.notEqual(scenes.shared[0].x,scenes.shared[1].x);assert.equal(scenes.shared[2].kind,'house-low');
     // Pointer-driven dragging must show the bubble and release the cat back to physics.
     await page.evaluate(()=>{const c=cats[0];c.x=140;c.y=20;c.air=false;c.mode='sit';c.until=1e9;renderCatPosition(c);});
     const box=await page.locator('.cat').first().boundingBox();await page.mouse.move(box.x+32,box.y+20);await page.mouse.down();await page.mouse.move(box.x+230,box.y-180,{steps:8});
     assert(await page.locator('.cat').first().evaluate(el=>el.classList.contains('in-bubble')));await page.mouse.up();
     assert(await page.evaluate(()=>cats[0].air&&cats[0].mode!=='bubble'));
-    console.log('time, weather, meals, bus, co-sleeping targets, eye kiss, bubble drag passed');await page.close();
+    await page.locator('#guestsBtn').click();assert.equal(await page.evaluate(()=>eventState?.kind),'meal');assert(await page.locator('#busBtn').isDisabled());
+    await page.evaluate(()=>{tickRoomEvents(eventState.start+33000);});
+    await page.locator('#busBtn').click();assert.equal(await page.evaluate(()=>eventState?.kind),'bus');
+    console.log('clock, weather, guest buttons, meals, bus, co-sleeping targets, eye kiss, bubble drag passed');await page.close();
     // Honor system motion preference initially; an explicit user choice enables play and persists.
     const reduced=await browser.newPage({reducedMotion:'reduce'});await reduced.goto(roomURL);assert.equal(await reduced.locator('#motionBtn').textContent(),'움직임 켜기');await reduced.locator('#motionBtn').click();assert.equal(await reduced.locator('#motionBtn').textContent(),'움직임 쉬기');await reduced.reload();assert.equal(await reduced.locator('#motionBtn').textContent(),'움직임 쉬기');await reduced.close();
     const records=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});await records.route('https://**/*',r=>r.abort());await records.goto(pathToFileURL(path.join(__dirname,'../records.html')).href);

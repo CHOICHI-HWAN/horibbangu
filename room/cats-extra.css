@@ -13,7 +13,7 @@
 .cat.land .l2,.cat.land .l4 { transform:scaleY(.65); }
 .cat.watch .all { transform:translateY(-1px) scaleX(.9) scaleY(1.03); }
 .cat.watch .head { transform:translateX(-6px) scale(1.15); }
-.cat.watch .eyes { animation:none; }
+.cat.watch .eyes { animation:cat-blink 8s infinite; }
 .cat.kiss .eyes { animation:eye-kiss 2.8s ease-in-out; }
 @keyframes eye-kiss { 0%,100% { transform:scaleY(1); } 32%,65% { transform:scaleY(.08); } }
 .cat.stretch .all { animation:cat-stretch 3s ease-in-out; }
@@ -44,3 +44,5 @@
 .cat.paw-wrap .tail-scarf { display:inline; }
 .cat.paw-wrap .all { transform:translateY(1px) scaleX(.92); }
 .cat.fluffy.paw-wrap .tail-scarf path:nth-child(2) { stroke-width:8; }
+
+.cat .eyes { animation-delay:var(--blink-delay,0s); }

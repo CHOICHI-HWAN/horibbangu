@@ -18,7 +18,8 @@
       "room/shell.html",
       "room/room.js",
       "room/room.css",
-      "scripts/**"
+      "scripts/**",
+      "room/assets/**"
     ],
     "headers": [
       {
@@ -32,6 +33,15 @@
       },
       {
         "source": "/records.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/room/cats-extra.css",
         "headers": [
           {
             "key": "Cache-Control",

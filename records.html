@@ -329,7 +329,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '2.0.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '2.1.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -900,6 +900,16 @@ function lookFor(p, i) {
   return { body: f, stripe: `color-mix(in srgb, ${f} 60%, black)`, leg: f, head: f, muzzle: `color-mix(in srgb, ${f} 65%, white)`, ear: f, tail: f,
            nose: '#e8a0a8', eye: '#8fae5a', belly: NONE, blaze: NONE, cap: NONE, patch: NONE, cls: '', scale: 1 };
 }
+// Weight affects apparent volume; memorial companions retain their photo-based shape.
+function catScaleFor(p,look) {
+  if (['로이','동글이'].includes(p.name)) return look.scale;
+  let scale=look.scale;
+  if (typeof petSeries === 'function') {
+    const recent=petSeries(p.id).filter(r=>Number.isFinite(r.v)&&r.v>0).at(-1);
+    if(recent)scale=look.scale*Math.cbrt(recent.v/5);
+  } else if (typeof roomSizes !== 'undefined' && Number.isFinite(+roomSizes[p.name])) scale=+roomSizes[p.name];
+  return Math.max(.82,Math.min(1.42,scale));
+}
 const CAT_W = 64, G = 900, FOOT = 4.5, TW = 130;
 const CUSHION_COLORS = ['#f4a6b8', '#a8d5ba', '#a9c4eb'];
 let cats = [], catSig = '', catsOn = true, lastT = 0;
@@ -911,6 +921,7 @@ let motionChoice = null;
 try { motionChoice = localStorage.getItem(KEY + ':motion'); } catch(e) {}
 let reduceMotion = motionChoice ? motionChoice === 'off' : motionQuery.matches;
 function applyMotionChoice() {
+  document.documentElement.dataset.motion=reduceMotion?'paused':'playing';
   $('cats').classList.toggle('motion-paused', reduceMotion);
   const button = $('motionBtn');
   if (button) { button.textContent = reduceMotion ? '움직임 켜기' : '움직임 쉬기'; button.setAttribute('aria-pressed', String(!reduceMotion)); }
@@ -1365,7 +1376,10 @@ function renderCats() {
   $('cats').hidden = !catsOn;
   $('catBtn').style.opacity = catsOn ? 1 : .45;
   const companions = state.pets.some(p => p.name === '동글이') ? state.pets : [...state.pets, { id: 'companion-dongle', name: '동글이', color: '#b7a690', memorial: true }];
-  const sig = companions.map(p => p.id + p.color + p.name).join('|');
+  if(typeof petSeries==='function') {
+    try { localStorage.setItem('horibbangu-cat-sizes-v1',JSON.stringify(Object.fromEntries(companions.map((p,i)=>[p.name,catScaleFor(p,lookFor(p,i))])))); } catch(e) {}
+  }
+  const sig = companions.map((p,i) => p.id + p.color + p.name + catScaleFor(p,lookFor(p,i))).join('|');
   if (sig === catSig) return;
   catSig = sig;
   const old = Object.fromEntries(cats.map(c => [c.id, c]));
@@ -1378,10 +1392,11 @@ function renderCats() {
     if (!['walk', 'sit', 'watch', 'loaf', 'purr', 'sleep', 'alert', 'groom'].includes(c.mode)) c.mode = 'sit';
     c.cls = ''; c.partner = null;
     const look = lookFor(p, i);
-    c.name = p.name; c.lookCls = look.cls; c.scale = look.scale;
+    c.name = p.name; c.lookCls = look.cls; c.scale = catScaleFor(p,look);
     c.el = document.createElement('div');
     c.el.className = 'cat ' + c.lookCls;
     c.el.style.setProperty('--c', p.color);
+    c.el.style.setProperty('--blink-delay',(-i*.83)+'s');
     for (const [k, v] of Object.entries(look)) if (k !== 'cls' && k !== 'scale') c.el.style.setProperty('--' + k, v);
     c.el.title = p.memorial ? '동글이 · 늘 함께하는 친구' : p.name;
     c.el.innerHTML = `<div class="flip">${CAT_SVG.replaceAll('__CAT__', 'cat-' + i)}</div>`;
