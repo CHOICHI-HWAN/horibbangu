@@ -12,7 +12,7 @@ button:focus-visible,a:focus-visible,select:focus-visible { outline:2px solid #5
 .sunbeam { position:absolute; left:28%; top:35%; width:68%; height:90%; background:linear-gradient(110deg,#fff1b849, #f8c56a00 77%); transform:rotate(var(--sun-angle)); transform-origin:35% 0; clip-path:polygon(0 0,55% 0,100% 100%,15% 100%); opacity:var(--warmth); filter:blur(4px); pointer-events:none; }
 .window-frame { position:absolute; left:26%; width:48%; top:17%; height:48%; padding:12px; border-radius:160px 160px 12px 12px; background:linear-gradient(110deg,#fffdf5,#e9d9c1); box-shadow:0 16px 0 #cdbda4,0 22px 36px #8c735726; }
 .window-view { position:relative; height:100%; overflow:hidden; border-radius:150px 150px 4px 4px; background:#99d3e7; }
-#landscape { width:100%; height:100%; display:block; object-fit:cover; object-position:40% 50%; }
+#landscape { width:100%; height:100%; display:block; object-fit:cover; object-position:50% 0%; }
 .window-cross { position:absolute; inset:0; pointer-events:none; border-radius:inherit; box-shadow:inset 0 0 18px #65859a18; }
 .window-cross::before { content:''; position:absolute; left:49.3%; width:1.4%; top:0; bottom:0; background:#fdf8e9; box-shadow:2px 0 4px #59829b33; }
 .window-cross::after { content:''; position:absolute; top:65%; height:7px; left:0; right:0; background:#fdf8e9; }
@@ -71,7 +71,7 @@ body[data-time="night"] .window-frame { box-shadow:0 16px 0 #b5b4ad,0 0 55px #8c
 body[data-time="night"]>.cat-wall-clock { filter:brightness(.78) drop-shadow(0 5px 4px #6c58452b); }
 
 /* Open balcony: one uninterrupted landscape, with sheer curtains and a low clear rail. */
-.balcony-opening {left:17%;width:66%;top:14%;height:56%;padding:9px;border-radius:20px 20px 5px 5px;box-shadow:0 11px 0 #c8bdab,0 20px 35px #8c735722;}
+.balcony-opening {left:17%;width:66%;top:8%;height:62%;padding:9px;border-radius:20px 20px 5px 5px;box-shadow:0 11px 0 #c8bdab,0 20px 35px #8c735722;}
 .balcony-opening .window-view {border-radius:12px 12px 2px 2px;}
 .balcony-opening::before,.balcony-opening::after {content:'';position:absolute;z-index:2;top:-8px;bottom:-12px;width:36px;background:repeating-linear-gradient(90deg,#fff9ecbb 0 5px,#e4dbca88 8px,#fffbf2aa 13px);box-shadow:3px 3px 8px #7d735c10;pointer-events:none;}
 .balcony-opening::before {left:-18px;clip-path:polygon(0 0,100% 0,70% 70%,92% 100%,10% 97%);}
