@@ -18,7 +18,7 @@ button:focus-visible,a:focus-visible,select:focus-visible { outline:2px solid #5
 .window-cross::after { content:''; position:absolute; top:65%; height:7px; left:0; right:0; background:#fdf8e9; }
 .shimmer { position:absolute; left:calc(var(--reflection-x,65%) - 20%); top:35%; width:40%; height:43%; background:repeating-linear-gradient(175deg,transparent 0 10px,#fff6c59a 12px,transparent 14px); clip-path:polygon(48% 0,58% 0,100% 100%,0 100%); opacity:.65; animation:sea-sparkle 5s ease-in-out infinite; mix-blend-mode:screen; }
 @keyframes sea-sparkle { 50% { transform:translateX(9px) scaleX(.8); opacity:.3; } }
-#sun,#moon { position:absolute; width:30px; height:30px; top:12%; left:65%; border-radius:50%; background:#fff2b2; box-shadow:0 0 25px #fff0ac99; transition:left 1s,top 1s; }
+#moon { position:absolute; width:30px; height:30px; top:12%; left:65%; border-radius:50%; background:#fff2b2; box-shadow:0 0 25px #fff0ac99; transition:left 1s,top 1s; }
 #moon { width:23px; height:23px; background:#fff4d3; box-shadow:inset -7px -2px #aabed3,0 0 16px #eaf4ff88; }
 .window-night { position:absolute; inset:0; background:linear-gradient(#15274a99,#214b8244); opacity:var(--night); pointer-events:none; }
 #weatherCanvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
@@ -108,3 +108,11 @@ button,.login-link,.weather-control select {background:#fff9e8de;border-color:#a
 @media(prefers-reduced-motion:reduce){.room-header,.login-link,.scene-label,.weather-control{transition:none;}}
 
 .room::before {content:"";position:absolute;inset:0;z-index:8;pointer-events:none;opacity:.18;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.7%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%22.15%22%2F%3E%3C%2Fsvg%3E");}
+
+/* A gentle camera breath and independently rippling painted water. */
+.landscape-motion {position:absolute;inset:0;transform-origin:50% 0;animation:landscape-breathe 32s ease-in-out infinite;}
+#lakeCanvas {position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+@keyframes landscape-breathe {0%,100%{transform:scale(1.003);}50%{transform:scale(1.018);}}
+.shimmer {top:65%;height:35%;opacity:.28;animation:lake-light 7s ease-in-out infinite;}
+@keyframes lake-light {0%,100%{transform:translateX(-5px) scaleX(.9);opacity:.18;}50%{transform:translateX(6px) scaleX(1.08);opacity:.36;}}
+[data-motion="paused"] .landscape-motion,[data-motion="paused"] .shimmer {animation:none;}

@@ -35,8 +35,8 @@ const roomURL = pathToFileURL(path.join(__dirname, '../index.html')).href;
     const page=await browser.newPage({viewport:{width:1200,height:844},reducedMotion:'no-preference'});
     await page.addInitScript(()=>window.requestAnimationFrame=()=>0);await page.goto(roomURL);
     const scenes=await page.evaluate(()=>{
-      updateRoomTime(new Date(2026,9,22,8,0));const morning={x:$('sun').style.left,night:getComputedStyle(document.documentElement).getPropertyValue('--night')};
-      updateRoomTime(new Date(2026,9,22,16,0));const afternoon=$('sun').style.left;const clock=$('clockHour').getAttribute('transform');
+      updateRoomTime(new Date(2026,9,22,8,0));const morning={x:getComputedStyle(document.documentElement).getPropertyValue('--reflection-x'),night:getComputedStyle(document.documentElement).getPropertyValue('--night')};
+      updateRoomTime(new Date(2026,9,22,16,0));const afternoon=getComputedStyle(document.documentElement).getPropertyValue('--reflection-x');const clock=$('clockHour').getAttribute('transform');
       updateRoomTime(new Date(2026,9,22,23,0));const night={moon:!$('moon').hidden,shade:getComputedStyle(document.documentElement).getPropertyValue('--night')};
       const weather=['clear','rain','snow','hail'].map(w=>{setRoomWeather(w,new Date(2026,9,22,14,5));return document.body.dataset.weather;});
       let t=performance.now();lastT=t;

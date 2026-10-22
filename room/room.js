@@ -97,7 +97,7 @@ function updateRoomTime(date=new Date()){
   const root=document.documentElement;root.style.setProperty('--night',Math.max(0,Math.min(1,night)).toFixed(3));
   root.style.setProperty('--reflection-x',x+'%');
   root.style.setProperty('--sun-angle',`${-30+progress*60}deg`);root.style.setProperty('--warmth',daylight?(hour<9||hour>16?.85:.4):.04);
-  for(const[id,visible]of[['sun',daylight],['moon',!daylight]]){$(id).hidden=!visible;$(id).style.left=x+'%';$(id).style.top=top+'%';}
+  $('moon').hidden=daylight;$('moon').style.left=x+'%';$('moon').style.top=top+'%';
   $('clockHour').setAttribute('transform',`rotate(${(hour%12)*30} 60 78)`);
   $('clockMinute').setAttribute('transform',`rotate(${(date.getMinutes()+date.getSeconds()/60)*6} 60 78)`);
   $('catClockText').textContent=date.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
@@ -115,7 +115,30 @@ function setRoomWeather(choice,date=new Date()){
   }else roomWeather=choice;
   document.body.dataset.weather=roomWeather;
 }
+// Animate only the painted lake reflections; the village and mountains stay solid.
+let lastLakeFrame=-Infinity;
+function drawLake(t){
+  const canvas=$('lakeCanvas'),image=$('landscape');
+  if(!image.complete||!image.naturalWidth)return;
+  const w=image.clientWidth,h=image.clientHeight;
+  if(!w||!h)return;
+  const resized=canvas.width!==w||canvas.height!==h;
+  if(!resized&&t-lastLakeFrame<33)return;
+  lastLakeFrame=t;canvas.width=w;canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  if(reduceMotion)return;
+  const scale=Math.max(w/image.naturalWidth,h/image.naturalHeight);
+  const rw=image.naturalWidth*scale,rh=image.naturalHeight*scale,x=(w-rw)/2;
+  const shore=Math.ceil(rh*.65);
+  for(let y=shore;y<h;y+=3){
+    const depth=(y-shore)/Math.max(1,h-shore),swell=Math.sin(y*.11+t/1100)*(.25+depth*1.4)+Math.sin(y*.047-t/1800)*.6;
+    ctx.save();ctx.beginPath();ctx.rect(0,y,w,3);ctx.clip();
+    ctx.drawImage(image,x+swell,-Math.abs(Math.sin(t/1700+y*.06))*.45,rw,rh);ctx.restore();
+  }
+}
 function drawWeather(t){
+  if(document.hidden){weatherFrame=requestAnimationFrame(drawWeather);return;}
+  drawLake(t);
   if(reduceMotion)t=0;
   const canvas=$('weatherCanvas'),ctx=canvas.getContext('2d'),rect=canvas.getBoundingClientRect();
   if(canvas.width!==Math.round(rect.width)||canvas.height!==Math.round(rect.height)){canvas.width=Math.round(rect.width);canvas.height=Math.round(rect.height);}
