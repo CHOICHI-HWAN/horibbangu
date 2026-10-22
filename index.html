@@ -327,6 +327,21 @@ button,.login-link,.weather-control select {background:#fff9e8de;border-color:#a
 .cat .body,.cat .skull {stroke:#6f6856;stroke-opacity:.34;stroke-width:.8;stroke-linejoin:round;}
 .cat .mouth {stroke:#786854;stroke-linecap:round;stroke-width:.75;}
 .cat .ground-shadow {opacity:.1;fill:#6c704e;}
+
+/* Soyang: silver-blue short coat and tall ears. Somi: orange tabby with a white nose. */
+.cat.soyang .ear {transform:translateY(-1px) scaleY(1.13);transform-origin:46px 18px;}
+.cat.soyang .ear-inner {fill:#a9a2aa;}
+.cat.soyang .all {transform:scaleX(.96);transform-origin:center bottom;}
+.cat.somi .blaze {transform:translate(0,6px) scaleY(.8);transform-origin:47px 24px;}
+.cat.somi .stripes {opacity:.65;}
+.cat.somi .m {opacity:.7;}
+
+.cat .skin-folds {display:none;}
+.cat.pang .skin-folds {display:inline;}
+.cat.pang .ear {transform:translateY(-2px) scale(1.13,1.6);transform-origin:46px 18px;}
+.cat.pang .ear-inner {fill:#d48c83;transform:translateY(-2px) scale(1.13,1.6);transform-origin:46px 18px;}
+.cat.pang .tailp {stroke-width:3.3;}
+.cat.pang .tail-outline {stroke-width:4;}
 </style></head><body class="room-page"><main id="roomScene" class="room" tabindex="0" aria-expanded="false" aria-controls="roomControls" aria-label="할슈타트 호수를 바라보는 발코니 고양이 방">
 <div class="floor"></div><div class="sunbeam"></div>
 <div class="window-frame balcony-opening"><div class="window-view">
@@ -344,7 +359,7 @@ button,.login-link,.weather-control select {background:#fff9e8de;border-color:#a
 </div>
 <figure class="cat-wall-clock" aria-label="고양이 벽시계"><svg viewBox="0 0 120 180" role="img" aria-label="기기 시간에 맞춰 움직이는 고양이 시계"><g id="clockTail"><path d="M60 128Q38 149 61 164Q78 174 89 158" fill="none" stroke="#a08465" stroke-width="9" stroke-linecap="round"/><path d="M65 166q6 0 10-3" stroke="#f3e6cf" stroke-width="5" stroke-linecap="round"/></g><path d="M22 54 18 9Q20 2 28 9L45 30H75L94 8Q102 2 102 12L98 58V105Q96 135 60 137Q23 135 22 106Z" fill="#cab18c" stroke="#a78d6a" stroke-width="2"/><path d="M25 15 29 37 39 32ZM94 16 82 33 95 39Z" fill="#ddb6a6"/><circle cx="60" cy="78" r="37" fill="#fffaf0" stroke="#af9875" stroke-width="1.5"/><g fill="#958268" font-size="10" text-anchor="middle"><text x="60" y="51">12</text><text x="89" y="82">3</text><text x="60" y="109">6</text><text x="31" y="82">9</text></g><g class="clock-eyes" fill="#81745f"><ellipse cx="47" cy="66" rx="2.3" ry="3"/><ellipse cx="73" cy="66" rx="2.3" ry="3"/></g><path id="clockHour" d="M60 81V58" stroke="#6c7869" stroke-width="4" stroke-linecap="round"/><path id="clockMinute" d="M60 83V49" stroke="#8f7858" stroke-width="2.5" stroke-linecap="round"/><circle cx="60" cy="78" r="4" fill="#c1a576"/><path d="M40 123q8 6 16 0m9 0q8 6 15 0" fill="none" stroke="#f7e8cf" stroke-width="3" stroke-linecap="round"/></svg><figcaption id="catClockText"></figcaption></figure>
 </main>
-<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="wingsBtn">날개 친구들</button><button id="catBtn">고양이 숨기기</button><button id="closeControls">풍경만 보기</button></nav></header>
+<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><button id="closeControls">풍경만 보기</button></nav></header>
 <a class="login-link" id="recordsLink" href="records.html">로그인 · 체중 기록 ↗</a>
 <div id="cats" aria-label="고양이 놀이터"><div id="props"></div></div>
 <div class="scene-label"><div id="status" role="status"><strong>호수가 보이는 작은 방</strong>고양이를 끌어 옮기거나, 눈을 맞춰 보세요.</div><div id="roomClock"></div></div>
@@ -362,6 +377,51 @@ addEventListener('storage',e=>{if(e.key==='horibbangu-cat-sizes-v1'){try {Object
 // Room-only scenery and events. Time is the device's local clock; weather is fictional.
 let housePlatforms = [], tunnelPlatform = null, tunnelX=0, roomWeather = 'clear', weatherChoice = 'auto';
 let lastRoomDate='',weatherFrame=0;
+// Guests are visual companions only; they never enter the records or size cache.
+const visitingFriends = [
+  {id:'guest-soyang',name:'소양',color:'#83949d',guest:true},
+  {id:'guest-somi',name:'소미',color:'#d7a36a',guest:true},
+  {id:'guest-pang',name:'팡이',color:'#d6a399',guest:true}
+];
+let activeRoomGuests=[], guestElapsed=0, nextGuestVisit=45+Math.random()*45, guestVisitEnds=Infinity;
+const friendLooks = {
+ '팡이':{body:'#d4a69b',stripe:'none',leg:'#d4a69b',head:'#d6a89d',muzzle:'#c9978d',ear:'#d5a094',tail:'#c99a90',nose:'#aa7875',eye:'#a9b5a8',belly:'none',blaze:'none',cap:'none',patch:'none',cls:'pang guest-cat',scale:.94},
+ '소양':{body:'#84929c',stripe:'none',leg:'#84929c',head:'#8b9aa3',muzzle:'#8a98a0',ear:'#7b8b95',tail:'#7c8b95',nose:'#454f56',eye:'#b2cc88',belly:'none',blaze:'none',cap:'none',patch:'none',cls:'soyang guest-cat',scale:.97},
+ '소미':{body:'#d8a469',stripe:'#b68046',leg:'#f9f3e7',head:'#d8a469',muzzle:'#fff9ed',ear:'#cb975d',tail:'#d2a06a',nose:'#d99a95',eye:'#b3b584',belly:'#fff9ed',blaze:'#fff9ed',cap:'none',patch:'none',cls:'tabby somi guest-cat',scale:1.04}
+};
+function roomGuestPets(){ return visitingFriends.filter(p=>activeRoomGuests.includes(p.id)); }
+function inviteRoomFriends(t=performance.now()){
+  if(activeRoomGuests.length) return;
+  activeRoomGuests=visitingFriends.map(p=>p.id);renderCats();
+  guestVisitEnds=guestElapsed+120+Math.random()*60;
+  cats.filter(c=>c.guest).forEach((c,i)=>{
+    c.x=i*34;c.y=0;c.air=false;c.stand=null;c.dir=1;c.speed=30;
+    setMode(c,'walk',t,3500+i*800);renderCatPosition(c);
+    say(c,c.name+' · 놀러 왔어요 ♡',2600);
+  });
+}
+function tickRoomGuests(t,dt){
+  if(reduceMotion) return;
+  guestElapsed+=dt;
+  if(!activeRoomGuests.length){if(guestElapsed>=nextGuestVisit)inviteRoomFriends(t);return;}
+  if(guestElapsed<guestVisitEnds)return;
+  const finished=[];
+  for(const c of cats.filter(c=>c.guest)){
+    // Let a held cat land before saying goodbye; never interrupt a drag or jump.
+    if(c.air||c.mode==='bubble')continue;
+    if(nodeOf(c)===GROUND){
+      if(c.mode==='guestExit'&&c.x>=Math.max(0,innerWidth-CAT_W)-2){finished.push(c.id);continue;}
+      if(c.mode!=='guestExit'){leave(c,t);c.goal=null;c.edge=null;c.zoom=0;setMode(c,'guestExit',t,Infinity);say(c,'또 놀러 올게요 ♡',1800);}
+      c.dir=1;c.speed=32;
+    }else if(c.goal!==GROUND||c.mode!=='travel'){
+      leave(c,t);c.zoom=0;travelTo(c,GROUND,t);
+    }
+  }
+  if(finished.length){
+    activeRoomGuests=activeRoomGuests.filter(id=>!finished.includes(id));renderCats();
+    if(!activeRoomGuests.length)nextGuestVisit=guestElapsed+300+Math.random()*180;
+  }
+}
 function furnitureElement(className, left, bottom, width, height, svg) {
   const el=document.createElement('div');el.className='room-furniture '+className;
   el.style.cssText=`left:${left}px;bottom:${bottom}px;width:${width}px;height:${height}px`;
@@ -465,6 +525,7 @@ function initRoom(){
     else if(e.key==='Tab')setRoomControls(true);
     else if((e.key==='Enter'||e.key===' ')&&e.target===$('roomScene')){e.preventDefault();setRoomControls(!document.body.classList.contains('controls-visible'));}
   });
+  $('friendsBtn').onclick=()=>{inviteRoomFriends();$('status').textContent='소양이, 소미, 팡이가 놀러 왔어요.';};
   $('closeControls').onclick=()=>setRoomControls(false);
   $('weather').onchange=e=>setRoomWeather(e.target.value);
   $('catBtn').addEventListener('click',()=>{$('catBtn').textContent=catsOn?'고양이 숨기기':'고양이 보이기';});
@@ -542,6 +603,9 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
       <path d="M38 19.3q2-1.5 4.7 0m7.8 0q2-1.5 4.7 0" fill="none" stroke="#51473d" stroke-width=".75"/>
       <circle cx="40" cy="20" r="1" fill="white"/><circle cx="52" cy="20" r="1" fill="white"/>
     </g>
+    <g class="skin-folds" fill="none" stroke="#a97872" stroke-opacity=".5" stroke-width=".6">
+      <path d="M38 12q8 4 16 0m-15 3q7 3 14 0m-10 2 2 2m5-2-1 2M33 26q0 4 4 5m20-5q0 4-3 5M39 33q7 4 14 0m-13 2q7 4 12 0"/>
+    </g>
     <path class="eyec" d="M38 22q2.5-2.5 5 0m7.5 0q2.5-2.5 5 0" fill="none" stroke="#51473d" stroke-width="1.1"/>
     <ellipse cx="37.8" cy="25.5" rx="2.6" ry="1.2" fill="#e4a69e" opacity=".3"/><ellipse cx="55.8" cy="25.5" rx="2.6" ry="1.2" fill="#e4a69e" opacity=".3"/>
     <path class="flat-nose" d="M44.8 23.3Q46.5 22.5 48.3 23.3Q48.5 24.3 46.6 24.8Q44.6 24.4 44.8 23.3Z" fill="#dda5a7"/>
@@ -575,6 +639,7 @@ const LOOKS = {
 };
 const FUR = ['#d9a066', '#4a4a4f', '#e8dcc6', '#a8793f', '#b9b9bd'];   // 사진이 없는 아이용 (생강, 검정, 크림, 갈색, 회색)
 function lookFor(p, i) {
+  if (p.guest && typeof friendLooks !== 'undefined' && friendLooks[p.name]) return friendLooks[p.name];
   if (LOOKS[p.name]) return LOOKS[p.name];
   const f = FUR[i % FUR.length];
   return { body: f, stripe: `color-mix(in srgb, ${f} 60%, black)`, leg: f, head: f, muzzle: `color-mix(in srgb, ${f} 65%, white)`, ear: f, tail: f,
@@ -1055,7 +1120,8 @@ function installCatPointer(c) {
 function renderCats() {
   $('cats').hidden = !catsOn;
   $('catBtn').style.opacity = catsOn ? 1 : .45;
-  const companions = state.pets.some(p => p.name === '동글이') ? state.pets : [...state.pets, { id: 'companion-dongle', name: '동글이', color: '#b7a690', memorial: true }];
+  let companions = state.pets.some(p => p.name === '동글이') ? state.pets : [...state.pets, { id: 'companion-dongle', name: '동글이', color: '#b7a690', memorial: true }];
+  if (typeof roomGuestPets === 'function') companions = [...companions, ...roomGuestPets()];
   if(typeof petSeries==='function') {
     try { localStorage.setItem('horibbangu-cat-sizes-v1',JSON.stringify(Object.fromEntries(companions.map((p,i)=>[p.name,catScaleFor(p,lookFor(p,i))])))); } catch(e) {}
   }
@@ -1063,25 +1129,30 @@ function renderCats() {
   if (sig === catSig) return;
   catSig = sig;
   const old = Object.fromEntries(cats.map(c => [c.id, c]));
-  cats.forEach(c => leave(c, 0));
-  $('cats').querySelectorAll('.cat').forEach(e => e.remove());
+  const retained = new Set(companions.map(p => p.id));
+  cats.filter(c => !retained.has(c.id)).forEach(c => { leave(c, performance.now()); c.el.remove(); });
   cats = companions.map((p, i) => {
+    const renderSig = p.name + p.color + catScaleFor(p,lookFor(p,i));
+    if (old[p.id]?.renderSig === renderSig) return old[p.id];
+    if (old[p.id]) { leave(old[p.id], performance.now()); old[p.id].el.remove(); }
     const c = old[p.id] || { id: p.id, x: Math.random() * Math.max(0, innerWidth - CAT_W), y: 0, vy: 0, vx: 0, air: false, stand: null,
       dir: Math.random() < .5 ? 1 : -1, speed: rnd(22, 50), mode: Math.random() < .35 ? 'sleep' : 'watch',
       until: performance.now() + rnd(2500, 9000) };
     if (!['walk', 'sit', 'watch', 'loaf', 'purr', 'sleep', 'alert', 'groom'].includes(c.mode)) c.mode = 'sit';
     c.cls = ''; c.partner = null;
     const look = lookFor(p, i);
+    c.renderSig = renderSig; c.guest = !!p.guest;
     c.name = p.name; c.lookCls = look.cls; c.scale = catScaleFor(p,look);
     c.el = document.createElement('div');
     c.el.className = 'cat ' + c.lookCls;
-    c.el.style.setProperty('--coat-paint',`url(#cat-${i}-coat)`);
-    c.el.style.setProperty('--face-paint',`url(#cat-${i}-face-paint)`);
+    const svgId = 'cat-' + encodeURIComponent(p.id).replaceAll('%','_');
+    c.el.style.setProperty('--coat-paint',`url(#${svgId}-coat)`);
+    c.el.style.setProperty('--face-paint',`url(#${svgId}-face-paint)`);
     c.el.style.setProperty('--c', p.color);
     c.el.style.setProperty('--blink-delay',(-i*.83)+'s');
     for (const [k, v] of Object.entries(look)) if (k !== 'cls' && k !== 'scale') c.el.style.setProperty('--' + k, v);
-    c.el.title = p.memorial ? '동글이 · 늘 함께하는 친구' : p.name;
-    c.el.innerHTML = `<div class="flip">${CAT_SVG.replaceAll('__CAT__', 'cat-' + i)}</div>`;
+    c.el.title = p.guest ? p.name + (p.name==='팡이' ? ' · 놀러온 친구' : ' · 박박사님 댁에서 놀러온 친구') : p.memorial ? '동글이 · 늘 함께하는 친구' : p.name;
+    c.el.innerHTML = `<div class="flip">${CAT_SVG.replaceAll('__CAT__', svgId)}</div>`;
     installCatPointer(c);
     c.el.onclick = () => {
       if (performance.now() < (c.ignoreClickUntil || 0)) return;
@@ -1089,7 +1160,7 @@ function renderCats() {
       leave(c, performance.now());
       c.noteAt = 0; setMode(c, 'purr', performance.now(), 4500);
       say(c, p.name + ' 골골골~ ♪', 1800);
-      if (!p.memorial) selectPet(p.id);
+      if (!p.memorial && !p.guest) selectPet(p.id);
     };
     $('cats').appendChild(c.el);
     return c;
@@ -1100,6 +1171,7 @@ function tickCats(t) {
   requestAnimationFrame(tickCats);
   const dt = Math.min(.1, (t - lastT) / 1000 || 0); lastT = t;
   if (!catsOn || document.hidden) return;
+  if (typeof tickRoomGuests === 'function') tickRoomGuests(t, dt);
   const max = Math.max(0, innerWidth - CAT_W), still = reduceMotion;
   const mouseOn = t - mouse.t < 2500 && mouse.x >= 0;
   const ground = innerHeight - 38;
@@ -1165,7 +1237,7 @@ function tickCats(t) {
       case 'eat': pose = 'eat'; break;
       case 'house-low': case 'house-top': case 'bed': case 'hammock': case 'sofa': case 'chin': pose = c.mode + ' sleep'; break;
       case 'roll': pose = 'roll'; break;
-      case 'walk': c.x += c.dir * c.speed * (c.name === '보리' ? .66 : .82) * dt; pose = 'walking'; break;
+      case 'guestExit': case 'walk': c.x += c.dir * c.speed * (c.name === '보리' ? .66 : .82) * dt; pose = 'walking'; break;
       case 'loaf': pose = 'loaf'; break;
       case 'groom': pose = 'groom'; break;
       case 'sleep':

@@ -53,3 +53,18 @@
 .cat .body,.cat .skull {stroke:#6f6856;stroke-opacity:.34;stroke-width:.8;stroke-linejoin:round;}
 .cat .mouth {stroke:#786854;stroke-linecap:round;stroke-width:.75;}
 .cat .ground-shadow {opacity:.1;fill:#6c704e;}
+
+/* Soyang: silver-blue short coat and tall ears. Somi: orange tabby with a white nose. */
+.cat.soyang .ear {transform:translateY(-1px) scaleY(1.13);transform-origin:46px 18px;}
+.cat.soyang .ear-inner {fill:#a9a2aa;}
+.cat.soyang .all {transform:scaleX(.96);transform-origin:center bottom;}
+.cat.somi .blaze {transform:translate(0,6px) scaleY(.8);transform-origin:47px 24px;}
+.cat.somi .stripes {opacity:.65;}
+.cat.somi .m {opacity:.7;}
+
+.cat .skin-folds {display:none;}
+.cat.pang .skin-folds {display:inline;}
+.cat.pang .ear {transform:translateY(-2px) scale(1.13,1.6);transform-origin:46px 18px;}
+.cat.pang .ear-inner {fill:#d48c83;transform:translateY(-2px) scale(1.13,1.6);transform-origin:46px 18px;}
+.cat.pang .tailp {stroke-width:3.3;}
+.cat.pang .tail-outline {stroke-width:4;}

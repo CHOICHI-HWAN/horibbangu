@@ -20,7 +20,12 @@
       "room/room.css",
       "scripts/**",
       "room/assets/**",
-      "**/*.png"
+      "**/*.png",
+      "**/*.jpg",
+      "**/*.JPG",
+      "**/*.jpeg",
+      "**/*.heic",
+      "**/*.HEIC"
     ],
     "headers": [
       {

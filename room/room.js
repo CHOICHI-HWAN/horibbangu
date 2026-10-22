@@ -5,6 +5,51 @@ addEventListener('storage',e=>{if(e.key==='horibbangu-cat-sizes-v1'){try {Object
 // Room-only scenery and events. Time is the device's local clock; weather is fictional.
 let housePlatforms = [], tunnelPlatform = null, tunnelX=0, roomWeather = 'clear', weatherChoice = 'auto';
 let lastRoomDate='',weatherFrame=0;
+// Guests are visual companions only; they never enter the records or size cache.
+const visitingFriends = [
+  {id:'guest-soyang',name:'소양',color:'#83949d',guest:true},
+  {id:'guest-somi',name:'소미',color:'#d7a36a',guest:true},
+  {id:'guest-pang',name:'팡이',color:'#d6a399',guest:true}
+];
+let activeRoomGuests=[], guestElapsed=0, nextGuestVisit=45+Math.random()*45, guestVisitEnds=Infinity;
+const friendLooks = {
+ '팡이':{body:'#d4a69b',stripe:'none',leg:'#d4a69b',head:'#d6a89d',muzzle:'#c9978d',ear:'#d5a094',tail:'#c99a90',nose:'#aa7875',eye:'#a9b5a8',belly:'none',blaze:'none',cap:'none',patch:'none',cls:'pang guest-cat',scale:.94},
+ '소양':{body:'#84929c',stripe:'none',leg:'#84929c',head:'#8b9aa3',muzzle:'#8a98a0',ear:'#7b8b95',tail:'#7c8b95',nose:'#454f56',eye:'#b2cc88',belly:'none',blaze:'none',cap:'none',patch:'none',cls:'soyang guest-cat',scale:.97},
+ '소미':{body:'#d8a469',stripe:'#b68046',leg:'#f9f3e7',head:'#d8a469',muzzle:'#fff9ed',ear:'#cb975d',tail:'#d2a06a',nose:'#d99a95',eye:'#b3b584',belly:'#fff9ed',blaze:'#fff9ed',cap:'none',patch:'none',cls:'tabby somi guest-cat',scale:1.04}
+};
+function roomGuestPets(){ return visitingFriends.filter(p=>activeRoomGuests.includes(p.id)); }
+function inviteRoomFriends(t=performance.now()){
+  if(activeRoomGuests.length) return;
+  activeRoomGuests=visitingFriends.map(p=>p.id);renderCats();
+  guestVisitEnds=guestElapsed+120+Math.random()*60;
+  cats.filter(c=>c.guest).forEach((c,i)=>{
+    c.x=i*34;c.y=0;c.air=false;c.stand=null;c.dir=1;c.speed=30;
+    setMode(c,'walk',t,3500+i*800);renderCatPosition(c);
+    say(c,c.name+' · 놀러 왔어요 ♡',2600);
+  });
+}
+function tickRoomGuests(t,dt){
+  if(reduceMotion) return;
+  guestElapsed+=dt;
+  if(!activeRoomGuests.length){if(guestElapsed>=nextGuestVisit)inviteRoomFriends(t);return;}
+  if(guestElapsed<guestVisitEnds)return;
+  const finished=[];
+  for(const c of cats.filter(c=>c.guest)){
+    // Let a held cat land before saying goodbye; never interrupt a drag or jump.
+    if(c.air||c.mode==='bubble')continue;
+    if(nodeOf(c)===GROUND){
+      if(c.mode==='guestExit'&&c.x>=Math.max(0,innerWidth-CAT_W)-2){finished.push(c.id);continue;}
+      if(c.mode!=='guestExit'){leave(c,t);c.goal=null;c.edge=null;c.zoom=0;setMode(c,'guestExit',t,Infinity);say(c,'또 놀러 올게요 ♡',1800);}
+      c.dir=1;c.speed=32;
+    }else if(c.goal!==GROUND||c.mode!=='travel'){
+      leave(c,t);c.zoom=0;travelTo(c,GROUND,t);
+    }
+  }
+  if(finished.length){
+    activeRoomGuests=activeRoomGuests.filter(id=>!finished.includes(id));renderCats();
+    if(!activeRoomGuests.length)nextGuestVisit=guestElapsed+300+Math.random()*180;
+  }
+}
 function furnitureElement(className, left, bottom, width, height, svg) {
   const el=document.createElement('div');el.className='room-furniture '+className;
   el.style.cssText=`left:${left}px;bottom:${bottom}px;width:${width}px;height:${height}px`;
@@ -108,6 +153,7 @@ function initRoom(){
     else if(e.key==='Tab')setRoomControls(true);
     else if((e.key==='Enter'||e.key===' ')&&e.target===$('roomScene')){e.preventDefault();setRoomControls(!document.body.classList.contains('controls-visible'));}
   });
+  $('friendsBtn').onclick=()=>{inviteRoomFriends();$('status').textContent='소양이, 소미, 팡이가 놀러 왔어요.';};
   $('closeControls').onclick=()=>setRoomControls(false);
   $('weather').onchange=e=>setRoomWeather(e.target.value);
   $('catBtn').addEventListener('click',()=>{$('catBtn').textContent=catsOn?'고양이 숨기기':'고양이 보이기';});
