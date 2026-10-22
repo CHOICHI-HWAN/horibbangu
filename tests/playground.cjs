@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
-const appURL = pathToFileURL(path.join(__dirname, '..', 'index.html')).href;
+const appURL = pathToFileURL(path.join(__dirname, '..', 'records.html')).href;
 (async()=>{const b=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {})});for(const width of [390,1200]){const p=await b.newPage({viewport:{width,height:844}});let errors=[];p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>window.requestAnimationFrame=()=>0);await p.route('https://**/*',r=>r.abort());await p.goto(appURL);const result=await p.evaluate(()=>{let seed=233;Math.random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);let t=0;
 function reset(){cats.forEach(c=>{c.mode='sit';c.until=1e9;c.x=innerWidth/2-CAT_W/2;c.y=0;c.air=false;c.stand=null;c.goal=null;c.edge=null;c.flight=null;c.cozy=null;c.zoom=0;c.restUntil=0;c.blockedRoute=null;c.angelAfter=1e9;});lastT=t;}
 function frames(n,dt=1000/60){for(let i=0;i<n;i++)tickCats(t+=dt)}

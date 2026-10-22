@@ -14,11 +14,24 @@
       ".git/**",
       ".firebase/**",
       "**/*.exe",
-      "**/*.zip"
+      "**/*.zip",
+      "room/shell.html",
+      "room/room.js",
+      "room/room.css",
+      "scripts/**"
     ],
     "headers": [
       {
         "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/records.html",
         "headers": [
           {
             "key": "Cache-Control",

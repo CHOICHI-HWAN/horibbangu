@@ -6,7 +6,7 @@
 ## 기능
 
 - **빠른 입력**: `호야, 4.40` 처럼 입력하면 오늘 날짜로 저장 (`호야 4.4, 보리 6.0`, `2026.10.20 호야 4.4`, `보리 5.76?` 도 가능)
-- **아이별 보기**: 카드를 누르면 그 아이의 그래프·기록만 표시, 오늘 체중을 바로 입력
+- **아이별 보기**: 카드를 한 번 누르면 그 아이의 그래프·기록과 최근 5회 이동평균 표시, 두 번 누르면 오늘 체중 입력
 - **평균·이상치**: 아이별 평균선과 평균에서 많이 벗어난 값을 표시
 - **기록 관리**: 추가/수정/삭제, 아이 추가·이름·색 변경, CSV·JSON 내보내기, JSON 가져오기
 - **고양이 친구들**: 아이마다 한 마리씩 화면 아래에서 자고, 마우스를 움직이면 귀를 쫑긋하고, 가끔 커서를 사냥하거나 식빵을 굽고 골골송을 부르고 술래잡기를 함 (누르면 그 아이 기록으로 이동, 🐱 버튼으로 끄기). 그루밍, 쿠션 꾹꾹이, 캣타워 점프·기둥 스크래칭·캣휠 달리기도 함. 양쪽 캣타워와 해먹·판자·로프 다리, 경사로를 오르내리며 곳곳을 우다다 뛰어다님
@@ -17,7 +17,10 @@
 
 | 파일 | 설명 |
 |---|---|
-| `index.html` | 앱 전체 (HTML/CSS/JS, 빌드 없음) |
+| `index.html` | 생성된 공개 고양이 방 (로그인 없음) |
+| `records.html` | 체중 기록과 공유 고양이 엔진 원본 |
+| `room/` | 고양이 방 풍경·가구·이벤트 원본 |
+| `scripts/build-room.py` | 공개 고양이 방 생성 |
 | `config.js` | Firebase 웹 설정값 (비워두면 이 기기에만 저장) |
 | `firestore.rules` | 허용한 이메일만 읽기/쓰기 |
 | `CHANGELOG.md` | 버전별 변경 내역 |
@@ -25,7 +28,7 @@
 
 ## 개발·배포
 
-빌드 과정이 없어 `index.html`을 브라우저로 열면 바로 동작합니다.
+`python3 scripts/build-room.py`로 첫 화면을 갱신합니다. 생성 후 `index.html`은 외부 의존성 없이 브라우저에서 바로 동작합니다.
 
 ```bash
 # 배포 (Firebase CLI 필요: npm install -g firebase-tools, firebase login)
@@ -44,7 +47,7 @@ firebase deploy --only firestore:rules    # 접근 허용 이메일 변경
 
 버전 번호는 `MAJOR.MINOR.PATCH` 형식입니다. 새 버전을 낼 때는 아래 순서로 합니다.
 
-1. `index.html`의 `VERSION`과 `CHANGELOG.md`를 수정
+1. `records.html`의 `VERSION`과 `CHANGELOG.md`를 수정하고 방과 로컬 실행 파일 재생성
 2. 커밋 후 태그 생성: `git tag -a v1.1.0 -m "v1.1.0"`
 3. `git push && git push --tags`
 4. `firebase deploy --only hosting`
@@ -68,3 +71,16 @@ Windows x64 GUI 파일이며, 서명되지 않은 개인용 빌드입니다. Win
 `ZIG_BIN`으로 Zig 실행 경로를 지정할 수 있습니다. `python3 desktop/windows/test_binary.py`로
 GUI 형식·리소스·아이콘·내장 HTML 일치·시스템 DLL 의존성을 검사합니다.
 웹 코드를 바꾼 뒤에는 실행 파일도 다시 빌드해야 합니다.
+
+
+## 바다가 보이는 고양이 방 (2.0)
+
+`index.html`은 로그인·체중 데이터·외부 요청이 없는 고양이 방입니다. 왼쪽 로그인 링크는 기존 Firebase 인증을 사용하는 `records.html`로 이동합니다. 기록 페이지의 저장 키와 Firestore 컬렉션은 기존 값을 유지합니다.
+
+방의 원본은 `room/shell.html`, `room/room.css`, `room/room.js`, `room/cats-extra.css`입니다. 고양이 엔진과 체중 기록은 `records.html`이 원본이며, 수정 후 `python3 scripts/build-room.py`로 첫 화면을 생성합니다. 생성된 `index.html`을 직접 편집하지 마세요.
+
+해·달은 기기 현지 시간의 6시/18시를 기준으로 움직이는 연출입니다. 자동 날씨는 반시간 단위 가상 날씨이며 실제 기상 정보나 위치를 요청하지 않습니다. 오른쪽 아래에서 날씨를 선택할 수 있습니다. 급식 방문은 방을 연 뒤 50분마다, 버스는 18~30분 간격에 나타납니다. 숨겨진 탭에서는 새 이벤트를 시작하지 않습니다. 움직임 쉬기 상태에서는 새 방문이 시작되지 않습니다.
+
+`python3 desktop/windows/build-playground.py`는 같은 방에서 체중 기록 링크를 제거해 오프라인 HTML로 만듭니다. 실행 파일 생성은 기존 `desktop/windows/build.sh`를 사용합니다. 실행 파일은 `downloads/`에만 보관합니다.
+
+검사: `tests/room.cjs`(화면 크기·공개 첫 화면·시간·날씨·행동·방문·모바일 입력), `tests/room-routes.cjs`(모든 타워·발판의 실제 이동), `tests/playground.cjs`(기록 페이지 엔진), `tests/offline-playground.cjs`(오프라인), `node tests/sync.cjs`(저장 중 재수정). 브라우저 검사는 `PLAYWRIGHT_MODULE` 및 필요하면 `BROWSER_EXECUTABLE` 환경 변수를 지정합니다.
