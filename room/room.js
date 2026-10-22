@@ -89,6 +89,31 @@ function inviteHouseBuddy(c,t) {
   buddy.cozy=spot;buddy.favorite='house-top';buddy.tx=spot.xc;buddy.goal=null;buddy.edge=null;buddy.zoom=0;
   if(nodeOf(buddy)===spot.platform)setMode(buddy,'goFavorite',t,45000);else travelTo(buddy,spot.platform,t);
 }
+// Decorative lunar age approximation: NASA's 2000-01-06 18:14 UTC new moon
+// and mean synodic month (29.530588 days), not an eclipse/ephemeris calculator.
+// https://eclipse.gsfc.nasa.gov/phase/phases1901.html
+function roomMoonPhase(date){
+  const cycle=29.530588*86400000,elapsed=date.getTime()-Date.UTC(2000,0,6,18,14);
+  const phase=((elapsed%cycle)+cycle)%cycle/cycle;
+  const names=['삭 · 새달','초승달','상현달','차오르는 달','보름달','기우는 달','하현달','그믐달'];
+  return {phase,name:names[Math.round(phase*8)%8],light:(1-Math.cos(phase*2*Math.PI))/2};
+}
+let lastMoonMinute=null;
+function updateClockMoon(date){
+  const minute=Math.floor(date.getTime()/60000);if(minute===lastMoonMinute)return;lastMoonMinute=minute;
+  const moon=roomMoonPhase(date),waxing=moon.phase<=.5,curve=Math.cos(moon.phase*2*Math.PI);
+  const outer=[],inner=[];
+  for(let i=0;i<=36;i++){
+    const y=-9+18*i/36,limb=Math.sqrt(Math.max(0,81-y*y));
+    outer.push([60+(waxing?limb:-limb),122+y]);
+    inner.push([60+(waxing?curve*limb:-curve*limb),122+y]);
+  }
+  const points=[...outer,...inner.reverse()];
+  $('clockMoonLight').setAttribute('d',points.map(([x,y],i)=>(i?'L':'M')+x.toFixed(3)+' '+y.toFixed(3)).join(' ')+'Z');
+  const description=`오늘의 달 · ${moon.name} · 밝은 면 약 ${Math.round(moon.light*100)}%`;
+  $('clockMoon').setAttribute('aria-label',description);$('clockMoonTitle').textContent=description;
+  document.querySelector('.cat-wall-clock>svg').setAttribute('aria-label','기기 시간에 맞춰 움직이는 고양이 시계, '+description);
+}
 function updateRoomTime(date=new Date()){
   const hour=date.getHours()+date.getMinutes()/60+date.getSeconds()/3600;
   const daylight=hour>=6&&hour<18, progress=((hour-(daylight?6:18)+24)%24)/12;
@@ -100,6 +125,7 @@ function updateRoomTime(date=new Date()){
   $('moon').hidden=daylight;$('moon').style.left=x+'%';$('moon').style.top=top+'%';
   $('clockHour').setAttribute('transform',`rotate(${(hour%12)*30} 60 78)`);
   $('clockMinute').setAttribute('transform',`rotate(${(date.getMinutes()+date.getSeconds()/60)*6} 60 78)`);
+  updateClockMoon(date);
   $('catClockText').textContent=date.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
   $('roomClock').textContent=date.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+(night>.7?' · 달빛의 방':hour>16?' · 노을의 방':' · 호수의 방');
   document.body.dataset.time=night>.7?'night':'day';
