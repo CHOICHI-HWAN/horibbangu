@@ -19,7 +19,8 @@
       "room/room.js",
       "room/room.css",
       "scripts/**",
-      "room/assets/**"
+      "room/assets/**",
+      "/*.png"
     ],
     "headers": [
       {
