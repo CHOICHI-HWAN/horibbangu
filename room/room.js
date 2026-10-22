@@ -4,8 +4,8 @@ try { Object.assign(roomSizes,JSON.parse(localStorage.getItem('horibbangu-cat-si
 addEventListener('storage',e=>{if(e.key==='horibbangu-cat-sizes-v1'){try {Object.assign(roomSizes,JSON.parse(e.newValue||'{}'));renderCats();}catch(err){}}});
 // Room-only scenery and events. Time is the device's local clock; weather is fictional.
 let housePlatforms = [], tunnelPlatform = null, tunnelX=0, roomWeather = 'clear', weatherChoice = 'auto';
-let bowlsUntil=0;
-let eventState = null, nextMealAt = 0, nextBusAt = 0, lastRoomDate = '', weatherFrame = 0;
+let acorns=[];
+let eventState = null, nextVisitAt = 0, nextBusAt = 0, lastRoomDate = '', weatherFrame = 0;
 const FIFTY_MINUTES = 50 * 60 * 1000;
 function furnitureElement(className, left, bottom, width, height, svg) {
   const el=document.createElement('div');el.className='room-furniture '+className;
@@ -101,6 +101,63 @@ function catbusSVG(){
   </svg>`;
 }
 
+function travelerSVG(){
+  return `<svg viewBox="0 0 240 180" aria-hidden="true"><defs>
+  <radialGradient id="traveler-fur" cx="35%" cy="25%" r="85%"><stop stop-color="#a7b3a8"/><stop offset=".7" stop-color="#84998b"/><stop offset="1" stop-color="#6b8273"/></radialGradient>
+  <radialGradient id="traveler-bag" cx="35%" cy="30%" r="90%"><stop stop-color="#9bac7b"/><stop offset="1" stop-color="#667c54"/></radialGradient>
+  </defs>
+  <ellipse cx="127" cy="168" rx="94" ry="5" fill="#5d6b50" opacity=".1"/>
+  <g class="trail-baby white-traveler"><path class="traveler-foot foot-back" d="M18 148q-6 12 6 13h8l-2-13" fill="#e2e4cd"/>
+  <path d="M16 138 16 110 24 90q3-5 6 1l3 20 9-15q4-5 6 1l-3 24q14 11 12 23-4 16-23 15-22-2-18-21Z" fill="#f4f0dc" stroke="#dde1c7" stroke-width=".8"/>
+  <path class="traveler-foot foot-front" d="M36 150q-3 12 8 12h8q4-4-3-6l-2-7" fill="#f4f0dc"/>
+  <g class="guest-eyes baby-eyes"><ellipse cx="45" cy="126" rx="2.7" ry="3.3" fill="#526e5c"/><circle cx="46" cy="125" r=".8" fill="white"/></g><path d="m53 132 4 1-3 2" fill="#91a184"/></g>
+  <g class="trail-baby blue-traveler"><path class="traveler-foot foot-back" d="M59 147q-5 14 8 15h9l-3-14" fill="#789aa5"/>
+  <path d="M58 128q-1-13 6-22l-2-27q2-8 7-1l8 23 10-21q4-6 6 1l-2 28q15 6 17 22 4 25-22 31-29 1-28-34Z" fill="#92b2bc" stroke="#759ca2" stroke-width="1"/>
+  <path d="M89 120q19 3 14 24-7 14-19 10-11-9 5-34Z" fill="#e6ebd0"/>
+  <path class="traveler-foot foot-front" d="M84 151q-3 13 9 13h10q5-4-4-6l-2-7" fill="#92b2bc"/>
+  <g class="guest-eyes baby-eyes" style="animation-delay:-2s"><ellipse cx="94" cy="115" rx="4" ry="4.5" fill="#fffdf1"/><ellipse cx="95" cy="115" rx="1.8" ry="2.4" fill="#426267"/></g><path d="m103 122 5 2-5 2" fill="#638b89"/></g>
+  <g class="traveler-body">
+  <path class="traveler-foot foot-back" d="M119 147q-11 17 3 19h21q7-4-2-10l-2-10" fill="#758e7a" stroke="#667e6d" stroke-width="1"/>
+  <path d="M111 73q-3-24 5-49 6-14 11-2l7 38m13-4 13-38q7-12 12-2 4 21-6 47" fill="url(#traveler-fur)" stroke="#738b77" stroke-width="1"/>
+  <path d="m119 28 3 25 5-3-3-21m40-5-10 27 5-1 9-25" fill="#bac5a8" opacity=".65"/>
+  <path d="M106 83q8-29 37-30 25-2 42 17l10 17q20 8 12 19l-12 5q12 38-21 50-43 16-69-11-20-27 1-67Z" fill="url(#traveler-fur)" stroke="#6e8573" stroke-width="1.1"/>
+  <path d="M167 98q24 5 22 30-3 27-28 29-16-6-12-24 3-23 18-35Z" fill="#ece7cd"/>
+  <path d="m165 116 6-5 4 6-5-2Zm-9 16 6-5 4 6-5-2Zm14 8 6-5 4 6-5-2Z" fill="#8b9d7f"/>
+  <g class="guest-eyes profile-eye"><ellipse cx="180" cy="84" rx="8" ry="8.5" fill="#fffdf1"/><ellipse cx="183" cy="84" rx="3.3" ry="4.3" fill="#3c5546"/><circle cx="184" cy="82" r="1.1" fill="white"/></g>
+  <path d="M199 91q8-2 10 4l-8 3Z" fill="#4c6651"/><path d="M188 105q7 3 12-2" stroke="#6a805e" fill="none" stroke-width="1.2" stroke-linecap="round"/>
+  <ellipse cx="179" cy="98" rx="6" ry="3" fill="#cca795" opacity=".35"/>
+  <path d="m193 100 23-3m-23 8 23 4m-36 4 14 5" stroke="#5e775e" stroke-width="1.2" stroke-linecap="round"/>
+  <path class="traveler-foot foot-front" d="M156 150q-5 16 7 17h20q7-4-3-8l-6-10" fill="#819682" stroke="#6c846f" stroke-width="1"/>
+  <path d="m165 163 1 3m6-3 1 3" stroke="#c7cfb3" stroke-width="1"/>
+  <path d="M163 103q-5 13 5 15 11-1 9-15" fill="#7e9480" stroke="#6d8470" stroke-width="1"/>
+  </g>
+  <g class="traveler-bundle">
+  <path d="m81 47 89 57" stroke="#886d48" stroke-width="4.5" stroke-linecap="round"/><path d="m86 50-5-11m3 10-11-3" stroke="#886d48" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M102 65q-18 2-24 27-4 24 22 29 26 2 29-21-2-24-18-34Z" fill="url(#traveler-bag)" stroke="#5f784e" stroke-width="1"/>
+  <path d="M103 69q-12-8-12-15 11-2 16 9 6-13 15-10-1 10-13 16Z" fill="#8fa06d" stroke="#687f51" stroke-width="1"/>
+  <path d="M105 69q-7 19-3 45m8-42q13 21 8 35" stroke="#b4bc8a" stroke-width="1" opacity=".6" fill="none"/>
+  <g fill="#e5e2b9" opacity=".7"><circle cx="89" cy="88" r="2.3"/><circle cx="116" cy="89" r="2.3"/><circle cx="94" cy="105" r="2"/><circle cx="115" cy="107" r="2"/></g>
+  <path d="m102 117 5-3 5 4" stroke="#516d45" stroke-width="1.6" fill="none"/>
+  </g></svg>`;
+}
+function acornSVG(){
+  return '<svg viewBox="0 0 20 25" aria-hidden="true"><path d="M4 10q-1 10 6 14 8-4 7-14Z" fill="#b2844f" stroke="#8e673e" stroke-width="1"/><path d="M2 11q-1-9 8-9 9 0 9 9Z" fill="#795d3f"/><path d="m10 3 2-3" stroke="#795d3f" stroke-width="2" stroke-linecap="round"/><path d="m5 7 3 2m1-4 3 3m2-2 2 3" stroke="#a58b62" stroke-width="1"/><path d="M7 14q-1 4 2 6" stroke="#d5b481" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>';
+}
+function dropAcorn(x,born){
+  const el=document.createElement('span');el.className='trail-acorn';el.innerHTML=acornSVG();el.style.left=x+'px';$('wanderers').append(el);
+  acorns.push({el,born});
+}
+function updateAcorns(now){
+  acorns=acorns.filter(a=>{
+    const age=Math.max(0,(now-a.born)/1000);
+    if(age>=10){a.el.remove();return false;}
+    const fall=Math.min(1,age/.65),bounce=age>.65&&age<1.05?Math.sin((age-.65)/.4*Math.PI)*6:0;
+    a.el.style.bottom=(26+78*Math.pow(1-fall,2)+bounce)+'px';
+    a.el.style.transform=`rotate(${-26+fall*48}deg)`;a.el.style.opacity=age<7?'1':String((10-age)/3);
+    return true;
+  });
+}
+
 function updateRoomTime(date=new Date()){
   const hour=date.getHours()+date.getMinutes()/60+date.getSeconds()/3600;
   const daylight=hour>=6&&hour<18, progress=((hour-(daylight?6:18)+24)%24)/12;
@@ -147,10 +204,12 @@ function drawWeather(t){
   }
   weatherFrame=requestAnimationFrame(drawWeather);
 }
-function beginMeal(now=Date.now()){
+function beginStroll(now=Date.now()){
   if(eventState||reduceMotion)return false;
-  const door=$('orangeDoor').getBoundingClientRect();
-  eventState={kind:'meal',start:now,served:false,doorX:door.left+door.width/2-90};$('orangeDoor').classList.add('open');$('status').textContent='주황색 문이 열렸어요. 작은 친구들이 밥을 차리러 왔어요.';updateVisitButtons();return true;
+  const width=$('visitors').offsetWidth;
+  eventState={kind:'stroll',start:now,width,walkDuration:Math.max(12,Math.min(24,(innerWidth+width)/52)),dropped:0};
+  $('visitors').className='strolling';$('visitors').style.opacity='1';$('visitors').style.left=(-width-24)+'px';
+  $('orangeDoor').classList.add('open');$('status').textContent='봇짐 메고 쪼르르… 도토리 손님들이 산책을 왔어요.';updateVisitButtons();return true;
 }
 function beginBus(now=Date.now()){
   if(eventState||reduceMotion)return false;
@@ -159,19 +218,31 @@ function beginBus(now=Date.now()){
   eventState={kind:'bus',start:now,passengers,boarded:false};$('status').textContent='고양이버스가 호수 드라이브를 왔어요.';updateVisitButtons();return true;
 }
 function tickRoomEvents(now=Date.now()){
-  if(bowlsUntil && now>bowlsUntil){$('bowls').classList.remove('visible');bowlsUntil=0;}
+  updateAcorns(now);
   if(!eventState){
-    if(now>=nextMealAt&&!document.hidden&&!reduceMotion){nextMealAt=now+FIFTY_MINUTES;beginMeal(now);}
+    if(now>=nextVisitAt&&!document.hidden&&!reduceMotion){nextVisitAt=now+FIFTY_MINUTES;beginStroll(now);}
     else if(now>=nextBusAt&&!document.hidden&&!reduceMotion){nextBusAt=now+(18+Math.random()*12)*60000;beginBus(now);}
     return;
   }
   const e=eventState,sec=(now-e.start)/1000;
-  if(e.kind==='meal'){
-    const progress=sec<6?Math.min(1,sec/6):sec<25?1:Math.max(0,1-(sec-25)/6);
-    const x=e.doorX+(innerWidth*.26-e.doorX)*progress;
-    $('visitors').style.left=x+'px';$('visitors').style.opacity=String(Math.min(1,progress*3));$('visitors').style.transform=`scale(${.25+.75*progress})`;
-    if(sec>=8&&!e.served){e.served=true;bowlsUntil=now+120000;$('bowls').classList.add('visible');cats.forEach((c,i)=>{if(!c.air&&c.mode!=='bubble'){leave(c,performance.now());c.goal=null;c.edge=null;c.foodTarget=innerWidth*(.23+i*.065);c.zoom=0;if(nodeOf(c)===GROUND){c.tx=c.foodTarget;c.foodTarget=null;c.favorite='eat';setMode(c,'goFavorite',performance.now(),45000);}else travelTo(c,GROUND,performance.now());}});}
-    if(sec>=32){$('orangeDoor').classList.remove('open');$('visitors').style.left='-230px';eventState=null;updateVisitButtons();$('status').textContent='맛있게 먹고, 또 느긋하게 놀아요.';}
+  if(e.kind==='stroll'){
+    const walkers=$('visitors'),walk=Math.min(1,sec/e.walkDuration),run=Math.max(0,Math.min(1,(sec-e.walkDuration)/3.6));
+    const runStart=innerWidth-e.width*1.1;
+    const x=sec<e.walkDuration?-e.width+(runStart+e.width)*walk:runStart+(innerWidth+e.width+30-runStart)*Math.pow(run,1.3);
+    const jump=Math.max(0,Math.min(1,(sec-e.walkDuration-1.2)/1.8));
+    const lift=Math.sin(jump*Math.PI)*85;
+    walkers.style.left=x+'px';walkers.style.transform=`translateY(${-lift}px) rotate(${jump>0&&jump<1?-Math.sin(jump*Math.PI)*7:0}deg)`;
+    walkers.classList.toggle('running',sec>=e.walkDuration);walkers.classList.toggle('leaping',jump>0&&jump<1);
+    // Each acorn has its own birth time/position, even when a background frame arrives late.
+    while(e.dropped<10){
+      const dropAt=2.5+e.dropped*1.75;
+      if(dropAt>=e.walkDuration-.7||sec<dropAt)break;
+      const dropX=-e.width+(runStart+e.width)*(dropAt/e.walkDuration)+e.width*107/240;
+      dropAcorn(dropX,e.start+dropAt*1000);e.dropped++;
+    }
+    updateAcorns(now);
+    if(sec>6)$('orangeDoor').classList.remove('open');
+    if(sec>=e.walkDuration+3.6){walkers.className='';walkers.style.left=(-e.width-24)+'px';walkers.style.transform='';$('orangeDoor').classList.remove('open');eventState=null;updateVisitButtons();$('status').textContent='도토리를 나누고, 폴짝! 다음에 또 만나요 ♡';}
   }else{
     const bus=$('catbus'),target=Math.max(20,innerWidth/2-140);
     const x=sec<5?-320+(target+320)*sec/5:sec<10?target:sec<20?target+(innerWidth+320-target)*Math.min(1,(sec-10)/5):sec<25?-320+(target+320)*(sec-20)/5:sec<31?target:target+(innerWidth+320-target)*Math.min(1,(sec-31)/5);
@@ -184,21 +255,20 @@ function tickRoomEvents(now=Date.now()){
 }
 function updateVisitButtons(){
   $('guestsBtn').disabled=!!eventState;$('busBtn').disabled=!!eventState;
-  $('guestsBtn').textContent=eventState?.kind==='meal'?'손님 오는 중…':'손님 초대';
+  $('guestsBtn').textContent=eventState?.kind==='stroll'?'산책 중…':'손님 초대';
   $('busBtn').textContent=eventState?.kind==='bus'?'드라이브 중…':'버스 부르기';
 }
 function initRoom(){
   document.body.append(document.querySelector('.cat-wall-clock'));
-  $('guestsBtn').onclick=()=>{if(reduceMotion)$('motionBtn').click();const now=Date.now();if(beginMeal(now))nextMealAt=now+FIFTY_MINUTES;};
+  $('guestsBtn').onclick=()=>{if(reduceMotion)$('motionBtn').click();const now=Date.now();if(beginStroll(now))nextVisitAt=now+FIFTY_MINUTES;};
   $('busBtn').onclick=()=>{if(reduceMotion)$('motionBtn').click();const now=Date.now();if(beginBus(now))nextBusAt=now+(18+Math.random()*12)*60000;};
-  $('visitors').innerHTML=totoroSVG();$('rain-friend').innerHTML=totoroSVG(true);
+  $('visitors').innerHTML=travelerSVG();$('rain-friend').innerHTML=totoroSVG(true);
   $('catbus').insertAdjacentHTML('afterbegin',catbusSVG());
-  $('bowls').innerHTML=Array.from({length:8},()=>'<span class="food-bowl"></span>').join('');
   $('weather').onchange=e=>setRoomWeather(e.target.value);
   $('catBtn').addEventListener('click',()=>{$('catBtn').textContent=catsOn?'고양이 숨기기':'고양이 보이기';});
   $('restBtn').onclick=()=>{const t=performance.now();cats.forEach(c=>{if(!c.air&&!['angel','bubble','busRide'].includes(c.mode)){leave(c,t);if(!chooseFavorite(c,t))sleepNow(c,t);}});$('status').textContent='각자 좋아하는 폭신한 자리로 가요.';};
   $('wingsBtn').onclick=()=>{if(reduceMotion){$('status').textContent='움직임을 켜면 로이와 동글이가 날개를 펼쳐요.';return;}const t=performance.now();cats.filter(c=>['로이','동글이'].includes(c.name)).forEach(c=>{c.angelAfter=0;c.restUntil=0;if(!c.air)startAngelFlight(c,t);});};
-  updateRoomTime();nextMealAt=Date.now()+FIFTY_MINUTES;nextBusAt=Date.now()+(18+Math.random()*12)*60000;
+  updateRoomTime();nextVisitAt=Date.now()+FIFTY_MINUTES;nextBusAt=Date.now()+(18+Math.random()*12)*60000;
   setInterval(()=>{updateRoomTime();},1000);
   weatherFrame=requestAnimationFrame(drawWeather);
 }
