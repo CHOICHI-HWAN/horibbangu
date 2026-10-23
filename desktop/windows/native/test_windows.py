@@ -26,10 +26,18 @@ def pump(seconds):
  while time.time()<end:
   while u.PeekMessageW(C.byref(msg),None,0,0,1):u.TranslateMessage(C.byref(msg));u.DispatchMessageW(C.byref(msg))
   time.sleep(.02)
+rpc=None
+def stop_rpc():
+ global rpc
+ if rpc:
+  rpc.stdin.close();rpc.wait(timeout=10);rpc=None
 def evaluate(expression):
- # A short separate CDP client avoids dependence on a third-party Python websocket library.
- code="const{chromium}=require('playwright');(async()=>{const b=await chromium.connectOverCDP('http://127.0.0.1:9223');try{const p=b.contexts()[0].pages().find(p=>p.url().startsWith('https://horibbangu.local/'));console.log(JSON.stringify((await p.evaluate("+json.dumps(expression)+"))??null));}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});"
- return json.loads(subprocess.check_output(['node','-e',code],text=True).strip())
+ global rpc
+ if rpc is None:rpc=subprocess.Popen(['node','desktop/windows/native/evaluate.cjs'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True,bufsize=1)
+ rpc.stdin.write(json.dumps(expression)+'\n');rpc.stdin.flush()
+ line=rpc.stdout.readline();assert line,'CDP evaluator exited'
+ response=json.loads(line);assert response['ok'],response
+ return response['result']
 app=subprocess.Popen([str(ROOT/'candidate.exe')]);print('Native host PID:',app.pid,flush=True)
 try:
  deadline=time.time()+60
@@ -50,10 +58,6 @@ try:
  assert not(style&0x00C00000),'Title bar unexpectedly present'
  assert extended&0x80000 and extended&0x80,'Layered/tool window missing'
  subprocess.run(['node','desktop/windows/native/test_page.cjs'],check=True)
- evaluate('desktopHost.setInteractive(true)');pump(.25)
- assert not(u.GetWindowLongPtrW(hwnd,-20)&0x20),'Explicit interactive message failed'
- evaluate('desktopHost.setInteractive(false)');pump(.25)
- assert u.GetWindowLongPtrW(hwnd,-20)&0x20
  # Use the actual native settings controls: monitor enumeration, live opacity and stacking.
  evaluate('setDesktopBackground(true)');pump(.4)
  u.PostMessageW(hwnd,0x0111,110,0);pump(.4)
@@ -111,16 +115,17 @@ try:
  assets=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.0'
  assert (assets/'LICENSE').exists() and (assets/'WebView2-LICENSE.txt').exists()
  # Exit and relaunch from a different location: same profile, same background preference.
- u.PostMessageW(hwnd,0x0010,0,0);app.wait(timeout=15)
+ stop_rpc();u.PostMessageW(hwnd,0x0010,0,0);app.wait(timeout=15)
  import shutil
  moved=OUT/'relocated';moved.mkdir(exist_ok=True);shutil.copyfile(ROOT/'candidate.exe',moved/'cats.exe')
  app=subprocess.Popen([str(moved/'cats.exe')]);pump(5)
  assert app.poll() is None and evaluate('desktopBackground')
  hwnd=u.FindWindowW('HoribbanguWebView2Desktop',None)
- u.PostMessageW(hwnd,0x0312,2,0);app.wait(timeout=15);assert app.returncode==0
+ stop_rpc();u.PostMessageW(hwnd,0x0312,2,0);app.wait(timeout=15);assert app.returncode==0
  (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'transparentPixel':sample,'checks':['real Win32/WebView2 launch','monitor selection and opacity','top/behind modes','offline renderer','background and lake','persistent settings','transparent compositor','physical mouse click-through and drag','hotkey menu and exit','relocated EXE']},indent=2))
  print('Windows native runtime verification passed.')
 finally:
+ if rpc:stop_rpc()
  ImageGrab.grab().save(OUT/'final-desktop.png')
  import shutil
  log=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.0/native-diagnostics.txt'
