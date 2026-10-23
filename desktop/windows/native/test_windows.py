@@ -57,6 +57,8 @@ try:
  # The Windows native mouse pump must enable hit testing over a visible cat.
  x=int(box['x']+box['width']/2);y=int(box['y']+box['height']/2)
  u.SetCursorPos(x,y);pump(.5)
+ pointer=evaluate("JSON.stringify({pointer:lastPointer,cat:{x:cats[0].x,y:cats[0].y,mode:cats[0].mode},target:document.elementFromPoint(lastPointer.x,lastPointer.y)?.className,interactive:lastInteractive})")
+ (OUT/'pointer.json').write_text(pointer,encoding='utf-8')
  assert not(u.GetWindowLongPtrW(hwnd,-20)&0x20),'Cat did not become interactive'
  u.mouse_event(0x0002,0,0,0,0);pump(.1)
  for step in range(1,9):u.SetCursorPos(x+step*12,y-step*9);pump(.06)

@@ -77,7 +77,7 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 ## Windows 바탕화면 친구들 (3.3.0)
 
-[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)에서 ZIP 안의 **`호리빵구.exe` 하나**를 꺼내 실행합니다. 기본 다운로드는 Win32·WebView2 경량판입니다. 고양이·호수 그림·동작 코드는 EXE에 포함하고 브라우저 엔진은 PC에 설치된 Microsoft Edge WebView2를 공유합니다. 실행 중 인터넷·로그인·체중 기록은 필요 없습니다. 런타임이 없으면 공식 설치 안내를 열지 묻고 자동 설치하지 않습니다.
+[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)에서 ZIP 안의 **`호리빵구.exe` 하나**를 꺼내 실행합니다. 기본 다운로드는 Win32·WebView2 경량판입니다. ZIP은 **755,218바이트(약 0.76 MB)**, EXE는 **1,222,656바이트(약 1.22 MB)**로 기존 ZIP 100,898,936바이트보다 다운로드 크기를 약 **99.25%** 줄였습니다. 고양이·호수 그림·동작 코드는 EXE에 포함하고 브라우저 엔진은 PC에 설치된 Microsoft Edge WebView2를 공유합니다. 실행 중 인터넷·로그인·체중 기록은 필요 없습니다. 런타임이 없으면 공식 설치 안내를 열지 묻고 자동 설치하지 않습니다.
 
 별도 런타임 설치 없이 실행하려면 [기존 3.2.1 호환판](https://horibbangu.web.app/releases/Horibbangu-Windows-Standalone.zip)을 받을 수 있습니다. 엔진을 포함해 약 101 MB이며 새 경량판과 별도 설정을 사용합니다. 로컬 `downloads/`에는 작은 EXE·ZIP·사용방법을 보관합니다. Firebase Spark에서는 EXE 직접 호스팅이 제한되어 EXE 하나를 담은 ZIP을 제공합니다.
 

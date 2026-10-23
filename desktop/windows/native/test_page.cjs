@@ -28,7 +28,7 @@ const {chromium}=require('playwright');
  assert(await page.locator('#viewBtn').isHidden());
  const stopped=await page.evaluate(()=>lastLakeFrame);await page.waitForTimeout(250);assert.equal(await page.evaluate(()=>lastLakeFrame),stopped);
  // Put a stationary cat on a blank part of the desktop for the physical mouse test.
- await page.evaluate(()=>{cats.slice(1).forEach(c=>c.el.style.pointerEvents='none');const c=cats[0];c.x=200;c.y=80;c.air=false;c.mode='sit';c.until=1e12;renderCatPosition(c);});
+ await page.evaluate(()=>{cats.slice(1).forEach(c=>c.el.style.pointerEvents='none');const c=cats[0];c.x=200;c.y=0;c.stand=GROUND;c.air=false;c.mode='sit';c.until=1e12;renderCatPosition(c);});
  const box=await page.locator('.cat').first().boundingBox();
  fs.writeFileSync('build/native-verification/cat.json',JSON.stringify(box));
  assert.deepEqual(errors,[]);
