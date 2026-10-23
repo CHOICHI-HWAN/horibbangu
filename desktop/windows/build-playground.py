@@ -23,6 +23,6 @@ script=root/'build/desktop-source.js';script.parent.mkdir(exist_ok=True);script.
 compile_file(script,root/'desktop/windows/playground.js','browser')
 html=html[:match.start()]+'<script src="playground.js"></script>'+html[match.end():]
 html=html.replace("script-src 'unsafe-inline'", "script-src 'self'")
-(root/'desktop/windows/playground.html').write_text(html)
+(root/'desktop/windows/playground.html').write_text(html,newline='\n')
 assert 'id="landscape"' in html and 'data:image/webp' in html
 print('Generated desktop playground with switchable painted background.')

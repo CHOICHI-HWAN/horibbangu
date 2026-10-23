@@ -14,16 +14,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Download exact candidate from draft release
+      - name: Build from source with pinned tools (read-only repository access)
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          $candidate = Get-Content desktop/windows/native/candidate.json | ConvertFrom-Json
-          if ($candidate.assetId -notmatch '^\d+$' -or $candidate.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid candidate metadata' }
-          curl.exe --fail --location --header "Authorization: Bearer $env:GH_TOKEN" --header 'Accept: application/octet-stream' "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/assets/$($candidate.assetId)" --output candidate.exe
-          if ($LASTEXITCODE -ne 0) { throw 'Candidate download failed' }
-          if ((Get-FileHash candidate.exe -Algorithm SHA256).Hash.ToLower() -ne $candidate.sha256) { throw 'Candidate hash mismatch' }
+          curl.exe --fail --location 'https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip' --output "$env:RUNNER_TEMP\zig.zip"
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler download failed' }
+          if ((Get-FileHash "$env:RUNNER_TEMP\zig.zip" -Algorithm SHA256).Hash.ToLower() -ne '3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c') { throw 'Compiler checksum mismatch' }
+          Expand-Archive "$env:RUNNER_TEMP\zig.zip" "$env:RUNNER_TEMP\zig"
+          $env:ZIG = "$env:RUNNER_TEMP\zig\zig-x86_64-windows-0.15.2\zig.exe"
+          $env:HORIBBANGU_NATIVE_CACHE = "$env:RUNNER_TEMP\hori-native"
+          npm ci --ignore-scripts
+          python desktop/windows/build-playground.py
+          if ($LASTEXITCODE -ne 0) { throw 'Renderer build failed' }
+          python desktop/windows/native/build.py
+          if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
+          python desktop/windows/native/test_binary.py
+          if ($LASTEXITCODE -ne 0) { throw 'Binary validation failed' }
+          Copy-Item 'build/windows-native/호리빵구.exe' candidate.exe
       - name: Prepare isolated test dependencies
         shell: pwsh
         run: |
@@ -47,4 +54,7 @@ jobs:
         if: always()
         with:
           name: windows-native-verification
-          path: build/native-verification/
+          path: |
+            build/native-verification/
+            build/windows-native/호리빵구.exe
+            build/windows-native/manifest.json

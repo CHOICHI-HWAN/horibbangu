@@ -14,10 +14,11 @@ if not package.exists():
 assert hashlib.sha256(package.read_bytes()).hexdigest()==SDK_SHA256
 if not sdk.exists():
  with zipfile.ZipFile(package) as z:z.extractall(sdk)
+zig=os.environ.get('ZIG') or str(CACHE/'zig-aarch64-macos-0.15.2/zig')
 BUILD=ROOT/'build/windows-native';BUILD.mkdir(parents=True,exist_ok=True)
 header=(sdk/'build/native/include/WebView2.h').read_text()
 iids=dict((name,value) for value,name in re.findall(r'MIDL_INTERFACE\("([a-fA-F0-9-]+)"\)\s*(ICore\w+)\s*:',header))
-dcomp=(CACHE/'zig-aarch64-macos-0.15.2/lib/libc/include/any-windows-any/dcomp.h').read_text()
+dcomp=(Path(zig).parent/'lib/libc/include/any-windows-any/dcomp.h').read_text()
 iids['IDCompositionDevice']=re.search(r'DECLARE_INTERFACE_IID_\(IDCompositionDevice,IUnknown,"([^"]+)"',dcomp).group(1)
 needed=re.findall(r'MY_(\w+)',(SOURCE/'host.cpp').read_text())
 needed+=re.findall(r'CALLBACK_BASE\((ICore\w+)\)',(SOURCE/'host.cpp').read_text())
@@ -36,7 +37,6 @@ for i,p in enumerate(files):
  shutil.copyfile(p,BUILD/f'asset-{101+i}.bin')
  resources.append(str(101+i)+' RCDATA "asset-'+str(101+i)+'.bin"')
 (BUILD/'app.rc').write_text('\n'.join(resources)+'\n')
-zig=os.environ.get('ZIG') or str(CACHE/'zig-aarch64-macos-0.15.2/zig')
 env={**os.environ,'ZIG_GLOBAL_CACHE_DIR':str(CACHE/'zig-cache'),'ZIG_LOCAL_CACHE_DIR':str(CACHE/'local-cache')}
 subprocess.run([zig,'rc','/fo',str(BUILD/'app.res'),str(BUILD/'app.rc')],env=env,check=True,cwd=BUILD)
 output=BUILD/'호리빵구.exe'
