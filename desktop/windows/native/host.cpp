@@ -12,6 +12,7 @@
 #include <dwmapi.h>
 #include <dcomp.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "WebView2.h"
 #include "webview-guids.h"
 
@@ -27,6 +28,8 @@ static IDCompositionEffectGroup* opacityEffect;
 static bool background=false,ready=false,interactive=false;
 static HHOOK mouseHook;
 static bool catGesture=false;
+static RECT inputRect={};
+static bool inputRectValid=false;
 static wchar_t assetFolder[2048],profileFolder[2048];
 static const wchar_t* origin=L"https://horibbangu.local/";
 static const wchar_t* pageUrl=L"https://horibbangu.local/playground.html";
@@ -57,29 +60,32 @@ static void hitTest(bool enabled){
 static bool visibleAt(POINT point){
  if(!IsWindowVisible(windowHandle))return false;
  RECT rect;GetWindowRect(windowHandle,&rect);if(!PtInRect(&rect,point))return false;
- HWND hit=GetAncestor(WindowFromPoint(point),GA_ROOT);
- if(hit==windowHandle)return true;
- // Never intercept a click on a foreground application covering the cats.
+ // WindowFromPoint can send cross-thread hit-test messages and block a mouse
+ // hook. Conservatively test visible window bounds without calling their UI.
  for(HWND h=GetTopWindow(nullptr);h;h=GetWindow(h,GW_HWNDNEXT)){
   if(h==windowHandle)return true;
-  if(h==hit)return false;
+  if(!IsWindowVisible(h)||(GetWindowLongPtrW(h,GWL_EXSTYLE)&WS_EX_TRANSPARENT))continue;
+  DWORD cloaked=0;DwmGetWindowAttribute(h,DWMWA_CLOAKED,&cloaked,sizeof(cloaked));if(cloaked)continue;
+  RECT area;if(GetWindowRect(h,&area)&&PtInRect(&area,point))return false;
  }return false;
 }
 static LRESULT CALLBACK desktopMouse(int code,WPARAM kind,LPARAM data){
  if(code==HC_ACTION&&ready&&composition){
   auto info=(MSLLHOOKSTRUCT*)data;POINT point=info->pt;
-  if(kind==WM_LBUTTONDOWN&&interactive&&visibleAt(point)){
+  if(diagnostics&&kind==WM_LBUTTONDOWN){wchar_t text[96];swprintf(text,96,L"hook down interactive %d visible %d",interactive,visibleAt(point));trace(text);}
+  POINT localPoint=point;ScreenToClient(windowHandle,&localPoint);
+  if(kind==WM_LBUTTONDOWN&&interactive&&inputRectValid&&PtInRect(&inputRect,localPoint)&&visibleAt(point)){
    catGesture=true;ScreenToClient(windowHandle,&point);
-   composition->SendMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_DOWN,COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_LEFT_BUTTON,0,point);
+   PostMessageW(windowHandle,WM_APP+3,COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_DOWN,MAKELPARAM(point.x,point.y));
    trace(L"cat gesture down");return 1;
   }
   if(catGesture&&kind==WM_MOUSEMOVE){
    ScreenToClient(windowHandle,&point);
-   composition->SendMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE,COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_LEFT_BUTTON,0,point);
+   PostMessageW(windowHandle,WM_APP+3,COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE,MAKELPARAM(point.x,point.y));
   }
   if(catGesture&&kind==WM_LBUTTONUP){
    ScreenToClient(windowHandle,&point);
-   composition->SendMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP,COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_NONE,0,point);
+   PostMessageW(windowHandle,WM_APP+3,COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP,MAKELPARAM(point.x,point.y));
    catGesture=false;trace(L"cat gesture up");return 1;
   }
  }
@@ -133,6 +139,11 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  if(taskbarCreated&&message==taskbarCreated){tray();return 0;}
  if(message==secondInstance){showControls();return 0;}
  switch(message){
+ case WM_APP+3:
+  if(composition&&(w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_DOWN||w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP||w==COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE)){
+   POINT point={GET_X_LPARAM(l),GET_Y_LPARAM(l)};
+   composition->SendMouseInput((COREWEBVIEW2_MOUSE_EVENT_KIND)w,w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP?COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_NONE:COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_LEFT_BUTTON,0,point);
+  }return 0;
  case WM_COMMAND:if(LOWORD(w)==110)openSettings();return 0;
  case WM_MOUSEACTIVATE:if(layer==2)return MA_NOACTIVATE;break;
  case WM_WINDOWPOSCHANGING:if(layer==2){auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
@@ -172,7 +183,16 @@ struct MessageHandler:ICoreWebView2WebMessageReceivedEventHandler{
   LPWSTR source=nullptr,message=nullptr;args->get_Source(&source);trace(source?source:L"message source null");
   if(!source||wcscmp(source,pageUrl)){CoTaskMemFree(source);return S_OK;}CoTaskMemFree(source);
   if(SUCCEEDED(args->TryGetWebMessageAsString(&message))&&message){trace(message);
-   if(!wcscmp(message,L"pointer:1"))hitTest(true);if(!wcscmp(message,L"pointer:0"))hitTest(false);
+   if(!wcsncmp(message,L"pointer:1:",10)&&wcslen(message)<128){
+    long values[4]={};const wchar_t* cursor=message+10;bool valid=true;
+    for(int i=0;i<4;i++){
+     wchar_t* end=nullptr;values[i]=wcstol(cursor,&end,10);
+     if(end==cursor||values[i]<-1000000||values[i]>1000000||(i<3?*end!=L',':*end!=0)){valid=false;break;}cursor=end+1;
+    }
+    RECT candidate={values[0],values[1],values[2],values[3]},client;GetClientRect(windowHandle,&client);
+    inputRectValid=valid&&IntersectRect(&inputRect,&candidate,&client)!=FALSE;hitTest(inputRectValid);
+   }
+   if(!wcscmp(message,L"pointer:0")){hitTest(false);inputRectValid=false;}
    if(!wcscmp(message,L"background:1"))background=true;if(!wcscmp(message,L"background:0"))background=false;
    if(!wcscmp(message,L"quit"))PostMessageW(windowHandle,WM_CLOSE,0,0);
   }CoTaskMemFree(message);return S_OK;
@@ -217,7 +237,7 @@ static const wchar_t* bridge=LR"JS((()=>{
  const allowed=['controls','friends','motion','background-on','background-off'];
  const send=s=>chrome.webview.postMessage(s);
  window.desktopHost=Object.freeze({
-  setInteractive:v=>{if(typeof v==='boolean')send('pointer:'+(v?'1':'0'));},
+  setInteractive:(v,rect)=>{if(v===false)send('pointer:0');else if(v===true&&Array.isArray(rect)&&rect.length===4&&rect.every(Number.isFinite))send('pointer:1:'+rect.map(Math.round).join(','));},
   setBackground:v=>{if(typeof v==='boolean')send('background:'+(v?'1':'0'));},
   quit:()=>send('quit'),
   onCommand:cb=>{if(typeof cb==='function')chrome.webview.addEventListener('message',e=>{if(allowed.includes(e.data))cb(e.data);});}

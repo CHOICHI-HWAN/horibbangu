@@ -1,11 +1,15 @@
 // Hit testing keeps the desktop usable through every empty transparent pixel.
 const host=window.desktopHost;
-let holding=false,lastInteractive=null,lastPointer={x:-1,y:-1};
+let holding=false,lastInteractive=null,lastHitRect='',lastPointer={x:-1,y:-1};
 function updateDesktopHit(x=lastPointer.x,y=lastPointer.y){
  lastPointer={x,y};
  const target=document.elementFromPoint(x,y);
- const interactive=holding||!!target?.closest('.cat,button,a,select');
- if(interactive!==lastInteractive){lastInteractive=interactive;host?.setInteractive(interactive);}
+ const hit=target?.closest('.cat,button,a,select');
+ const interactive=holding||!!hit;
+ const box=hit?.getBoundingClientRect();
+ const rect=box?[box.left,box.top,box.right,box.bottom].map(value=>Math.round(value*devicePixelRatio)):null;
+ const signature=rect?.join(',')||'';
+ if(interactive!==lastInteractive||signature!==lastHitRect){lastInteractive=interactive;lastHitRect=signature;host?.setInteractive(interactive,rect);}
 }
 addEventListener('mousemove',event=>updateDesktopHit(event.clientX,event.clientY));
 addEventListener('pointerdown',event=>{if(event.button===0&&event.target.closest('.cat'))holding=true;updateDesktopHit(event.clientX,event.clientY);},true);
