@@ -162,9 +162,9 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_RBUTTONDOWN:case WM_RBUTTONUP:case WM_MBUTTONDOWN:case WM_MBUTTONUP:case WM_MOUSEWHEEL:case WM_MOUSEHWHEEL:mouse(message,w,l);return 0;
  case WM_TIMER:
   if(layer==2&&IsWindowVisible(h)){static ULONGLONG lastBehind=0;ULONGLONG now=GetTickCount64();if(now-lastBehind>=1000){SetWindowPos(h,HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);lastBehind=now;}}
-  if(ready&&composition&&IsWindowVisible(h)&&!catGesture&&GetCapture()!=h){
+  if(ready&&composition&&IsWindowVisible(h)&&GetCapture()!=h){
    POINT p;GetCursorPos(&p);ScreenToClient(h,&p);RECT r;GetClientRect(h,&r);
-   composition->SendMouseInput(PtInRect(&r,p)?COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE:COREWEBVIEW2_MOUSE_EVENT_KIND_LEAVE,keys(),0,p);
+   composition->SendMouseInput(catGesture||PtInRect(&r,p)?COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE:COREWEBVIEW2_MOUSE_EVENT_KIND_LEAVE,catGesture?COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_LEFT_BUTTON:keys(),0,p);
   }return 0;
  case WM_HOTKEY:if(w==1)showControls();else DestroyWindow(h);return 0;
  case WM_APP+1:

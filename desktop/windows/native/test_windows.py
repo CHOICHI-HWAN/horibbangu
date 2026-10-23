@@ -106,7 +106,9 @@ try:
  (OUT/'pointer.json').write_text(pointer,encoding='utf-8')
  assert json.loads(pointer)['interactive'],'Cat did not become interactive'
  u.mouse_event(0x0002,0,0,0,0);pump(.1)
- for step in range(1,9):u.SetCursorPos(x+step*12,y-step*9);pump(.06)
+ for step in range(1,9):
+  # SetCursorPos alone doesn't produce WH_MOUSE_LL movement packets.
+  u.mouse_event(0x8001,round((x+step*12)*65535/(width-1)),round((y-step*9)*65535/(height-1)),0,0);pump(.06)
  (OUT/'drag-events.json').write_text(json.dumps(evaluate('({events:window.nativeEvents,mode:cats[0].mode,holding})')),encoding='utf-8')
  assert evaluate("cats[0].mode==='bubble'"),'Native drag never entered bubble mode'
  u.mouse_event(0x0004,0,0,0,0);pump(.2)
