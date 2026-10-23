@@ -96,7 +96,7 @@
 .cat.wheel-running.fast .l4 {animation-delay:-.045s;}
 .cat.wheel-running.fast.walking .head,.cat.wheel-running.fast.walking .leg {animation-duration:.30s;animation-direction:normal;}
 .cat.wheel-running.fast .tail {animation:wheel-tail .60s ease-in-out infinite;}
-.wheel.spin svg .ring {animation-duration:.75s;}
+svg.wheel.spin .ring {animation-duration:.75s;}
 @keyframes wheel-drive {0%,100%{transform:translate(0,1px) rotate(-4deg) scale(1.1,.9);}50%{transform:translate(0,-1.3px) rotate(-6deg) scale(1.12,.91);}}
 @keyframes wheel-hind-stride {0%,100%{transform:rotate(42deg) translateY(-1px);}35%{transform:rotate(-40deg);}65%{transform:rotate(-22deg) translateY(-3px);}}
 @keyframes wheel-front-stride {0%,100%{transform:rotate(-38deg);}35%{transform:rotate(42deg) translateY(-2px);}65%{transform:rotate(20deg) translateY(-4px);}}
