@@ -16,6 +16,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/cache/restore@v4
+        id: native-cache
+        with:
+          path: ${{ runner.temp }}/hori-native
+          key: windows-zig-0.15.2-webview2-1.0.4258.31-v1
       - name: Build from source with pinned tools (read-only repository access)
         shell: pwsh
         run: |
@@ -52,6 +57,11 @@ jobs:
         env:
           WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: --remote-debugging-port=9223
         run: python desktop/windows/native/test_windows.py
+      - uses: actions/cache/save@v4
+        if: always() && steps.native-cache.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/hori-native
+          key: windows-zig-0.15.2-webview2-1.0.4258.31-v1
       - uses: actions/upload-artifact@v4
         if: always()
         with:

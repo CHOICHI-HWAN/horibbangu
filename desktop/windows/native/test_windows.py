@@ -27,9 +27,12 @@ def evaluate(expression):
  # A short separate CDP client avoids dependence on a third-party Python websocket library.
  code="const{chromium}=require('playwright');(async()=>{const b=await chromium.connectOverCDP('http://127.0.0.1:9223');try{const p=b.contexts()[0].pages().find(p=>p.url().startsWith('https://horibbangu.local/'));console.log(JSON.stringify(await p.evaluate("+json.dumps(expression)+")));}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});"
  return json.loads(subprocess.check_output(['node','-e',code],text=True).strip())
-app=subprocess.Popen([str(ROOT/'candidate.exe')])
+app=subprocess.Popen([str(ROOT/'candidate.exe')]);print('Native host PID:',app.pid,flush=True)
 try:
+ deadline=time.time()+60
+ print('Starting WebView2 readiness probe',flush=True)
  for _ in range(300):
+  if time.time()>deadline:raise AssertionError('WebView2 did not become ready within 60 seconds')
   pump(.2)
   if app.poll() is not None:raise AssertionError(f'Native host exited: {app.returncode}')
   try:
@@ -80,5 +83,15 @@ try:
  (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'transparentPixel':sample,'checks':['real Win32/WebView2 launch','offline renderer','background and lake','persistent settings','transparent compositor','physical mouse click-through and drag','hotkey menu and exit','relocated EXE']},indent=2))
  print('Windows native runtime verification passed.')
 finally:
+ ImageGrab.grab().save(OUT/'final-desktop.png')
+ titles=[]
+ callbackType=C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
+ u.GetWindowTextW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
+ def title(h,l):
+  text=C.create_unicode_buffer(1024);u.GetWindowTextW(h,text,1024)
+  if text.value:titles.append(text.value)
+  return True
+ callback=callbackType(title);u.EnumWindows(callback,0)
+ (OUT/'window-titles.json').write_text(json.dumps(titles,ensure_ascii=False),encoding='utf-8')
  if app.poll() is None:app.terminate();app.wait(timeout=10)
  u.DestroyWindow(under)
