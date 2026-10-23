@@ -95,7 +95,7 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 재빌드: `npm ci` 후 `desktop/windows/build.sh`. Python 3.10+·Node.js·Zig 0.15.2가 필요합니다. `ZIG`에 컴파일러 절대경로를, `HORIBBANGU_NATIVE_CACHE`에 SDK·컴파일 캐시 위치를 지정할 수 있습니다. Microsoft 공식 NuGet SDK 1.0.4258.31은 고정 SHA-256으로 확인합니다. 생성물은 `build/windows-native/`, `downloads/`, `releases/`에 두며 Git에서 제외합니다. `--standalone` 옵션은 기존 Electron 패키징을 사용해 별도 호환판 파일을 만듭니다.
 
-`native/test_binary.py`는 최종 PE의 x64·GUI 형식, 권한·DPI 선언, 내장 리소스 전체의 해시와 오프라인 화면을 검사합니다. `.github/workflows/windows-native.yml`은 저장소 읽기 권한으로 Windows에서 직접 빌드하고 `native/test_windows.py`로 실제 WebView2 실행·투명 합성·물리 마우스 드래그·배경 전환·설정 유지·모니터 목록·투명도·위/뒤 모드·종료를 검사합니다. 2026-10-23 [Windows CI 검증](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/39946363454)을 통과했고, Mac 교차 빌드와 Windows 빌드의 EXE 바이트가 일치했습니다. 이 검사는 Windows CI 환경에 대한 결과이며 모든 PC의 드라이버·다중 모니터·터치 동작을 보장하지 않습니다. 기존 Electron 검사도 `test_binary.py`, `test_portable.py`, `tests/desktop.cjs`로 남겨둡니다.
+`native/test_binary.py`는 최종 PE의 x64·GUI 형식, 권한·DPI 선언, 내장 리소스 전체의 해시와 오프라인 화면을 검사합니다. `.github/workflows/windows-native.yml`은 저장소 읽기 권한으로 Windows에서 직접 빌드하고 `native/test_windows.py`로 실제 WebView2 실행·투명 합성·물리 마우스 드래그·배경 전환·설정 유지·모니터 목록·투명도·위/뒤 모드·종료를 검사합니다. 2026-10-23 [3.3.1 Windows CI 검증](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/39957308671)을 통과했고, Mac 교차 빌드와 Windows 빌드의 EXE 바이트가 일치했습니다. 배경 그림 켜짐·꺼짐 양쪽에서 Win32 아이콘 ListView의 실제 마우스 선택·더블클릭·우클릭·드래그를 검사하고, 이전 클릭 영역 정보와 창 순서가 바뀌어도 입력이 통과함을 확인했습니다. 보통 모드의 고양이 드래그 복원과 드래그 중 배경 모드 전환도 검사합니다. 이 검사는 Windows CI 환경에 대한 결과이며 모든 PC의 드라이버·다중 모니터·터치 동작을 보장하지 않습니다. 기존 Electron 검사도 `test_binary.py`, `test_portable.py`, `tests/desktop.cjs`로 남겨둡니다.
 
 ## 고양이 방 (2.2)
 
