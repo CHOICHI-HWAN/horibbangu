@@ -18,13 +18,17 @@ with tempfile.TemporaryDirectory(prefix='horibbangu-desktop-') as temp:
     with zipfile.ZipFile(archive) as bundle:
         assert all(not name.startswith('/') and '..' not in Path(name).parts for name in bundle.namelist())
         bundle.extractall(stage)
+    # This Korean UI needs Korean plus Electron's English fallback, not 55 locales.
+    for locale in (stage/'locales').glob('*.pak'):
+        if locale.name not in lock['locales']:locale.unlink()
+    assert {p.name for p in (stage/'locales').glob('*.pak')}==set(lock['locales'])
     (stage/'electron.exe').rename(stage/'호리빵구.exe')
     (stage/'resources/default_app.asar').unlink(missing_ok=True)
     app=stage/'resources/app';app.mkdir()
     for name in ['playground.html','playground.js','tray.png','package.json']:
         shutil.copyfile(source/name,app/name)
     for name in ['main.cjs','preload.cjs']:compile_file(source/name,app/name,'node')
-    shutil.copyfile(source/'사용방법.txt',stage/'사용방법.txt')
+    shutil.copyfile(source/'사용방법-호환판.txt',stage/'사용방법.txt')
     target=root/'build/windows-unpacked'
     if target.exists():shutil.rmtree(target)
     shutil.copytree(stage,target)

@@ -24,7 +24,7 @@ const quit=document.createElement('button');quit.id='desktopQuit';quit.textConte
 $('closeControls').textContent='메뉴 접기';
 document.querySelector('.brand').textContent='바탕화면의 작은 친구들';
 document.querySelector('.small-copy').textContent='트레이의 고양이 아이콘에서 메뉴를 열 수 있어요.';
-// Keep the user's choice in the existing stable Electron profile.
+// Keep the user's choice in the host's persistent local profile.
 const backgroundButton=document.createElement('button');backgroundButton.id='desktopBackground';
 backgroundButton.onclick=()=>setDesktopBackground(!desktopBackground);
 $('roomControls').insertBefore(backgroundButton,quit);

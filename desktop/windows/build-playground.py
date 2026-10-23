@@ -9,7 +9,7 @@ root=Path(__file__).resolve().parents[2]
 runpy.run_path(str(root/'scripts/build-room.py'))
 html=(root/'index.html').read_text()
 html=html.replace('<a class="login-link" id="recordsLink" href="records.html">로그인 · 체중 기록 ↗</a>','')
-html=re.sub(r'<a id="windowsDownload"[^>]*>.*?</a>','',html)
+html=re.sub(r'<a id="windows(?:Download|Standalone)"[^>]*>.*?</a>','',html)
 # Keep the painted room embedded; the desktop toggle controls its visibility.
 html=re.sub(r'<title>.*?</title>','<title>호리빵구 · 바탕화면 친구들</title>',html)
 html=html.replace('<body class="room-page">','<body class="room-page desktop-overlay">')

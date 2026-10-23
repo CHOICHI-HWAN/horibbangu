@@ -14,7 +14,11 @@ assert u16(pe+4)==0x8664 and u16(pe+24)==0x20b and u16(pe+24+68)==2
 lock=json.loads((source/'runtime-lock.json').read_text())
 cache=Path(os.environ.get('HORIBBANGU_ELECTRON_CACHE','/tmp/horibbangu-build/electron'))/lock['archive']
 assert hashlib.sha256(cache.read_bytes()).hexdigest()==lock['sha256']
-with zipfile.ZipFile(cache) as z:assert data==z.read('electron.exe'),'Runtime executable was modified'
+with zipfile.ZipFile(cache) as z:
+    assert data==z.read('electron.exe'),'Runtime executable was modified'
+    assert {p.name for p in (folder/'locales').glob('*.pak')}==set(lock['locales'])
+    for name in lock['locales']:assert (folder/'locales'/name).read_bytes()==z.read('locales/'+name)
+    for name in ['LICENSE','LICENSES.chromium.html']:assert (folder/name).read_bytes()==z.read(name)
 for name in ['resources.pak','icudtl.dat','electron_wer.dll','ffmpeg.dll','dxcompiler.dll','d3dcompiler_47.dll','v8_context_snapshot.bin']:
     assert (folder/name).is_file(),name
 for name in ['playground.html','playground.js','package.json','tray.png']:

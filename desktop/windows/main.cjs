@@ -4,6 +4,7 @@ const path=require('node:path');
 let win,tray,interactive=false,background=false;
 const testing=process.env.HORIBBANGU_DESKTOP_TEST==='1';
 app.setName('호리빵구');
+app.commandLine.appendSwitch('lang','ko');
 app.setPath('userData',testing?path.join(app.getPath('temp'),'HoribbanguDesktopTest'):path.join(app.getPath('appData'),'HoribbanguDesktop'));
 function send(command){if(win&&!win.isDestroyed())win.webContents.send('desktop:command',command);}
 function showControls(){if(win&&!win.isDestroyed()){win.showInactive();send('controls');}}

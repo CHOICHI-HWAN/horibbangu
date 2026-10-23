@@ -1,12 +1,14 @@
 # 외부 소프트웨어·자료 고지
 
-확인 기준: 앱 3.2.1 / 2026-10-23. 이 문서는 구성요소를 구분하는 안내이며,
+확인 기준: 앱 3.3.0 / 2026-10-23. 이 문서는 구성요소를 구분하는 안내이며,
 배포본에 포함된 원문 라이선스와 각 권리자의 조건을 대신하지 않습니다.
 호리빵구의 제한적 이용 정책은 아래 외부 구성요소의 이용 권리를 축소하지 않습니다.
 
 | 구성요소 | 사용 위치 | 라이선스·고지 |
 |---|---|---|
-| Electron 45.0.0 | Windows 앱 실행 환경 | MIT. 공식 런타임의 `LICENSE` 원문을 유지합니다. |
+| Microsoft.Web.WebView2 1.0.4258.31 | 경량 Windows 앱의 WebView2Loader.dll 및 SDK | Microsoft의 BSD형 라이선스. `WebView2-LICENSE.txt`, `WebView2-NOTICE.txt` 원문을 함께 포함합니다. |
+| Microsoft Edge WebView2 Runtime | PC에 별도로 설치된 공유 실행 환경 | Microsoft의 런타임 조건을 따릅니다. 경량 EXE에는 브라우저 엔진을 포함하지 않습니다. |
+| Electron 45.0.0 | 기존 Windows 호환판 실행 환경 | MIT. 공식 런타임의 `LICENSE` 원문을 유지합니다. |
 | Chromium·Node.js 및 런타임 내 구성요소 | Electron 런타임 | 구성요소별 조건. 공식 런타임의 `LICENSES.chromium.html` 및 해당 고지를 유지합니다. |
 | Firebase JavaScript SDK 10.12.2 | 체중 기록 웹페이지의 인증·동기화 | Apache-2.0. CDN에서 불러오며 공개 고양이 방·Windows 앱에는 포함하지 않습니다. |
 | esbuild 0.28.2 | 개발·컴파일 도구 | MIT. 최종 앱에서 실행되는 런타임 라이브러리가 아닙니다. |
@@ -20,10 +22,12 @@
 
 원문을 확인한 Electron·esbuild·electron-builder·NSIS·StdUtils·LGPL 고지는
 [legal/third-party](legal/third-party/)에도 보관했습니다. 런타임의 `LICENSES.chromium.html`은
-현재 Windows 실행 폴더에서 원본 그대로 유지됩니다.
+기존 Electron 호환판 실행 폴더에서 원본 그대로 유지됩니다.
 
 ## 확인한 원문과 배포 자료
 
+- WebView2 SDK: https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.4258.31
+- WebView2 런타임 배포: https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution
 - Electron: https://github.com/electron/electron/blob/v45.0.0/LICENSE
 - Firebase SDK: https://github.com/firebase/firebase-js-sdk/blob/firebase%4010.12.2/LICENSE
 - esbuild: https://github.com/evanw/esbuild/blob/v0.28.2/LICENSE.md
