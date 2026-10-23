@@ -498,11 +498,29 @@ function roomCatSVG(svg,pet){
 function chooseRoomScenery(c,t){
   if(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground)return false;
   if(reduceMotion||c.air||c.mode==='bubble'||c.mode==='guestExit')return false;
-  if(cats.filter(o=>o!==c&&o.sceneryGoal).length>=3)return false;
-  const spots=highSpots().filter(p=>p.h>innerHeight*.20&&p.h<innerHeight*.84&&p.xc>innerWidth*.08&&p.xc<innerWidth*.92&&distTo(p).has(nodeOf(c))&&!cats.some(o=>o!==c&&o.sceneryGoal===p));
-  if(!spots.length)return false;
-  const here=nodeOf(c),spot=spots.includes(here)?here:spots[Math.floor(Math.random()*spots.length)];
-  leave(c,t);c.zoom=0;c.sceneryGoal=spot;
+  const watching=cats.filter(o=>o!==c&&o.sceneryGoal);
+  if(watching.length>=3)return false;
+  if(c.sceneryGoal)return true;
+  const here=nodeOf(c),pitch=88,margin=Math.max(28,32*c.scale);
+  const anchor=watching.length?watching.reduce((sum,o)=>sum+(o.sceneryX??o.sceneryGoal.xc),0)/watching.length:innerWidth/2;
+  const seats=[];
+  for(const platform of highSpots()){
+    if(platform.h<=innerHeight*.20||platform.h>=innerHeight-80||!distTo(platform).has(here))continue;
+    const left=Math.max(platform.x0+margin,CAT_W/2+margin/2),right=Math.min(platform.x1-margin,innerWidth-CAT_W/2-margin/2);
+    if(left>right)continue;
+    const center=Math.max(left,Math.min(right,platform.xc));
+    for(let offset=0;offset<=Math.ceil((right-left)/pitch);offset++){
+      for(const x of offset?[center-offset*pitch,center+offset*pitch]:[center]){
+        if(x<left||x>right||watching.some(o=>o.sceneryGoal===platform&&Math.abs((o.sceneryX??platform.xc)-x)<pitch-1))continue;
+        seats.push({platform,x});
+      }
+    }
+  }
+  // Reserve adjacent seats on the highest reachable catwalk before lower ledges.
+  seats.sort((a,b)=>b.platform.h-a.platform.h||Math.abs(a.x-anchor)-Math.abs(b.x-anchor));
+  if(!seats.length)return false;
+  const {platform:spot,x}=seats[0];
+  leave(c,t);c.zoom=0;c.sceneryGoal=spot;c.sceneryX=x;
   if(here===spot)setMode(c,'goScenery',t,30000);else travelTo(c,spot,t);
   return true;
 }
@@ -723,7 +741,7 @@ function initRoom(){
     else if(e.key==='Tab')setRoomControls(true);
     else if((e.key==='Enter'||e.key===' ')&&e.target===$('roomScene')){e.preventDefault();setRoomControls(!document.body.classList.contains('controls-visible'));}
   });
-  $('viewBtn').onclick=()=>{let n=0;for(const c of cats){if(n<3&&chooseRoomScenery(c,performance.now()))n++;}$('status').textContent=reduceMotion?'움직임을 켜면 아이들이 호수를 보러 가요.':'호수가 잘 보이는 자리로 천천히 가요.';};
+  $('viewBtn').onclick=()=>{let n=0;for(const c of cats){if(n<3&&chooseRoomScenery(c,performance.now()))n++;}$('status').textContent=reduceMotion?'움직임을 켜면 아이들이 호수를 보러 가요.':'위쪽 캣워커에 나란히 앉아 호수를 바라봐요.';};
   $('friendsBtn').onclick=()=>{inviteRoomFriends();$('status').textContent='소양이, 소미, 팡이가 놀러 왔어요.';};
   $('closeControls').onclick=()=>setRoomControls(false);
   $('weather').onchange=e=>setRoomWeather(e.target.value);
@@ -1067,7 +1085,7 @@ function layoutProps() {
   }
   layoutCozySpots();
   if (typeof roomCozySpots === 'function') roomCozySpots();
-  cats.forEach(c => { c.goal = null; c.edge = null; c.flight = null; c.cozy = null; c.sceneryGoal = null; c.zoom = 0; if (['travel', 'goFavorite', 'goScenery', 'scenery', 'jump', 'angel'].includes(c.mode)) setMode(c, 'sit', performance.now(), 1200); });
+  cats.forEach(c => { c.goal = null; c.edge = null; c.flight = null; c.cozy = null; c.sceneryGoal = null; c.sceneryX = null; c.zoom = 0; if (['travel', 'goFavorite', 'goScenery', 'scenery', 'jump', 'angel'].includes(c.mode)) setMode(c, 'sit', performance.now(), 1200); });
 }
 // 실제 발판 충돌과 화면 경계를 미리 확인해 출발한 칸으로 돌아오는 점프를 제외한다.
 function jumpPlan(P, Q) {
@@ -1232,7 +1250,7 @@ function chooseFavorite(c, t) {
   c.goal = null; c.edge = null; c.zoom = 0; setMode(c, 'goFavorite', t, 45000); return true;
 }
 function pickIdle(c, t) {
-  c.goal = null; c.edge = null; c.zoom = 0; c.cozy = null; c.sceneryGoal = null;
+  c.goal = null; c.edge = null; c.zoom = 0; c.cozy = null; c.sceneryGoal = null; c.sceneryX = null;
   if (c.restUntil > t) { sleepNow(c, t); return; }
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (isHigh(c) && c.stand.kind !== 'ramp') return pickPerch(c, t);
@@ -1294,7 +1312,7 @@ function pounce(c, t, h) {
   c.vy = Math.sqrt(2 * G * Math.max(25, Math.min(110, h) + 15));
   c.vx = c.dir * 130; c.y += .5; c.air = true; c.stand = null; setMode(c, 'pounce', t, 3000);
 }
-function leave(c, t) { c.cozy = null; c.sceneryGoal = null; if (c.mode === 'angel') { c.angel = null; c.air = true; c.vy = 0; c.vx = 0; } if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
+function leave(c, t) { c.cozy = null; c.sceneryGoal = null; c.sceneryX = null; if (c.mode === 'angel') { c.angel = null; c.air = true; c.vy = 0; c.vx = 0; } if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
 function onLand(c, t) {
   if (c.mode === 'pounce') {
     const hit = t - mouse.t < 2500 && Math.abs(mouse.x - (c.x + CAT_W / 2)) < 45;
@@ -1460,7 +1478,7 @@ function tickCats(t) {
       case 'scenery': pose = 'scenery'; break;
       case 'goScenery': {
         if (!c.sceneryGoal) { setMode(c,'sit',t,1000); break; }
-        const dx=c.sceneryGoal.xc-cx;
+        const dx=(c.sceneryX??c.sceneryGoal.xc)-cx;
         if(Math.abs(dx)<3) { c.goal=null;c.edge=null;setMode(c,'scenery',t,rnd(18000,32000));pose='scenery'; }
         else {c.dir=dx<0?-1:1;c.x+=c.dir*Math.min(Math.abs(dx),28*dt);pose='walking';}
         break;

@@ -336,7 +336,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.2.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.2.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -1132,7 +1132,7 @@ function layoutProps() {
   }
   layoutCozySpots();
   if (typeof roomCozySpots === 'function') roomCozySpots();
-  cats.forEach(c => { c.goal = null; c.edge = null; c.flight = null; c.cozy = null; c.sceneryGoal = null; c.zoom = 0; if (['travel', 'goFavorite', 'goScenery', 'scenery', 'jump', 'angel'].includes(c.mode)) setMode(c, 'sit', performance.now(), 1200); });
+  cats.forEach(c => { c.goal = null; c.edge = null; c.flight = null; c.cozy = null; c.sceneryGoal = null; c.sceneryX = null; c.zoom = 0; if (['travel', 'goFavorite', 'goScenery', 'scenery', 'jump', 'angel'].includes(c.mode)) setMode(c, 'sit', performance.now(), 1200); });
 }
 // 실제 발판 충돌과 화면 경계를 미리 확인해 출발한 칸으로 돌아오는 점프를 제외한다.
 function jumpPlan(P, Q) {
@@ -1297,7 +1297,7 @@ function chooseFavorite(c, t) {
   c.goal = null; c.edge = null; c.zoom = 0; setMode(c, 'goFavorite', t, 45000); return true;
 }
 function pickIdle(c, t) {
-  c.goal = null; c.edge = null; c.zoom = 0; c.cozy = null; c.sceneryGoal = null;
+  c.goal = null; c.edge = null; c.zoom = 0; c.cozy = null; c.sceneryGoal = null; c.sceneryX = null;
   if (c.restUntil > t) { sleepNow(c, t); return; }
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (isHigh(c) && c.stand.kind !== 'ramp') return pickPerch(c, t);
@@ -1359,7 +1359,7 @@ function pounce(c, t, h) {
   c.vy = Math.sqrt(2 * G * Math.max(25, Math.min(110, h) + 15));
   c.vx = c.dir * 130; c.y += .5; c.air = true; c.stand = null; setMode(c, 'pounce', t, 3000);
 }
-function leave(c, t) { c.cozy = null; c.sceneryGoal = null; if (c.mode === 'angel') { c.angel = null; c.air = true; c.vy = 0; c.vx = 0; } if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
+function leave(c, t) { c.cozy = null; c.sceneryGoal = null; c.sceneryX = null; if (c.mode === 'angel') { c.angel = null; c.air = true; c.vy = 0; c.vx = 0; } if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
 function onLand(c, t) {
   if (c.mode === 'pounce') {
     const hit = t - mouse.t < 2500 && Math.abs(mouse.x - (c.x + CAT_W / 2)) < 45;
@@ -1525,7 +1525,7 @@ function tickCats(t) {
       case 'scenery': pose = 'scenery'; break;
       case 'goScenery': {
         if (!c.sceneryGoal) { setMode(c,'sit',t,1000); break; }
-        const dx=c.sceneryGoal.xc-cx;
+        const dx=(c.sceneryX??c.sceneryGoal.xc)-cx;
         if(Math.abs(dx)<3) { c.goal=null;c.edge=null;setMode(c,'scenery',t,rnd(18000,32000));pose='scenery'; }
         else {c.dir=dx<0?-1:1;c.x+=c.dir*Math.min(Math.abs(dx),28*dt);pose='walking';}
         break;

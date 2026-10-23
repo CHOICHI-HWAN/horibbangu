@@ -61,7 +61,7 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 `PLAYWRIGHT_MODULE`로 모듈 경로, `BROWSER_EXECUTABLE`로 설치된 Chromium 계열 브라우저 경로를 지정할 수도 있습니다.
 검사는 별도 브라우저 세션에서 실행하며 Firebase 연결을 차단하고 실제 체중기록을 저장하지 않습니다.
 
-## Windows 바탕화면 친구들 (3.2)
+## Windows 바탕화면 친구들 (3.2.1)
 
 [Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)에서 ZIP을 받아 안에 있는 **`호리빵구.exe` 하나**만 꺼내 실행합니다. 설치·관리자 권한·별도 DLL 폴더가 필요 없습니다. 바탕화면에 EXE 자체를 두어도 됩니다. ZIP 안에는 EXE 하나만 들어 있습니다. 로컬 `downloads/호리빵구.exe`나 GitHub 릴리즈에서는 EXE 자체도 받을 수 있습니다. Firebase Spark 요금제는 EXE 직접 호스팅을 제한하므로 웹에서는 ZIP으로 제공합니다.
 
@@ -94,6 +94,8 @@ Windows 실행본은 기본적으로 고양이와 가구·그림·시계·달력
 `desktop/windows/build.sh`는 같은 고양이 엔진에서 기록 링크를 제거하고 배경을 전환할 수 있는 투명 데스크톱 앱을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에 보관하며, Firebase용 ZIP·체크섬을 `releases/`에 복사합니다. Firebase Hosting은 ZIP을, GitHub Releases는 EXE와 ZIP을 제공합니다. Windows 실기기 실행은 아직 미확인입니다.
 
 검사: `tests/room.cjs`(공개 화면·터치/키보드 메뉴·시간·날씨·행동·모바일 입력), `tests/room-routes.cjs`(전체 타워/발판 이동), `tests/playground.cjs`(기록 페이지 엔진), `tests/offline-playground.cjs`(오프라인), `tests/sizes.cjs`(체중과 크기 전달), `node tests/sync.cjs`(저장 중 재수정). 브라우저 검사는 `PLAYWRIGHT_MODULE`, 필요하면 `BROWSER_EXECUTABLE` 환경 변수를 지정합니다.
+
+풍경 감상은 도달 가능한 가장 높은 캣워커부터 고릅니다. 넓은 상단 다리에는 최대 세 마리가 88px 간격으로 나란히 앉고, 작은 화면은 위쪽 빈 자리부터 나누어 사용합니다. `tests/scenery.cjs`로 높은 자리 선택·나란히 앉기·실제 이동을 검사합니다.
 
 소양(러시안블루)과 소미(치즈 태비 코리안숏헤어)는 박박사님 댁의 방문 친구이며, 팡이(분홍빛 피부와 큰 귀)도 함께 방문합니다. 방을 연 뒤 45~90초에 처음 찾아와 2~3분 놀고, 5~8분 쉬었다 다시 방문합니다. 빈 곳을 탭해 **친구 초대**를 누르면 바로 만날 수 있습니다. 숨긴 탭·고양이 숨김·움직임 쉬기 중에는 방문 시간이 흐르지 않으며, 체중 기록에는 추가되지 않습니다.
 

@@ -24,11 +24,29 @@ function roomCatSVG(svg,pet){
 function chooseRoomScenery(c,t){
   if(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground)return false;
   if(reduceMotion||c.air||c.mode==='bubble'||c.mode==='guestExit')return false;
-  if(cats.filter(o=>o!==c&&o.sceneryGoal).length>=3)return false;
-  const spots=highSpots().filter(p=>p.h>innerHeight*.20&&p.h<innerHeight*.84&&p.xc>innerWidth*.08&&p.xc<innerWidth*.92&&distTo(p).has(nodeOf(c))&&!cats.some(o=>o!==c&&o.sceneryGoal===p));
-  if(!spots.length)return false;
-  const here=nodeOf(c),spot=spots.includes(here)?here:spots[Math.floor(Math.random()*spots.length)];
-  leave(c,t);c.zoom=0;c.sceneryGoal=spot;
+  const watching=cats.filter(o=>o!==c&&o.sceneryGoal);
+  if(watching.length>=3)return false;
+  if(c.sceneryGoal)return true;
+  const here=nodeOf(c),pitch=88,margin=Math.max(28,32*c.scale);
+  const anchor=watching.length?watching.reduce((sum,o)=>sum+(o.sceneryX??o.sceneryGoal.xc),0)/watching.length:innerWidth/2;
+  const seats=[];
+  for(const platform of highSpots()){
+    if(platform.h<=innerHeight*.20||platform.h>=innerHeight-80||!distTo(platform).has(here))continue;
+    const left=Math.max(platform.x0+margin,CAT_W/2+margin/2),right=Math.min(platform.x1-margin,innerWidth-CAT_W/2-margin/2);
+    if(left>right)continue;
+    const center=Math.max(left,Math.min(right,platform.xc));
+    for(let offset=0;offset<=Math.ceil((right-left)/pitch);offset++){
+      for(const x of offset?[center-offset*pitch,center+offset*pitch]:[center]){
+        if(x<left||x>right||watching.some(o=>o.sceneryGoal===platform&&Math.abs((o.sceneryX??platform.xc)-x)<pitch-1))continue;
+        seats.push({platform,x});
+      }
+    }
+  }
+  // Reserve adjacent seats on the highest reachable catwalk before lower ledges.
+  seats.sort((a,b)=>b.platform.h-a.platform.h||Math.abs(a.x-anchor)-Math.abs(b.x-anchor));
+  if(!seats.length)return false;
+  const {platform:spot,x}=seats[0];
+  leave(c,t);c.zoom=0;c.sceneryGoal=spot;c.sceneryX=x;
   if(here===spot)setMode(c,'goScenery',t,30000);else travelTo(c,spot,t);
   return true;
 }
@@ -249,7 +267,7 @@ function initRoom(){
     else if(e.key==='Tab')setRoomControls(true);
     else if((e.key==='Enter'||e.key===' ')&&e.target===$('roomScene')){e.preventDefault();setRoomControls(!document.body.classList.contains('controls-visible'));}
   });
-  $('viewBtn').onclick=()=>{let n=0;for(const c of cats){if(n<3&&chooseRoomScenery(c,performance.now()))n++;}$('status').textContent=reduceMotion?'움직임을 켜면 아이들이 호수를 보러 가요.':'호수가 잘 보이는 자리로 천천히 가요.';};
+  $('viewBtn').onclick=()=>{let n=0;for(const c of cats){if(n<3&&chooseRoomScenery(c,performance.now()))n++;}$('status').textContent=reduceMotion?'움직임을 켜면 아이들이 호수를 보러 가요.':'위쪽 캣워커에 나란히 앉아 호수를 바라봐요.';};
   $('friendsBtn').onclick=()=>{inviteRoomFriends();$('status').textContent='소양이, 소미, 팡이가 놀러 왔어요.';};
   $('closeControls').onclick=()=>setRoomControls(false);
   $('weather').onchange=e=>setRoomWeather(e.target.value);
