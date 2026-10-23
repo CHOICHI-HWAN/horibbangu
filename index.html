@@ -536,11 +536,21 @@ function drawLake(t){
   if(reduceMotion)return;
   const scale=Math.max(w/image.naturalWidth,h/image.naturalHeight);
   const rw=image.naturalWidth*scale,rh=image.naturalHeight*scale,x=(w-rw)/2;
-  const shore=Math.ceil(rh*.65);
+  const shore=Math.ceil(rh*.62);
   for(let y=shore;y<h;y+=3){
-    const depth=(y-shore)/Math.max(1,h-shore),swell=Math.sin(y*.11+t/1100)*(.25+depth*1.4)+Math.sin(y*.047-t/1800)*.6;
+    const depth=(y-shore)/Math.max(1,h-shore),swell=Math.sin(y*.075-t/650)*(.6+depth*5)+Math.sin(y*.032+t/1300)*(depth*1.7);
     ctx.save();ctx.beginPath();ctx.rect(0,y,w,3);ctx.clip();
-    ctx.drawImage(image,x+swell,-Math.abs(Math.sin(t/1700+y*.06))*.45,rw,rh);ctx.restore();
+    ctx.drawImage(image,x+swell,-Math.abs(Math.sin(t/950+y*.05))*(.3+depth*1.8),rw,rh);ctx.restore();
+  }
+  // Broad, drifting glints make the current readable even on a small screen.
+  ctx.lineCap='round';
+  for(let i=0;i<34;i++){
+    const depth=(i+.5)/34,yy=shore+(h-shore)*depth+Math.sin(t/850+i*1.7)*(1+depth*2);
+    const span=(8+depth*24)*(w/700+.4),speed=5+depth*13;
+    const xx=((i*137.7+t/1000*speed)%(w+span*2))-span;
+    const pulse=.08+.17*(.5+.5*Math.sin(t/700+i*2.3));
+    ctx.strokeStyle=`rgba(255,245,208,${pulse})`;ctx.lineWidth=.7+depth*1.1;
+    ctx.beginPath();ctx.moveTo(xx,yy);ctx.quadraticCurveTo(xx+span*.5,yy-1.6,xx+span,yy);ctx.stroke();
   }
 }
 function drawWeather(t){
