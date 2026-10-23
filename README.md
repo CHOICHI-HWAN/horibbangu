@@ -91,7 +91,7 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 작은 내장 파일과 원문 라이선스는 `%LOCALAPPDATA%\HoribbanguDesktop\Native\3.3.0`, 설정은 `%LOCALAPPDATA%\HoribbanguDesktop\WebView2`에 저장됩니다. EXE를 옮겨도 설정은 유지됩니다. 기존 Electron 호환판의 `%APPDATA%\HoribbanguDesktop` 설정은 자동 이전하지 않습니다. 삭제는 앱 종료 후 EXE와 해당 사용자 폴더를 지우면 됩니다.
 
-`native/host.cpp`는 Win32 트레이와 DirectComposition 투명 창을 만들고, `window.desktopHost`의 고정된 메시지만 받습니다. HTML·JS·SDK 로더·라이선스는 PE 리소스에 내장합니다. WebView2 가상 호스트는 로컬 앱 폴더에만 연결하며 외부 탐색·새 창·외부 HTTP 요청·권한 요청·Node 실행·호스트 객체를 허용하지 않습니다. 런타임의 보안 업데이트는 공유 WebView2 배포를 따릅니다.
+`native/host.cpp`는 Win32 트레이와 DirectComposition 투명 창을 만들고, `window.desktopHost`의 고정된 메시지만 받습니다. 화면은 클릭 통과 상태로 유지하고, 가려지지 않은 고양이·버튼 위에서 시작한 마우스 동작만 Windows 마우스 훅으로 렌더러에 전달합니다. 다른 프로그램이 앞을 가리면 해당 프로그램의 입력을 가로채지 않습니다. 마우스 좌표를 저장하거나 외부로 전송하지 않으며 종료 시 훅을 해제합니다. HTML·JS·SDK 로더·라이선스는 PE 리소스에 내장합니다. WebView2 가상 호스트는 로컬 앱 폴더에만 연결하며 외부 탐색·새 창·외부 HTTP 요청·권한 요청·Node 실행·호스트 객체를 허용하지 않습니다. 런타임의 보안 업데이트는 공유 WebView2 배포를 따릅니다.
 
 재빌드: `npm ci` 후 `desktop/windows/build.sh`. Python 3.10+·Node.js·Zig 0.15.2가 필요합니다. `ZIG`에 컴파일러 절대경로를, `HORIBBANGU_NATIVE_CACHE`에 SDK·컴파일 캐시 위치를 지정할 수 있습니다. Microsoft 공식 NuGet SDK 1.0.4258.31은 고정 SHA-256으로 확인합니다. 생성물은 `build/windows-native/`, `downloads/`, `releases/`에 두며 Git에서 제외합니다. `--standalone` 옵션은 기존 Electron 패키징을 사용해 별도 호환판 파일을 만듭니다.
 

@@ -25,6 +25,8 @@ static IDCompositionTarget* target;
 static IDCompositionVisual* visual;
 static IDCompositionEffectGroup* opacityEffect;
 static bool background=false,ready=false,interactive=false;
+static HHOOK mouseHook;
+static bool catGesture=false;
 static wchar_t assetFolder[2048],profileFolder[2048];
 static const wchar_t* origin=L"https://horibbangu.local/";
 static const wchar_t* pageUrl=L"https://horibbangu.local/playground.html";
@@ -48,16 +50,40 @@ static void error(const wchar_t* message,HRESULT hr=E_FAIL){
 static void command(const wchar_t* text){if(webview)webview->PostWebMessageAsString(text);}
 static void showControls(){ShowWindow(windowHandle,SW_SHOWNOACTIVATE);command(L"controls");}
 static void hitTest(bool enabled){
- if(interactive==enabled)return;interactive=enabled;
- LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_EXSTYLE);
- // A layered HWND has no alpha bitmap for the DirectComposition pixels, so
- // Windows would pass even cat clicks through. Use normal DComp hit testing
- // while hovering/dragging a cat, and a layered click-through window elsewhere.
- LONG_PTR next=enabled?style&~(WS_EX_TRANSPARENT|WS_EX_LAYERED):style|WS_EX_TRANSPARENT|WS_EX_LAYERED;
- SetLastError(0);SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,next);
- if(!enabled)SetLayeredWindowAttributes(windowHandle,0,255,LWA_ALPHA);
- SetWindowPos(windowHandle,nullptr,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_NOACTIVATE|SWP_FRAMECHANGED);
- wchar_t text[160];swprintf(text,160,L"hit %d style %llx error %lu",enabled,(unsigned long long)GetWindowLongPtrW(windowHandle,GWL_EXSTYLE),GetLastError());trace(text);
+ interactive=enabled;
+ // Keep the visual window permanently click-through. Composition pixels have no
+ // HWND alpha bitmap; changing layered styles can invalidate that visual target.
+}
+static bool visibleAt(POINT point){
+ if(!IsWindowVisible(windowHandle))return false;
+ RECT rect;GetWindowRect(windowHandle,&rect);if(!PtInRect(&rect,point))return false;
+ HWND hit=GetAncestor(WindowFromPoint(point),GA_ROOT);
+ if(hit==windowHandle)return true;
+ // Never intercept a click on a foreground application covering the cats.
+ for(HWND h=GetTopWindow(nullptr);h;h=GetWindow(h,GW_HWNDNEXT)){
+  if(h==windowHandle)return true;
+  if(h==hit)return false;
+ }return false;
+}
+static LRESULT CALLBACK desktopMouse(int code,WPARAM kind,LPARAM data){
+ if(code==HC_ACTION&&ready&&composition){
+  auto info=(MSLLHOOKSTRUCT*)data;POINT point=info->pt;
+  if(kind==WM_LBUTTONDOWN&&interactive&&visibleAt(point)){
+   catGesture=true;ScreenToClient(windowHandle,&point);
+   composition->SendMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_DOWN,COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_LEFT_BUTTON,0,point);
+   trace(L"cat gesture down");return 1;
+  }
+  if(catGesture&&kind==WM_MOUSEMOVE){
+   ScreenToClient(windowHandle,&point);
+   composition->SendMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE,COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_LEFT_BUTTON,0,point);
+  }
+  if(catGesture&&kind==WM_LBUTTONUP){
+   ScreenToClient(windowHandle,&point);
+   composition->SendMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP,COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_NONE,0,point);
+   catGesture=false;trace(L"cat gesture up");return 1;
+  }
+ }
+ return CallNextHookEx(mouseHook,code,kind,data);
 }
 static void tray(bool remove=false){
  NOTIFYICONDATAW data={};data.cbSize=sizeof(data);data.hWnd=windowHandle;data.uID=1;
@@ -120,7 +146,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_RBUTTONDOWN:case WM_RBUTTONUP:case WM_MBUTTONDOWN:case WM_MBUTTONUP:case WM_MOUSEWHEEL:case WM_MOUSEHWHEEL:mouse(message,w,l);return 0;
  case WM_TIMER:
   if(layer==2&&IsWindowVisible(h)){static ULONGLONG lastBehind=0;ULONGLONG now=GetTickCount64();if(now-lastBehind>=1000){SetWindowPos(h,HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);lastBehind=now;}}
-  if(ready&&composition&&IsWindowVisible(h)&&GetCapture()!=h){
+  if(ready&&composition&&IsWindowVisible(h)&&!catGesture&&GetCapture()!=h){
    POINT p;GetCursorPos(&p);ScreenToClient(h,&p);RECT r;GetClientRect(h,&r);
    composition->SendMouseInput(PtInRect(&r,p)?COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE:COREWEBVIEW2_MOUSE_EVENT_KIND_LEAVE,keys(),0,p);
   }return 0;
@@ -130,7 +156,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
   if(LOWORD(l)==WM_CONTEXTMENU||LOWORD(l)==WM_RBUTTONUP)menu();return 0;
  case WM_CLOSE:DestroyWindow(h);return 0;
  case WM_DESTROY:
-  ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);tray(true);UnregisterHotKey(h,1);UnregisterHotKey(h,2);
+  ready=false;catGesture=false;if(mouseHook){UnhookWindowsHookEx(mouseHook);mouseHook=nullptr;}if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);tray(true);UnregisterHotKey(h,1);UnregisterHotKey(h,2);
   if(controller)controller->Close();PostQuitMessage(0);return 0;
  }return DefWindowProcW(h,message,w,l);
 }
@@ -181,7 +207,10 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
  CALLBACK_BASE(ICoreWebView2NavigationCompletedEventHandler)
  HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2*,ICoreWebView2NavigationCompletedEventArgs* args) override{
   BOOL success=FALSE;args->get_IsSuccess(&success);if(!success){error(L"고양이 화면을 불러오지 못했습니다.");return S_OK;}
-  ready=true;ShowWindow(windowHandle,SW_SHOWNOACTIVATE);SetTimer(windowHandle,1,50,nullptr);return S_OK;
+  ready=true;
+  if(!mouseHook)mouseHook=SetWindowsHookExW(WH_MOUSE_LL,desktopMouse,GetModuleHandleW(nullptr),0);
+  if(!mouseHook){error(L"고양이 마우스 입력을 연결하지 못했습니다.",HRESULT_FROM_WIN32(GetLastError()));return S_OK;}
+  ShowWindow(windowHandle,SW_SHOWNOACTIVATE);SetTimer(windowHandle,1,50,nullptr);return S_OK;
  }
 };
 static const wchar_t* bridge=LR"JS((()=>{
