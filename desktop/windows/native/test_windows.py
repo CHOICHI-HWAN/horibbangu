@@ -1,6 +1,7 @@
 """Run on an interactive Windows CI desktop, never claim cross-compilation is execution."""
 from pathlib import Path
-import ctypes as C,ctypes.wintypes as W,json,os,subprocess,time,urllib.request
+import ctypes as C,ctypes.wintypes as W,faulthandler,json,os,subprocess,time,urllib.request
+faulthandler.dump_traceback_later(120,exit=True)
 from PIL import ImageGrab
 ROOT=Path(__file__).resolve().parents[3]
 os.chdir(ROOT)
@@ -123,6 +124,7 @@ try:
  # Background mode must also pass real desktop-icon gestures through. Check
  # after a stale hit rectangle and a shell-style Z-order change, not just styles.
  from test_background_input import verify_background_input
+ print('Starting background icon regression.',flush=True)
  verify_background_input(u,pump,hwnd,under,evaluate,OUT,width,height)
  u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.2)
  box=evaluate("(()=>{const r=cats[0].el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()")
@@ -131,6 +133,7 @@ try:
  u.mouse_event(0x0002,0,0,0,0);pump(.05)
  u.mouse_event(0x8001,round((x+25)*65535/(width-1)),round((y-25)*65535/(height-1)),0,0);pump(.1)
  assert evaluate("cats[0].mode==='bubble'"),'Interactive cat drag did not return after background mode'
+ print('Restored interactive drag verified; switching during a held gesture.',flush=True)
  # Switching to background during a held drag must release the bubble.
  u.PostMessageW(hwnd,0x0111,110,0);pump(.1)
  settings=u.FindWindowW('HoribbanguDesktopSettings',None);assert settings

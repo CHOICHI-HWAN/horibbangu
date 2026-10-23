@@ -18,7 +18,7 @@ def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height):
  callback_type=C.WINFUNCTYPE(C.c_ssize_t,W.HWND,W.UINT,W.WPARAM,W.LPARAM)
  u.SetWindowLongPtrW.argtypes=[W.HWND,C.c_int,C.c_ssize_t];u.SetWindowLongPtrW.restype=C.c_ssize_t
  u.CallWindowProcW.argtypes=[C.c_void_p,W.HWND,W.UINT,W.WPARAM,W.LPARAM];u.CallWindowProcW.restype=C.c_ssize_t
- notifications=[]
+ notifications=[];icons=None
  def receive(h,m,w,l):
   if m==0x004e:
    header=C.cast(l,C.POINTER(Header)).contents
@@ -56,22 +56,27 @@ def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height):
   u.mouse_event(0x0008 if right else 0x0002,0,0,0,0);pump(.03)
   u.mouse_event(0x0010 if right else 0x0004,0,0,0,0);pump(.06)
  try:
+  print('Icon control ready; entering background mode.',flush=True)
   mode(2)
   evaluate("window.backgroundDowns=0;window.backgroundCount=e=>{if(e.type==='pointerdown')backgroundDowns++};addEventListener('pointerdown',backgroundCount,true)")
   # Queued mouse messages from the preceding interactive mode must be ignored.
   for message in (0x201,0x202):u.PostMessageW(hwnd,0x8003,message,(y<<16)|(x&0xffff))
   pump(.1);assert evaluate('backgroundDowns')==0,'Queued interactive input leaked into background mode'
   for background in (False,True):
+   print('Checking icon gestures, painted background:',background,flush=True)
    evaluate('setDesktopBackground('+str(background).lower()+')')
    u.SendMessageW(icons,0x102b,-1,C.addressof(Item(stateMask=2)))  # deselect all
    notifications.clear();expose();click()
    assert u.SendMessageW(icons,0x102c,0,2)&2,'Background overlay swallowed icon selection'
+   print('Icon selection passed.',flush=True)
    checks.append(f'icon selection with background {background}')
    notifications.clear();expose();click();click()
    assert -3 in notifications,('Background overlay swallowed icon double-click',notifications)
+   print('Icon double-click passed.',flush=True)
    checks.append(f'icon double-click with background {background}')
    notifications.clear();expose();click(True)
    assert -5 in notifications,('Background overlay swallowed icon right-click',notifications)
+   print('Icon right-click passed.',flush=True)
    checks.append(f'icon right-click with background {background}')
    notifications.clear();expose()
    u.mouse_event(0x0002,0,0,0,0);pump(.03)
@@ -79,6 +84,7 @@ def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height):
     u.mouse_event(0x8001,round((x+step*12)*65535/(width-1)),round((y+step*6)*65535/(height-1)),0,0);pump(.03)
    u.mouse_event(0x0004,0,0,0,0);pump(.05)
    assert -109 in notifications,('Background overlay swallowed icon drag',notifications)
+   print('Icon drag passed.',flush=True)
    assert evaluate('backgroundDowns')==0,'Background app consumed desktop input'
    checks.append(f'icon drag with background {background}')
   # Native tray/hotkey access must stay usable in display-only mode.
