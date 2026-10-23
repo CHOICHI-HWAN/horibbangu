@@ -62,7 +62,7 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 ## Windows 고양이 놀이터
 
-로컬 `downloads/호리빵구.exe`는 체중기록 기능이 없는 오프라인 고양이 놀이터입니다. 실행 파일과 ZIP은 로컬 폴더에만 보관하며 GitHub 및 Firebase 배포에서 제외합니다.
+로컬 `downloads/호리빵구.exe`는 체중기록 기능이 없는 오프라인 고양이 놀이터입니다. 실행 파일과 ZIP은 소스 Git 및 Firebase 배포에서 제외하며, 공개용 ZIP은 [GitHub Releases](https://github.com/CHOICHI-HWAN/horibbangu/releases/latest)에서 제공합니다.
 Windows 바탕화면에 저장하고 더블클릭하면 됩니다. Edge/Chrome/Brave가 있으면 별도 창으로 열립니다.
 고양이와 가구·투명해먹·날개 비행만 포함하며 Firebase와 체중 데이터는 포함하지 않습니다.
 Windows x64 GUI 파일이며, 서명되지 않은 개인용 빌드입니다. Windows 실기기 실행은 아직 미확인입니다.
@@ -87,7 +87,7 @@ GUI 형식·리소스·아이콘·내장 HTML 일치·시스템 DLL 의존성을
 
 크기는 최근 양수 체중의 세제곱근에 사진 기준 체형을 곱해 0.82~1.42배로 제한합니다. 동글이와 로이는 사진 기준 체형을 유지합니다. 공개 화면에는 빌드 시 기본 기록의 크기 비율만 들어갑니다. 기록 페이지에서 동기화한 기기는 최신 크기 비율을 방에 전달합니다. 다른 기기의 최신 서버 크기를 반영하려면 그 기기에서 기록 페이지를 한 번 동기화해야 합니다.
 
-`desktop/windows/build.sh`는 같은 방에서 기록 링크를 제거한 오프라인 실행 파일을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에만 보관합니다. Windows 실기기 실행은 아직 미확인입니다.
+`desktop/windows/build.sh`는 같은 방에서 기록 링크를 제거한 오프라인 실행 파일을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에 보관하며, ZIP과 체크섬을 GitHub Releases에 배포합니다. Windows 실기기 실행은 아직 미확인입니다.
 
 검사: `tests/room.cjs`(공개 화면·터치/키보드 메뉴·시간·날씨·행동·모바일 입력), `tests/room-routes.cjs`(전체 타워/발판 이동), `tests/playground.cjs`(기록 페이지 엔진), `tests/offline-playground.cjs`(오프라인), `tests/sizes.cjs`(체중과 크기 전달), `node tests/sync.cjs`(저장 중 재수정). 브라우저 검사는 `PLAYWRIGHT_MODULE`, 필요하면 `BROWSER_EXECUTABLE` 환경 변수를 지정합니다.
 
