@@ -20,7 +20,7 @@ checksums=[]
 for local,name in [(exe,'Horibbangu-Windows.exe'),(archive,'Horibbangu-Windows.zip')]:
     shutil.copyfile(local,public/name)
     digest=hashlib.sha256(local.read_bytes()).hexdigest()
-    checksums.append(digest+'  '+name+'\n')
+    if name.endswith('.zip'):checksums.append(digest+'  '+name+'\n')
     print(f'Published {name}: {local.stat().st_size:,} bytes; SHA-256: {digest}')
 (public/'SHA256SUMS.txt').write_text(''.join(checksums))
 (folder/'SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in [exe,archive]))

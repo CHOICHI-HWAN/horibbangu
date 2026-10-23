@@ -24,7 +24,8 @@
       "**/*.jpeg",
       "**/*.heic",
       "**/*.HEIC",
-      "**/*.log"
+      "**/*.log",
+      "**/*.exe"
     ],
     "headers": [
       {
@@ -73,19 +74,6 @@
           {
             "key": "Content-Disposition",
             "value": "attachment; filename=\"Horibbangu-Windows.zip\""
-          }
-        ]
-      },
-      {
-        "source": "/releases/Horibbangu-Windows.exe",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/octet-stream"
-          },
-          {
-            "key": "Content-Disposition",
-            "value": "attachment; filename=\"Horibbangu-Windows.exe\"; filename*=UTF-8''%ED%98%B8%EB%A6%AC%EB%B9%B5%EA%B5%AC.exe"
           }
         ]
       }
