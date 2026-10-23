@@ -3,7 +3,21 @@
 /*EXTRA_CSS*/</style></head><body class="room-page"><main id="roomScene" class="room" tabindex="0" aria-expanded="false" aria-controls="roomControls" aria-label="할슈타트 호수를 바라보는 발코니 고양이 방">
 <div class="floor"></div><div class="sunbeam"></div>
 <div class="window-frame balcony-opening"><div class="window-view">
-<div class="landscape-motion"><img id="landscape" src="/*HALLSTATT_IMAGE*/" alt="할슈타트 호수에 비치는 알프스와 교회 첨탑, 호숫가 마을을 그린 풍경화"><canvas id="lakeCanvas" aria-hidden="true"></canvas></div>
+<div class="landscape-motion"><img id="landscape" src="/*HALLSTATT_IMAGE*/" alt="할슈타트 호수에 비치는 알프스와 교회 첨탑, 호숫가 마을을 그린 풍경화"><canvas id="lakeCanvas" aria-hidden="true"></canvas>
+<svg id="landscapeAir" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+ <defs>
+  <linearGradient id="cloudPaint" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff9e7" stop-opacity=".56"/><stop offset="1" stop-color="#fff9e7" stop-opacity="0"/></linearGradient>
+  <radialGradient id="mistPaint"><stop stop-color="#f3f4e5" stop-opacity=".32"/><stop offset=".55" stop-color="#eef3e8" stop-opacity=".16"/><stop offset="1" stop-color="#eef3e8" stop-opacity="0"/></radialGradient>
+  <filter id="airSoft" x="-20%" y="-100%" width="140%" height="300%"><feGaussianBlur stdDeviation="5"/></filter>
+ </defs>
+ <g class="sky-cloud cloud-near" fill="url(#cloudPaint)" filter="url(#airSoft)">
+  <path d="M390 110Q415 82 449 91Q458 61 491 69Q517 39 549 66Q591 54 607 85Q642 72 671 106Q697 103 713 127H390Z"/>
+  <path d="M1040 75Q1065 46 1095 59Q1110 28 1137 47Q1163 20 1194 46Q1229 40 1251 72Q1280 66 1300 93H1040Z"/>
+ </g>
+ <g class="sky-cloud cloud-far" fill="url(#cloudPaint)" filter="url(#airSoft)"><path d="M665 58Q696 32 728 42Q747 14 781 34Q803 20 831 41Q864 29 884 57Q915 48 935 80H665Z"/></g>
+ <g class="mountain-mist mist-high" fill="url(#mistPaint)"><ellipse cx="1010" cy="343" rx="330" ry="36"/><ellipse cx="1200" cy="375" rx="285" ry="22"/></g>
+ <g class="mountain-mist mist-low" fill="url(#mistPaint)"><ellipse cx="1070" cy="507" rx="385" ry="33"/><ellipse cx="1330" cy="545" rx="265" ry="22"/></g>
+</svg></div>
 <div id="moon"></div><div class="shimmer"></div><div class="window-night"></div><canvas id="weatherCanvas" aria-hidden="true"></canvas><div class="balcony-rail" aria-hidden="true"></div>
 </div></div>
 <div class="balcony-step" aria-hidden="true"></div>

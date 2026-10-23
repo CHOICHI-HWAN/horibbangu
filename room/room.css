@@ -116,3 +116,14 @@ button,.login-link,.weather-control select {background:#fff9e8de;border-color:#a
 .shimmer {top:65%;height:35%;opacity:.28;animation:lake-light 7s ease-in-out infinite;}
 @keyframes lake-light {0%,100%{transform:translateX(-5px) scaleX(.9);opacity:.18;}50%{transform:translateX(6px) scaleX(1.08);opacity:.36;}}
 [data-motion="paused"] .landscape-motion,[data-motion="paused"] .shimmer {animation:none;}
+
+/* Clouds and mountain mist drift independently over the painted landscape. */
+#landscapeAir {position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden;}
+.sky-cloud,.mountain-mist {transform-box:view-box;transform-origin:center;}
+.cloud-near {animation:cloud-drift 46s ease-in-out infinite alternate;animation-delay:-15s;}
+.cloud-far {opacity:.65;animation:cloud-drift 68s ease-in-out infinite alternate-reverse;animation-delay:-34s;}
+.mist-high {animation:mist-drift 35s ease-in-out infinite alternate;animation-delay:-11s;}
+.mist-low {opacity:.8;animation:mist-drift 47s ease-in-out infinite alternate-reverse;animation-delay:-24s;}
+@keyframes cloud-drift {from{transform:translate(-34px,0);}to{transform:translate(55px,6px);}}
+@keyframes mist-drift {from{transform:translate(-65px,4px);opacity:.5;}to{transform:translate(60px,-6px);opacity:.95;}}
+[data-motion="paused"] .sky-cloud,[data-motion="paused"] .mountain-mist {animation-play-state:paused;}
