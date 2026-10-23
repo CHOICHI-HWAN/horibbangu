@@ -335,7 +335,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '2.3.3';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '2.3.4';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -1419,7 +1419,8 @@ function renderCats() {
     c.el.style.setProperty('--blink-delay',(-i*.83)+'s');
     for (const [k, v] of Object.entries(look)) if (k !== 'cls' && k !== 'scale') c.el.style.setProperty('--' + k, v);
     c.el.title = p.guest ? p.name + (p.name==='팡이' ? ' · 놀러온 친구' : ' · 박박사님 댁에서 놀러온 친구') : p.memorial ? '동글이 · 늘 함께하는 친구' : p.name;
-    c.el.innerHTML = `<div class="flip">${CAT_SVG.replaceAll('__CAT__', svgId)}</div>`;
+    const svg = typeof roomCatSVG === 'function' ? roomCatSVG(CAT_SVG,p) : CAT_SVG;
+    c.el.innerHTML = `<div class="flip">${svg.replaceAll('__CAT__', svgId)}</div>`;
     installCatPointer(c);
     c.el.onclick = () => {
       if (performance.now() < (c.ignoreClickUntil || 0)) return;

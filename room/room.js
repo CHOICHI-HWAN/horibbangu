@@ -13,10 +13,19 @@ const visitingFriends = [
 ];
 let activeRoomGuests=[], guestElapsed=0, nextGuestVisit=45+Math.random()*45, guestVisitEnds=Infinity;
 const friendLooks = {
- '팡이':{body:'#d4a69b',stripe:'none',leg:'#d4a69b',head:'#d6a89d',muzzle:'#c9978d',ear:'#d5a094',tail:'#c99a90',nose:'#aa7875',eye:'#a9b5a8',belly:'none',blaze:'none',cap:'none',patch:'none',cls:'pang guest-cat',scale:.94},
+ '팡이':{body:'#d4a69b',stripe:'none',leg:'#d4a69b',head:'#dfb5a8',muzzle:'#e4bcae',ear:'#d5a094',tail:'#c99a90',nose:'#aa7875',eye:'#b5c1a2',belly:'none',blaze:'none',cap:'none',patch:'none',cls:'pang guest-cat',scale:.94},
  '소양':{body:'#84929c',stripe:'none',leg:'#84929c',head:'#8b9aa3',muzzle:'#8a98a0',ear:'#7b8b95',tail:'#7c8b95',nose:'#454f56',eye:'#b2cc88',belly:'none',blaze:'none',cap:'none',patch:'none',cls:'soyang guest-cat',scale:.97},
  '소미':{body:'#d8a469',stripe:'#b68046',leg:'#f9f3e7',head:'#d8a469',muzzle:'#fff9ed',ear:'#cb975d',tail:'#d2a06a',nose:'#d99a95',eye:'#b3b584',belly:'#fff9ed',blaze:'#fff9ed',cap:'none',patch:'none',cls:'tabby somi guest-cat',scale:1.04}
 };
+function roomCatSVG(svg,pet){
+  if(pet.name!=='팡이')return svg;
+  // Draw joined ears in the head's own coordinates, rather than scaling them away.
+  return svg.replace('M32 17Q29 4 33 5L42 12M50 12 57 5Q61 4 60 19',
+    'M32 20Q29 13 28 2Q28-3 32-1Q38 3 43 14ZM50 14Q55 4 61 0Q65-3 65 2Q65 12 59 21Z')
+    .replace('M33 8 34 16 39 12ZM57 8 53 13 58 17Z',
+    'M31 3Q31 10 34 15L39 13ZM62 3 54 14 59 16Q62 10 62 3Z')
+    .replaceAll('cx="26" cy="28" rx="19.5" ry="13"','cx="26" cy="30" rx="16.5" ry="10"');
+}
 function roomGuestPets(){ return visitingFriends.filter(p=>activeRoomGuests.includes(p.id)); }
 function inviteRoomFriends(t=performance.now()){
   if(activeRoomGuests.length) return;

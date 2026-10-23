@@ -64,7 +64,13 @@
 
 .cat .skin-folds {display:none;}
 .cat.pang .skin-folds {display:inline;}
-.cat.pang .ear {transform:translateY(-2px) scale(1.13,1.6);transform-origin:46px 18px;}
-.cat.pang .ear-inner {fill:#d48c83;transform:translateY(-2px) scale(1.13,1.6);transform-origin:46px 18px;}
+.cat.pang .ear {transform:none;}
+.cat.pang .ear-inner {fill:#dca297;transform:none;}
 .cat.pang .tailp {stroke-width:3.3;}
 .cat.pang .tail-outline {stroke-width:4;}
+
+.cat.pang .ground-shadow {rx:19;}
+.cat.pang .skin-folds {opacity:.65;}
+.cat.pang .eyes {transform-origin:46px 22px;}
+.cat.pang.airplane-ears .ear,.cat.pang.airplane-ears .ear-inner {transform:rotate(-12deg) scaleY(.9);transform-origin:46px 18px;}
+.cat.pang.ear-right .ear,.cat.pang.ear-right .ear-inner {transform:rotate(12deg) scaleY(.9);}
