@@ -28,7 +28,7 @@ def pump(seconds):
   time.sleep(.02)
 def evaluate(expression):
  # A short separate CDP client avoids dependence on a third-party Python websocket library.
- code="const{chromium}=require('playwright');(async()=>{const b=await chromium.connectOverCDP('http://127.0.0.1:9223');try{const p=b.contexts()[0].pages().find(p=>p.url().startsWith('https://horibbangu.local/'));console.log(JSON.stringify(await p.evaluate("+json.dumps(expression)+")));}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});"
+ code="const{chromium}=require('playwright');(async()=>{const b=await chromium.connectOverCDP('http://127.0.0.1:9223');try{const p=b.contexts()[0].pages().find(p=>p.url().startsWith('https://horibbangu.local/'));console.log(JSON.stringify((await p.evaluate("+json.dumps(expression)+"))??null));}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});"
  return json.loads(subprocess.check_output(['node','-e',code],text=True).strip())
 app=subprocess.Popen([str(ROOT/'candidate.exe')]);print('Native host PID:',app.pid,flush=True)
 try:
@@ -50,6 +50,10 @@ try:
  assert not(style&0x00C00000),'Title bar unexpectedly present'
  assert extended&0x80000 and extended&0x80,'Layered/tool window missing'
  subprocess.run(['node','desktop/windows/native/test_page.cjs'],check=True)
+ evaluate('desktopHost.setInteractive(true)');pump(.25)
+ assert not(u.GetWindowLongPtrW(hwnd,-20)&0x20),'Explicit interactive message failed'
+ evaluate('desktopHost.setInteractive(false)');pump(.25)
+ assert u.GetWindowLongPtrW(hwnd,-20)&0x20
  # Use the actual native settings controls: monitor enumeration, live opacity and stacking.
  evaluate('setDesktopBackground(true)');pump(.4)
  u.PostMessageW(hwnd,0x0111,110,0);pump(.4)

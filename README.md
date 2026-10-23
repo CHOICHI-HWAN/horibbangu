@@ -77,11 +77,15 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 ## Windows 바탕화면 친구들 (3.3.0)
 
-[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)에서 ZIP 안의 **`호리빵구.exe` 하나**를 꺼내 실행합니다. 기본 다운로드는 Win32·WebView2 경량판입니다. ZIP은 **755,218바이트(약 0.76 MB)**, EXE는 **1,222,656바이트(약 1.22 MB)**로 기존 ZIP 100,898,936바이트보다 다운로드 크기를 약 **99.25%** 줄였습니다. 고양이·호수 그림·동작 코드는 EXE에 포함하고 브라우저 엔진은 PC에 설치된 Microsoft Edge WebView2를 공유합니다. 실행 중 인터넷·로그인·체중 기록은 필요 없습니다. 런타임이 없으면 공식 설치 안내를 열지 묻고 자동 설치하지 않습니다.
+[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)에서 ZIP 안의 **`호리빵구.exe` 하나**를 꺼내 실행합니다. 기본 다운로드는 Win32·WebView2 경량판입니다. ZIP은 **약 0.76 MB**, EXE는 **약 1.23 MB**로 기존 ZIP 100,898,936바이트보다 다운로드 크기를 약 **99.25%** 줄였습니다. 고양이·호수 그림·동작 코드는 EXE에 포함하고 브라우저 엔진은 PC에 설치된 Microsoft Edge WebView2를 공유합니다. 실행 중 인터넷·로그인·체중 기록은 필요 없습니다. 런타임이 없으면 공식 설치 안내를 열지 묻고 자동 설치하지 않습니다.
 
 별도 런타임 설치 없이 실행하려면 [기존 3.2.1 호환판](https://horibbangu.web.app/releases/Horibbangu-Windows-Standalone.zip)을 받을 수 있습니다. 엔진을 포함해 약 101 MB이며 새 경량판과 별도 설정을 사용합니다. 로컬 `downloads/`에는 작은 EXE·ZIP·사용방법을 보관합니다. Firebase Spark에서는 EXE 직접 호스팅이 제한되어 EXE 하나를 담은 ZIP을 제공합니다.
 
 기본은 투명한 바탕화면 위에 고양이와 가구만 표시합니다. 트레이의 **호수 배경 보이기**나 앱 메뉴의 **배경 켜기 / 끄기**로 풍경을 전환하고 선택을 저장합니다. 배경을 켜면 호수·구름·안개·날씨와 풍경 감상이 동작하고, 끄면 불필요한 Canvas 그리기를 멈춥니다. 빈 공간은 아래 프로그램을 클릭할 수 있으며 고양이는 쓰다듬거나 공기방울로 드래그할 수 있습니다. 제목 표시줄·테두리는 없습니다.
+
+트레이의 **화면·투명도 설정…**에서 모니터를 선택하고 투명도 0~80%를 슬라이더로 조절합니다. 0%가 가장 선명합니다. **보통 / 항상 위에 / 항상 뒤에**는 서로 하나만 선택하며, 항상 뒤 모드는 일반 프로그램 뒤에 머물고 클릭해도 앞으로 나오지 않습니다. 모니터·투명도·쌓임 설정은 `%LOCALAPPDATA%\HoribbanguDesktop\settings.ini`에 저장합니다. 선택한 모니터를 분리하면 주 모니터로 옮기고 재연결하면 원래 선택으로 돌아옵니다. 설정창에는 현재 연결된 모니터만 표시합니다.
+
+별도 언어팩은 EXE에 넣지 않고 공유 WebView2 런타임의 시스템 기본 언어를 사용합니다.
 
 알림 영역 고양이 아이콘 클릭 또는 `Ctrl+Alt+H`로 메뉴를 엽니다. 오른쪽 클릭 메뉴에서 배경·숨김·항상 위·친구 초대·움직임을 조절하고 `Ctrl+Alt+Q`로 종료합니다. 항상 위는 기본 꺼짐입니다. Windows 10/11 x64용이며 앱 설치·관리자 권한이 필요 없습니다. 코드 서명은 되어 있지 않습니다.
 
@@ -91,7 +95,7 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 재빌드: `npm ci` 후 `desktop/windows/build.sh`. Python 3.10+·Node.js·Zig 0.15.2가 필요합니다. `ZIG`에 컴파일러 절대경로를, `HORIBBANGU_NATIVE_CACHE`에 SDK·컴파일 캐시 위치를 지정할 수 있습니다. Microsoft 공식 NuGet SDK 1.0.4258.31은 고정 SHA-256으로 확인합니다. 생성물은 `build/windows-native/`, `downloads/`, `releases/`에 두며 Git에서 제외합니다. `--standalone` 옵션은 기존 Electron 패키징을 사용해 별도 호환판 파일을 만듭니다.
 
-`native/test_binary.py`는 최종 PE의 x64·GUI 형식, 권한·DPI 선언, 내장 리소스 전체의 해시와 오프라인 화면을 검사합니다. `.github/workflows/windows-native.yml`은 저장소 읽기 권한으로 Windows에서 직접 빌드하고 `native/test_windows.py`로 실제 WebView2 실행·투명 합성·물리 마우스 드래그·배경 전환·설정 유지·종료를 검사합니다. 이 검사는 Windows CI 환경에 대한 결과이며 모든 PC의 드라이버·다중 모니터·터치 동작을 보장하지 않습니다. 기존 Electron 검사도 `test_binary.py`, `test_portable.py`, `tests/desktop.cjs`로 남겨둡니다.
+`native/test_binary.py`는 최종 PE의 x64·GUI 형식, 권한·DPI 선언, 내장 리소스 전체의 해시와 오프라인 화면을 검사합니다. `.github/workflows/windows-native.yml`은 저장소 읽기 권한으로 Windows에서 직접 빌드하고 `native/test_windows.py`로 실제 WebView2 실행·투명 합성·물리 마우스 드래그·배경 전환·설정 유지·모니터 목록·투명도·위/뒤 모드·종료를 검사합니다. 이 검사는 Windows CI 환경에 대한 결과이며 모든 PC의 드라이버·다중 모니터·터치 동작을 보장하지 않습니다. 기존 Electron 검사도 `test_binary.py`, `test_portable.py`, `tests/desktop.cjs`로 남겨둡니다.
 
 ## 고양이 방 (2.2)
 
