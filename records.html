@@ -143,11 +143,10 @@
   .cat.fluffy .tailp, .cat.fluffy .tailst { stroke-width: 8; }
   .cat .eyec { display: none; }
   .cat.sleep .eyes { display: none; } .cat.sleep .eyec { display: inline; }
-  .cat .ear { transform-box: fill-box; transform-origin: 50% 100%; }
-  .cat.alert .ear { transform: scaleY(1.28); animation: perk .7s ease-out; }
+  .cat.alert .ear-unit { transform: scaleY(1.08); animation: perk .7s ease-out; }
   .cat.alert .tail { animation-duration: .5s; }
   @keyframes breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.06); } }
-  @keyframes perk { 0% { transform: scaleY(1) rotate(0); } 25% { transform: scaleY(1.4) rotate(-9deg); } 55% { transform: scaleY(1.32) rotate(8deg); } 100% { transform: scaleY(1.28) rotate(0); } }
+  @keyframes perk { 0% { transform: scaleY(1) rotate(0); } 25% { transform: scaleY(1.12) rotate(-7deg); } 55% { transform: scaleY(1.1) rotate(6deg); } 100% { transform: scaleY(1.08) rotate(0); } }
   .cat .bubble { position: absolute; left: 50%; bottom: 49px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
     font-size: 12px; padding: 2px 8px; border-radius: 8px; white-space: nowrap; animation: pop var(--d, 1.2s) forwards; }
   .cat .note { position: absolute; bottom: 34px; left: 22px; color: var(--c); font-size: 15px; animation: floatup 1.4s forwards; }
@@ -167,9 +166,9 @@
   .cat .head { transform-origin: 50% 65%; }
   .cat .eyes { animation: cat-blink 7s infinite; transform-box: fill-box; transform-origin: center; }
   .cat.dongle .head { transform: translate(-1px, 2px) scale(1.08, .91); }
-  .cat .exotic-ears, .cat .flat-nose { display: none; }
-  .cat.dongle .exotic-ears, .cat.dongle .flat-nose { display: inline; }
-  .cat.dongle .ear, .cat.dongle .ear-inner, .cat.dongle .nose { display: none; }
+  .cat .flat-nose { display: none; }
+  .cat.dongle .flat-nose { display: inline; }
+  .cat.dongle .nose { display: none; }
   .cat.dongle .mouth { transform: translateY(-2px); }
   .cat.dongle .m { opacity: 0; }
   .cat.dongle .cap { transform: translateY(-3px); }
@@ -335,7 +334,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.0.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.1.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -845,13 +844,8 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
   <g class="leg l3"><path d="M12 36L11 38Q10 42 16 42H19Q21 41 20 38L21 36" fill="var(--leg)" stroke="#54483e" stroke-opacity=".32" stroke-width=".7"/><path d="M14 40v1m3-1v1" stroke="#54483e" stroke-opacity=".25" stroke-width=".6"/></g>
   <g class="leg l4"><path d="M36 35L35 38Q34 42 40 42H43Q45 41 44 38V35" fill="var(--leg)" stroke="#54483e" stroke-opacity=".32" stroke-width=".7"/><path d="M38 40v1m3-1v1" stroke="#54483e" stroke-opacity=".25" stroke-width=".6"/></g>
   <g class="head">
-    <path class="ear" d="M32 17Q29 4 33 5L42 12M50 12 57 5Q61 4 60 19" stroke="#54483e" stroke-opacity=".5" stroke-width=".8"/>
-    <path class="ear-inner" d="M33 8 34 16 39 12ZM57 8 53 13 58 17Z" fill="#dda6a0"/>
-    <g class="norwegian-tufts" fill="var(--head)"><path d="M31.5 7 29-1 34.5 6ZM56 6 61-1 59.5 10Z"/></g>
-    <g class="exotic-ears" fill="var(--ear)" stroke="#8a7b65" stroke-opacity=".5" stroke-width=".65">
-      <path d="M30 19Q27 9 30 4Q32 2 35 6L40 15Z"/><path d="M52 15 58 5Q61 2 63 5Q66 10 61 20Z"/>
-      <path d="M30.5 7Q31 12 35 15M61 7Q61 12 57 15" fill="none" stroke="#d6beaa"/>
-    </g>
+    <g class="ear-unit ear-l"><path class="ear" d="__EAR_L__" stroke="#54483e" stroke-opacity=".5" stroke-width=".8"/><path class="ear-inner" d="__INNER_L__" fill="#dda6a0"/><path class="norwegian-tufts" d="M31 7 29-1 34 6Z" fill="var(--head)"/></g>
+    <g class="ear-unit ear-r"><path class="ear" d="__EAR_R__" stroke="#54483e" stroke-opacity=".5" stroke-width=".8"/><path class="ear-inner" d="__INNER_R__" fill="#dda6a0"/><path class="norwegian-tufts" d="M57 6 61-1 60 10Z" fill="var(--head)"/></g>
     <path class="cheek" d="M32 18Q25 20 28 24Q23 28 30 30Q28 34 36 33M59 18Q65 20 63 24Q67 28 61 30Q63 34 56 33"/>
     <path class="skull" d="M30 19 C29 6 60 6 61 20 C65 38 27 38 30 19Z" stroke="#54483e" stroke-opacity=".28" stroke-width=".7"/>
     <g clip-path="url(#__CAT__-face)">
@@ -902,6 +896,16 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
 
 // 고양이 생김새: 사진을 참고해 이름별로 지정 (없는 아이는 자연스러운 털색으로 자동 배정)
 const NONE = 'transparent';
+const EAR_SHAPES = {
+ normal:['M31 21Q29 14 29.5 5Q30 2 33 4L43 15Z','M49 15 57 4Q60 1 61 5L61 21Z','M32 7 34 16 39 13Z','M58 7 53 14 58.5 18Z'],
+ exotic:['M30 22Q27 12 30 5Q32 2 35 6L43 16Z','M49 16 58 5Q61 2 63 5Q66 12 60 22Z','M31 8 33 17 38 14Z','M61 8 54 15 59 18Z'],
+ russian:['M31 21Q28 12 30 2Q31-1 34 3L43 15Z','M49 15 58 2Q61-1 62 3L61 21Z','M32 5 34 16 39 13Z','M59 5 53 14 58.5 18Z'],
+ sphynx:['M32 21Q29 13 28 2Q28-3 32-1Q38 3 43 15Z','M49 15Q55 4 61 0Q65-3 65 2Q65 12 59 22Z','M31 3Q31 10 34 15L39 13Z','M62 3 54 14 59 16Q62 10 62 3Z']
+};
+function catDrawing(p){
+ const key=p.name==='동글이'?'exotic':p.name==='소양'?'russian':p.name==='팡이'?'sphynx':'normal',shape=EAR_SHAPES[key];
+ return ['__EAR_L__','__EAR_R__','__INNER_L__','__INNER_R__'].reduce((svg,token,i)=>svg.replaceAll(token,shape[i]),CAT_SVG);
+}
 const LOOKS = {
   '호야': { body: '#8e9094', stripe: '#33353a', leg: '#c3c5ca', head: '#8e9094', muzzle: '#a9abb0', ear: '#8e9094', tail: '#8e9094',
             nose: '#b99878', eye: '#a2b47a', belly: NONE, blaze: NONE, cap: NONE, patch: NONE, cls: 'tabby hoya', scale: 1 },     // 은회색 고등어 태비
@@ -937,6 +941,7 @@ function catScaleFor(p,look) {
 const CAT_W = 64, G = 900, FOOT = 4.5, TW = 130;
 const CUSHION_COLORS = ['#f4a6b8', '#a8d5ba', '#a9c4eb'];
 let cats = [], catSig = '', catsOn = true, lastT = 0;
+let layoutRevision=0;
 let platforms = [], towers = [], posts = [], wheel = null, GROUND = null, nodes = [], distCache = new Map(), cozySpots = [];
 const mouse = { x: -1, y: -1, t: -1e9 };
 try { catsOn = localStorage.getItem(KEY + ':cats') !== 'off'; } catch (e) {}
@@ -975,6 +980,7 @@ function floorAt(cx, y, tol) {
 
 // 쿠션·캣휠·양쪽 캣타워·다리·경사로 배치 (화면 크기에 맞춰 다시 계산)
 function layoutProps() {
+  layoutRevision++;
   const W = innerWidth, H = innerHeight, box = $('props');
   box.innerHTML = ''; platforms = []; towers = []; posts = []; wheel = null; distCache = new Map();
   GROUND = { kind: 'ground', node: true, x0: -1e5, x1: 1e5, h: 0, xc: W / 2, out: [] };
@@ -1368,7 +1374,14 @@ function onLand(c, t) {
 }
 
 function renderCatPosition(c) {
-  c.el.style.transform = `translate(${c.x.toFixed(1)}px, ${(-c.y).toFixed(1)}px)`;
+  if(c.renderedX!==c.x||c.renderedY!==c.y){
+    c.el.style.transform=`translate(${c.x.toFixed(1)}px, ${(-c.y).toFixed(1)}px)`;
+    c.renderedX=c.x;c.renderedY=c.y;
+  }
+  if(c.renderedDir!==c.dir||c.renderedScale!==c.scale){
+    (c.flip||c.el.firstElementChild).style.transform=`scale(${(c.dir<0?-1:1)*c.scale}, ${c.scale})`;
+    c.renderedDir=c.dir;c.renderedScale=c.scale;
+  }
 }
 function installCatPointer(c) {
   let press = null;
@@ -1433,8 +1446,10 @@ function renderCats() {
     c.el.style.setProperty('--blink-delay',(-i*.83)+'s');
     for (const [k, v] of Object.entries(look)) if (k !== 'cls' && k !== 'scale') c.el.style.setProperty('--' + k, v);
     c.el.title = p.guest ? p.name + (p.name==='팡이' ? ' · 놀러온 친구' : ' · 박박사님 댁에서 놀러온 친구') : p.memorial ? '동글이 · 늘 함께하는 친구' : p.name;
-    const svg = typeof roomCatSVG === 'function' ? roomCatSVG(CAT_SVG,p) : CAT_SVG;
+    const baseSVG=catDrawing(p);
+    const svg = typeof roomCatSVG === 'function' ? roomCatSVG(baseSVG,p) : baseSVG;
     c.el.innerHTML = `<div class="flip">${svg.replaceAll('__CAT__', svgId)}</div>`;
+    c.flip=c.el.firstElementChild;c.renderedX=NaN;c.renderedY=NaN;c.renderedDir=0;c.renderedScale=0;
     installCatPointer(c);
     c.el.onclick = () => {
       if (performance.now() < (c.ignoreClickUntil || 0)) return;
@@ -1669,20 +1684,23 @@ function tickCats(t) {
         if (c.y <= fy) { c.y = fy; c.vy = 0; c.vx = 0; c.air = false; c.stand = p; c.landT = t; onLand(c, t); }
       }
     } else {
-      const p = floorAt(fcx, c.y, 14), fy = p ? hOf(p, fcx) : 0, d = fy - c.y;
+      let p;
+      if(c.supportLayout===layoutRevision&&c.supportX===fcx&&c.supportY===c.y)p=c.supportPlatform;
+      else {p=floorAt(fcx,c.y,14);c.supportLayout=layoutRevision;c.supportX=fcx;c.supportY=c.y;c.supportPlatform=p;}
+      const fy = p ? hOf(p, fcx) : 0, d = fy - c.y;
       if (Math.abs(d) <= 14) c.y = Math.abs(d) < .6 ? fy : c.y + Math.sign(d) * Math.min(Math.abs(d), 220 * dt);
       else { c.air = true; c.vy = 0; c.vx = 0; }   // 발판 가장자리를 벗어나면 떨어짐
       c.stand = p;
     }
     if (c.air) pose = 'air ' + (c.vy > 0 ? 'rise' : 'fall');
-    if (wheel && c === cats[0]) wheel.el.classList.toggle('spin', cats.some(o => o.mode === 'run'));
+
 
     if (['watch','pawWrap'].includes(c.mode) && mouseOn && Math.abs(mouse.x - cx) < 130 && Math.random() < dt * .4) setMode(c, 'kiss', t, 2800);
     const cls = 'cat ' + c.lookCls + (c.earUntil > t ? ' airplane-ears' + (c.earDir < 0 ? ' ear-left' : ' ear-right') : '') + (c.name === '보리' ? ' tiger-walk' : '') + (c.cozy && c.mode === c.favorite ? ' at-cozy' : '') + ' ' + (c.mode === 'sit' && !c.air ? '' : pose) + (t - (c.landT || -1e9) < 200 && !c.air ? ' land' : '') + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
     if (cls !== c.cls) { c.cls = cls; c.el.className = cls; }
-    c.el.style.transform = `translate(${c.x.toFixed(1)}px, ${(-c.y).toFixed(1)}px)`;
-    c.el.firstChild.style.transform = `scale(${(c.dir < 0 ? -1 : 1) * c.scale}, ${c.scale})`;
+    renderCatPosition(c);
   }
+  if(wheel){const spinning=cats.some(c=>c.mode==='run');if(spinning!==wheel.spinning){wheel.el.classList.toggle('spin',spinning);wheel.spinning=spinning;}}
 }
 $('catBtn').onclick = () => {
   catsOn = !catsOn;

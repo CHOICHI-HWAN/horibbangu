@@ -4,3 +4,7 @@ node_modules/
 downloads/
 releases/
 firebase-debug.log
+site/
+build/
+__pycache__/
+*.pyc

@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),path=require('node:path');
 const{_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
- const app=await _electron.launch({executablePath:process.env.ELECTRON_EXECUTABLE,args:[path.join(__dirname,'../desktop/windows')],env:{...process.env,HORIBBANGU_DESKTOP_TEST:'1'}});
+ const app=await _electron.launch({executablePath:process.env.ELECTRON_EXECUTABLE,args:[process.env.HORI_DESKTOP_APP||path.join(__dirname,'../desktop/windows')],env:{...process.env,HORIBBANGU_DESKTOP_TEST:'1'}});
  try{
   const page=await app.firstWindow();await page.waitForFunction(()=>window.desktopHost&&document.querySelectorAll('.cat').length===8);
   const native=await app.evaluate(({BrowserWindow,screen})=>{const w=BrowserWindow.getAllWindows()[0],prefs=w.webContents.getLastWebPreferences();return{background:w.getBackgroundColor(),resize:w.isResizable(),shadow:w.hasShadow(),top:w.isAlwaysOnTop(),bounds:w.getBounds(),work:screen.getPrimaryDisplay().workArea,isolated:prefs.contextIsolation,sandbox:prefs.sandbox,node:prefs.nodeIntegration};});

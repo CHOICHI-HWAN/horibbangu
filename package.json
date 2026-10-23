@@ -1,0 +1,11 @@
+{
+  "name": "horibbangu-build",
+  "version": "3.1.0",
+  "private": true,
+  "scripts": {
+    "build": "python3 scripts/build-hosting.py"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

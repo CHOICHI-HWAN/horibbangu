@@ -19,12 +19,7 @@ const friendLooks = {
 };
 function roomCatSVG(svg,pet){
   if(pet.name!=='팡이')return svg;
-  // Draw joined ears in the head's own coordinates, rather than scaling them away.
-  return svg.replace('M32 17Q29 4 33 5L42 12M50 12 57 5Q61 4 60 19',
-    'M32 20Q29 13 28 2Q28-3 32-1Q38 3 43 14ZM50 14Q55 4 61 0Q65-3 65 2Q65 12 59 21Z')
-    .replace('M33 8 34 16 39 12ZM57 8 53 13 58 17Z',
-    'M31 3Q31 10 34 15L39 13ZM62 3 54 14 59 16Q62 10 62 3Z')
-    .replaceAll('cx="26" cy="28" rx="19.5" ry="13"','cx="26" cy="30" rx="16.5" ry="10"');
+  return svg.replaceAll('cx="26" cy="28" rx="19.5" ry="13"','cx="26" cy="30" rx="16.5" ry="10"');
 }
 function chooseRoomScenery(c,t){
   if(typeof desktopOverlay!=='undefined'&&desktopOverlay)return false;
@@ -176,26 +171,31 @@ function setRoomWeather(choice,date=new Date()){
   document.body.dataset.weather=roomWeather;
 }
 // Animate only the painted lake reflections; the village and mountains stay solid.
-let lastLakeFrame=-Infinity;
+let lastLakeFrame=-Infinity,lastWeatherFrame=-Infinity;
+let sceneDimensions=null,lakePaint=null,weatherPaint=null;
 function drawLake(t){
   const canvas=$('lakeCanvas'),image=$('landscape');
-  if(!image.complete||!image.naturalWidth)return;
-  const w=image.clientWidth,h=image.clientHeight;
+  if(!canvas||!image||!image.complete||!image.naturalWidth)return;
+  const dimensions=sceneDimensions||(sceneDimensions={width:image.clientWidth,height:image.clientHeight});
+  const w=dimensions.width,h=dimensions.height;
   if(!w||!h)return;
   const resized=canvas.width!==w||canvas.height!==h;
   if(!resized&&t-lastLakeFrame<33)return;
-  lastLakeFrame=t;canvas.width=w;canvas.height=h;
-  const ctx=canvas.getContext('2d');
-  if(reduceMotion)return;
-  const scale=Math.max(w/image.naturalWidth,h/image.naturalHeight);
-  const rw=image.naturalWidth*scale,rh=image.naturalHeight*scale,x=(w-rw)/2;
-  const shore=Math.ceil(rh*.62);
+  lastLakeFrame=t;
+  if(resized){canvas.width=w;canvas.height=h;}
+  const ctx=lakePaint?.context||canvas.getContext('2d');
+  if(reduceMotion){if(resized||!lakePaint?.paused)ctx.clearRect(0,0,w,h);if(lakePaint)lakePaint.paused=true;return;}
+  if(!lakePaint||lakePaint.width!==w||lakePaint.height!==h){
+    const scale=Math.max(w/image.naturalWidth,h/image.naturalHeight),rw=image.naturalWidth*scale,rh=image.naturalHeight*scale;
+    lakePaint={width:w,height:h,scale,x:(w-rw)/2,context:ctx,shore:Math.ceil(rh*.62),paused:false};
+  }
+  lakePaint.paused=false;ctx.clearRect(0,0,w,h);
+  const {shore,scale,x}=lakePaint;
   for(let y=shore;y<h;y+=3){
     const depth=(y-shore)/Math.max(1,h-shore),swell=Math.sin(y*.075-t/650)*(.6+depth*5)+Math.sin(y*.032+t/1300)*(depth*1.7);
-    ctx.save();ctx.beginPath();ctx.rect(0,y,w,3);ctx.clip();
-    ctx.drawImage(image,x+swell,-Math.abs(Math.sin(t/950+y*.05))*(.3+depth*1.8),rw,rh);ctx.restore();
+    const lift=Math.abs(Math.sin(t/950+y*.05))*(.3+depth*1.8),band=Math.min(3,h-y);
+    ctx.drawImage(image,(-x-swell)/scale,(y+lift)/scale,w/scale,band/scale,0,y,w,band);
   }
-  // Broad, drifting glints make the current readable even on a small screen.
   ctx.lineCap='round';
   for(let i=0;i<34;i++){
     const depth=(i+.5)/34,yy=shore+(h-shore)*depth+Math.sin(t/850+i*1.7)*(1+depth*2);
@@ -207,23 +207,26 @@ function drawLake(t){
   }
 }
 function drawWeather(t){
-  if(document.hidden){weatherFrame=requestAnimationFrame(drawWeather);return;}
+  weatherFrame=requestAnimationFrame(drawWeather);
+  if(document.hidden||t-lastWeatherFrame<33)return;lastWeatherFrame=t;
   drawLake(t);
+  const canvas=$('weatherCanvas');if(!canvas)return;
+  const dimensions=sceneDimensions||(sceneDimensions={width:canvas.clientWidth,height:canvas.clientHeight});
+  const w=dimensions.width,h=dimensions.height,resized=canvas.width!==w||canvas.height!==h;
+  if(resized){canvas.width=w;canvas.height=h;}
+  if(!weatherPaint)weatherPaint={context:canvas.getContext('2d'),weather:null,paused:false};
+  if(!resized&&weatherPaint.weather===roomWeather&&(roomWeather==='clear'||(reduceMotion&&weatherPaint.paused)))return;
+  const ctx=weatherPaint.context;ctx.clearRect(0,0,w,h);weatherPaint.weather=roomWeather;weatherPaint.paused=reduceMotion;
   if(reduceMotion)t=0;
-  const canvas=$('weatherCanvas'),ctx=canvas.getContext('2d'),rect=canvas.getBoundingClientRect();
-  if(canvas.width!==Math.round(rect.width)||canvas.height!==Math.round(rect.height)){canvas.width=Math.round(rect.width);canvas.height=Math.round(rect.height);}
-  ctx.clearRect(0,0,canvas.width,canvas.height);
   if(roomWeather!=='clear'){
     const snow=roomWeather==='snow',hail=roomWeather==='hail',speed=snow?18:hail?160:230;
     ctx.strokeStyle='rgba(224,241,247,.65)';ctx.fillStyle=snow?'#fffcf1dc':'#eef8f9d9';ctx.lineWidth=1;
     for(let i=0;i<(snow?45:65);i++){
-      const x=((i*137.2+Math.sin(t/2000+i)*(snow?14:2))%Math.max(1,canvas.width));
-      const yy=(i*71+t/1000*speed)%Math.max(1,canvas.height);
+      const x=((i*137.2+Math.sin(t/2000+i)*(snow?14:2))%Math.max(1,w)),yy=(i*71+t/1000*speed)%Math.max(1,h);
       if(snow||hail){ctx.beginPath();ctx.arc(x,yy,snow?1.8:2.6,0,Math.PI*2);ctx.fill();}
       else{ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x-4,yy+13);ctx.stroke();}
     }
   }
-  if($('weatherCanvas'))weatherFrame=requestAnimationFrame(drawWeather);
 }
 function setRoomControls(visible){
   document.body.classList.toggle('controls-visible',visible);
@@ -254,5 +257,9 @@ function initRoom(){
   $('restBtn').onclick=()=>{const t=performance.now();cats.forEach(c=>{if(!c.air&&!['angel','bubble'].includes(c.mode)){leave(c,t);if(!chooseFavorite(c,t))sleepNow(c,t);}});$('status').textContent='각자 좋아하는 폭신한 자리로 가요.';};
   $('wingsBtn').onclick=()=>{if(reduceMotion){$('status').textContent='움직임을 켜면 로이와 동글이가 날개를 펼쳐요.';return;}const t=performance.now();cats.filter(c=>['로이','동글이'].includes(c.name)).forEach(c=>{c.angelAfter=0;c.restUntil=0;if(!c.air)startAngelFlight(c,t);});};
   setRoomControls(false);updateRoomTime();setInterval(updateRoomTime,1000);
-  if($('weatherCanvas'))weatherFrame=requestAnimationFrame(drawWeather);
+  if($('weatherCanvas')){
+    const image=$('landscape');sceneDimensions={width:image.clientWidth,height:image.clientHeight};
+    new ResizeObserver(entries=>{const r=entries[0].contentRect;sceneDimensions={width:Math.round(r.width),height:Math.round(r.height)};}).observe(image);
+    weatherFrame=requestAnimationFrame(drawWeather);
+  }
 }

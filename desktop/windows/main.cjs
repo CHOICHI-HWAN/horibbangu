@@ -29,7 +29,7 @@ async function start(){
   hasShadow:false,resizable:false,maximizable:false,minimizable:false,fullscreenable:false,
   skipTaskbar:true,show:false,alwaysOnTop:false,autoHideMenuBar:true,
   icon:path.join(__dirname,'tray.png'),
-  webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,backgroundThrottling:!testing}
+  webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,v8CacheOptions:'code',backgroundThrottling:!testing}
  });
  win.setMenu(null);
  win.setIgnoreMouseEvents(true,{forward:true});

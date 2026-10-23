@@ -71,7 +71,7 @@ Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그
 
 실행 환경은 [Electron 투명 창](https://www.electronjs.org/docs/latest/tutorial/custom-window-styles)과 [클릭 통과 API](https://www.electronjs.org/docs/latest/tutorial/custom-window-interactions)를 사용합니다. `main.cjs`가 네이티브 창과 트레이를 담당하고 `preload.cjs`가 제한된 IPC만 제공합니다. 렌더러는 sandbox/contextIsolation을 사용하며 Node·외부 네트워크·외부 탐색을 허용하지 않습니다.
 
-재빌드는 Python 3로 `desktop/windows/build.sh`를 실행합니다. `runtime-lock.json`에 고정한 공식 Windows x64 런타임 ZIP을 SHA-256으로 확인한 뒤 앱 파일과 함께 패키징합니다. `HORIBBANGU_ELECTRON_CACHE`로 런타임 캐시 위치를 지정할 수 있습니다. 기본값은 `/tmp/horibbangu-build/electron`입니다. ZIP과 실행 폴더는 Git에서 제외되고 공개 ZIP·체크섬만 `releases/`를 통해 Firebase에 배포됩니다.
+최초 빌드 전 Node.js에서 `npm ci`로 고정된 esbuild를 설치합니다. 재빌드는 Node.js·Python 3 환경에서 `desktop/windows/build.sh`를 실행합니다. `runtime-lock.json`에 고정한 공식 Windows x64 런타임 ZIP을 SHA-256으로 확인한 뒤 앱 파일과 함께 패키징합니다. `HORIBBANGU_ELECTRON_CACHE`로 런타임 캐시 위치를 지정할 수 있습니다. 기본값은 `/tmp/horibbangu-build/electron`입니다. ZIP과 실행 폴더는 Git에서 제외되고 공개 ZIP·체크섬만 `releases/`를 통해 Firebase에 배포됩니다.
 
 `test_binary.py`는 공식 런타임 일치·PE 형식·필수 파일·앱 파일 일치를 확인합니다. `tests/desktop.cjs`는 실제 Electron 창에서 투명 렌더링·IPC·드래그·메뉴를 검증합니다 (`ELECTRON_EXECUTABLE`, `PLAYWRIGHT_MODULE` 지정). Mac에서 앱 구조를 검증했으며 Windows 실기기의 투명 합성과 클릭 통과는 아직 미확인입니다. 실행파일은 코드 서명이 되어 있지 않습니다.
 
@@ -96,3 +96,13 @@ Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그
 소양(러시안블루)과 소미(치즈 태비 코리안숏헤어)는 박박사님 댁의 방문 친구이며, 팡이(분홍빛 피부와 큰 귀)도 함께 방문합니다. 방을 연 뒤 45~90초에 처음 찾아와 2~3분 놀고, 5~8분 쉬었다 다시 방문합니다. 빈 곳을 탭해 **친구 초대**를 누르면 바로 만날 수 있습니다. 숨긴 탭·고양이 숨김·움직임 쉬기 중에는 방문 시간이 흐르지 않으며, 체중 기록에는 추가되지 않습니다.
 
 고양이 시계 아래의 문페이즈는 현재 기기 날짜에 맞춰 갱신됩니다. [NASA 월상표](https://eclipse.gsfc.nasa.gov/phase/phases1901.html)의 2000-01-06 18:14 UTC 새달과 평균 삭망월 29.530588일을 바탕으로 한 장식용 근사치입니다. 정밀 천문 시각을 계산하는 용도는 아닙니다.
+
+## JavaScript 컴파일과 성능 검사 (3.1)
+
+`records.html`과 `room/`는 읽기 쉬운 원본입니다. `npm run build` 또는 Firebase Hosting의 predeploy에서 `scripts/build-hosting.py`가 인라인 JavaScript를 고정 버전 esbuild로 컴파일·압축한 뒤 `site/`에 배포할 여섯 파일만 만듭니다. `site/`와 `build/`는 생성물이며 Git에 넣지 않습니다. 소스맵·빌드 도구·원본 사진·개발 파일은 Hosting에 포함되지 않습니다.
+
+데스크톱의 renderer는 `playground.js`로 컴파일하고 엄격한 로컬 CSP로 불러옵니다. main/preload도 패키징할 때 컴파일합니다. Electron은 V8 코드 캐시 정책을 사용합니다. esbuild는 JavaScript 변환·압축 도구이며 네이티브 코드로 바꾸는 것은 아닙니다. 실제 실행 비용은 위치·크기 DOM 쓰기 생략, 발판 조회 캐시, 물결의 좁은 이미지 영역 그리기와 Canvas 재사용, 날씨 30fps 및 맑은 날 중복 그리기 제거로 줄였습니다.
+
+`tests/performance.cjs`는 같은 1440×960 화면·고양이 8마리·5회 중앙값으로 정지/걷기 틱을 측정하고, 물결 180프레임 평균도 진단용으로 측정합니다. Canvas의 비동기 GPU 처리 편차가 커서 이 물결 수치는 속도 개선 판단에 사용하지 않습니다. CPU 처리 구간의 마이크로벤치마크이며 전체 앱 FPS나 Windows 성능의 보장은 아닙니다. `BENCH_OUT`으로 결과 JSON을 저장하고 `HORI_SITE_DIR`로 컴파일 배포 폴더를 지정할 수 있습니다. JavaScript 크기는 `build/compile-report.json`에 기록됩니다. 귀 정렬과 귀 밑동 고정축은 `tests/ears.cjs`가 11마리·6가지 자세에서 검사합니다.
+
+2026-10-23 macOS/Brave headless에서 v3.0.0 원본과 3.1 컴파일 배포본을 같은 조건으로 비교했습니다. 정지 틱은 약 0.00533→0.00100ms, 걷기 틱은 약 0.00656→0.00444ms였습니다. 프레임당 위치·크기 transform 쓰기는 정지 16→0회, 걷기 16→8회로 줄었습니다. 이 구간의 CPU 비용 감소이며 전체 앱 FPS 향상률로 해석하지 않습니다.

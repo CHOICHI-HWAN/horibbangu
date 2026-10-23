@@ -2,7 +2,8 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const roomURL = pathToFileURL(path.join(__dirname, '../index.html')).href;
+const siteRoot=process.env.HORI_SITE_DIR||path.join(__dirname,'..');
+const roomURL = pathToFileURL(path.join(siteRoot,'index.html')).href;
 (async () => {
   const browser = await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE ? {executablePath:process.env.BROWSER_EXECUTABLE} : {})});
   try {
@@ -60,7 +61,7 @@ const roomURL = pathToFileURL(path.join(__dirname, '../index.html')).href;
     console.log('clock, weather, co-sleeping, eye kiss, bubble drag and quiet controls passed');await page.close();
     // Honor system motion preference initially; an explicit user choice enables play and persists.
     const reduced=await browser.newPage({reducedMotion:'reduce'});await reduced.goto(roomURL);await reduced.keyboard.press('Tab');assert.equal(await reduced.locator('#motionBtn').textContent(),'움직임 켜기');await reduced.locator('#motionBtn').click();assert.equal(await reduced.locator('#motionBtn').textContent(),'움직임 쉬기');await reduced.reload();await reduced.keyboard.press('Tab');assert.equal(await reduced.locator('#motionBtn').textContent(),'움직임 쉬기');await reduced.close();
-    const records=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});await records.route('https://**/*',r=>r.abort());await records.goto(pathToFileURL(path.join(__dirname,'../records.html')).href);
+    const records=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});await records.route('https://**/*',r=>r.abort());await records.goto(pathToFileURL(path.join(siteRoot,'records.html')).href);
     await records.locator('#summary .pet').first().tap();assert(await records.locator('#todayBox').isHidden());assert.notEqual(await records.evaluate(()=>document.activeElement?.id),'todayVal');assert(await records.locator('.moving-average').count()>0);
     await records.locator('#summary .pet').first().tap();assert(await records.locator('#todayBox').isVisible());assert.equal(await records.evaluate(()=>document.activeElement.id),'todayVal');await records.close();console.log('motion preference and mobile single/double-tap passed');
   } finally { await browser.close(); }

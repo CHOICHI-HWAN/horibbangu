@@ -20,9 +20,6 @@
 .cat.stretch .l2,.cat.stretch .l4 { transform:rotate(-50deg); }
 .cat.stretch .tail { transform:rotate(-32deg); }
 @keyframes cat-stretch { 20%,70% { transform:translate(-4px,3px) scale(1.2,.72) rotate(5deg); } }
-.cat.airplane-ears .ear,.cat.airplane-ears .ear-inner { transform:rotate(-32deg) scaleY(.7); }
-.cat.airplane-ears .exotic-ears { transform:rotate(-12deg); transform-origin:46px 20px; }
-.cat.ear-right .ear,.cat.ear-right .ear-inner { transform:rotate(28deg) scaleY(.7); }
 .cat.in-bubble { z-index:15!important; cursor:grabbing; }
 .cat.in-bubble::after { content:''; position:absolute; inset:-20px -15px -14px; border-radius:50%; border:1.5px solid #ffffffd9; background:radial-gradient(ellipse at 27% 20%,#ffffffa8 0 3%,transparent 14%),linear-gradient(125deg,#b9eff64a,#eccce851,#fff9); box-shadow:inset 0 0 13px #c9f2ff94,0 5px 15px #72b4be30; pointer-events:none; }
 .cat.tunnel .flip { transform:translateY(-22px) scale(.95)!important; }
@@ -55,7 +52,6 @@
 .cat .ground-shadow {opacity:.1;fill:#6c704e;}
 
 /* Soyang: silver-blue short coat and tall ears. Somi: orange tabby with a white nose. */
-.cat.soyang .ear {transform:translateY(-1px) scaleY(1.13);transform-origin:46px 18px;}
 .cat.soyang .ear-inner {fill:#a9a2aa;}
 .cat.soyang .all {transform:scaleX(.96);transform-origin:center bottom;}
 .cat.somi .blaze {transform:translate(0,6px) scaleY(.8);transform-origin:47px 24px;}
@@ -64,16 +60,13 @@
 
 .cat .skin-folds {display:none;}
 .cat.pang .skin-folds {display:inline;}
-.cat.pang .ear {transform:none;}
-.cat.pang .ear-inner {fill:#dca297;transform:none;}
+.cat.pang .ear-inner {fill:#dca297;}
 .cat.pang .tailp {stroke-width:3.3;}
 .cat.pang .tail-outline {stroke-width:4;}
 
 .cat.pang .ground-shadow {rx:19;}
 .cat.pang .skin-folds {opacity:.65;}
 .cat.pang .eyes {transform-origin:46px 22px;}
-.cat.pang.airplane-ears .ear,.cat.pang.airplane-ears .ear-inner {transform:rotate(-12deg) scaleY(.9);transform-origin:46px 18px;}
-.cat.pang.ear-right .ear,.cat.pang.ear-right .ear-inner {transform:rotate(12deg) scaleY(.9);}
 
 .cat .scenery-back {display:none;}
 .cat.scenery .all {display:none;}
@@ -103,3 +96,14 @@ svg.wheel.spin .ring {animation-duration:.75s;}
 @keyframes wheel-focus {0%,100%{transform:translate(2px,1px) rotate(5deg);}50%{transform:translate(2px,2px) rotate(7deg);}}
 @keyframes wheel-tail {0%,100%{transform:rotate(-26deg);}50%{transform:rotate(-14deg);}}
 [data-motion="paused"] .wheel.spin .ring {animation:none;}
+
+/* Each ear shell, inner ear and tuft share a fixed attachment point. */
+.cat .ear-unit {transform-box:view-box;transition:transform .22s ease-out;}
+.cat .ear-l {transform-origin:37px 18.5px;}
+.cat .ear-r {transform-origin:55.5px 18.5px;}
+.cat.airplane-ears .ear-l {transform:rotate(-24deg);}
+.cat.airplane-ears .ear-r {transform:rotate(24deg);}
+.cat.airplane-ears.ear-left .ear-l {transform:rotate(-30deg);}
+.cat.airplane-ears.ear-left .ear-r {transform:rotate(8deg);}
+.cat.airplane-ears.ear-right .ear-l {transform:rotate(-8deg);}
+.cat.airplane-ears.ear-right .ear-r {transform:rotate(30deg);}

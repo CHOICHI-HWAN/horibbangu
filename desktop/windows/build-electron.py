@@ -1,6 +1,8 @@
 """Package the verified official Windows runtime with the transparent pet app."""
 from pathlib import Path
-import hashlib,json,os,shutil,tempfile,urllib.request,zipfile
+import hashlib,json,os,shutil,tempfile,urllib.request,zipfile,sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'scripts'))
+from compiler import compile_file
 root=Path(__file__).resolve().parents[2]
 source=root/'desktop/windows'
 lock=json.loads((source/'runtime-lock.json').read_text())
@@ -19,8 +21,9 @@ with tempfile.TemporaryDirectory(prefix='horibbangu-desktop-') as temp:
     (stage/'electron.exe').rename(stage/'호리빵구.exe')
     (stage/'resources/default_app.asar').unlink(missing_ok=True)
     app=stage/'resources/app';app.mkdir()
-    for name in ['main.cjs','preload.cjs','playground.html','tray.png','package.json']:
+    for name in ['playground.html','playground.js','tray.png','package.json']:
         shutil.copyfile(source/name,app/name)
+    for name in ['main.cjs','preload.cjs']:compile_file(source/name,app/name,'node')
     shutil.copyfile(root/'downloads/사용방법.txt',stage/'사용방법.txt')
     target=root/'downloads/호리빵구'
     if target.exists():shutil.rmtree(target)
