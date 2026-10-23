@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict');
 const path=require('node:path');
+const version=require('../desktop/windows/package.json').version;
 const {pathToFileURL}=require('node:url');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
@@ -38,7 +39,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   const web=await context.newPage();await web.goto(pathToFileURL(path.join(root,'index.html')).href);
   await web.evaluate(()=>setRoomControls(true));
   for(const [id,file] of [['windowsPark','Park'],['windowsKim','Kim']]){
-   assert(await web.locator('#'+id).isVisible());assert.equal(await web.locator('#'+id).getAttribute('href'),'/releases/Horibbangu-'+file+'-Windows.zip');
+   assert(await web.locator('#'+id).isVisible());assert.equal(await web.locator('#'+id).getAttribute('href'),'/releases/Horibbangu-'+file+'-Windows-v'+version+'.zip');
   }
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

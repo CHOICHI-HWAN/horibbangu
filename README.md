@@ -77,9 +77,9 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 ## Windows 바탕화면 친구들 (3.3.1)
 
-[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)에서 ZIP 안의 **`호리빵구.exe` 하나**를 꺼내 실행합니다. 기본 다운로드는 Win32·WebView2 경량판입니다. ZIP은 **약 0.76 MB**, EXE는 **약 1.23 MB**로 기존 ZIP 100,898,936바이트보다 다운로드 크기를 약 **99.25%** 줄였습니다. 고양이·호수 그림·동작 코드는 EXE에 포함하고 브라우저 엔진은 PC에 설치된 Microsoft Edge WebView2를 공유합니다. 실행 중 인터넷·로그인·체중 기록은 필요 없습니다. 런타임이 없으면 공식 설치 안내를 열지 묻고 자동 설치하지 않습니다.
+[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows-v3.3.1.zip)에서 ZIP 안의 **`호리빵구-v3.3.1.exe` 하나**를 꺼내 실행합니다. 기본 다운로드는 Win32·WebView2 경량판입니다. ZIP은 **약 0.76 MB**, EXE는 **약 1.23 MB**로 기존 ZIP 100,898,936바이트보다 다운로드 크기를 약 **99.25%** 줄였습니다. 고양이·호수 그림·동작 코드는 EXE에 포함하고 브라우저 엔진은 PC에 설치된 Microsoft Edge WebView2를 공유합니다. 실행 중 인터넷·로그인·체중 기록은 필요 없습니다. 런타임이 없으면 공식 설치 안내를 열지 묻고 자동 설치하지 않습니다.
 
-별도 런타임 설치 없이 실행하려면 [기존 3.2.1 호환판](https://horibbangu.web.app/releases/Horibbangu-Windows-Standalone.zip)을 받을 수 있습니다. 엔진을 포함해 약 101 MB이며 새 경량판과 별도 설정을 사용합니다. 로컬 `downloads/`에는 작은 EXE·ZIP·사용방법을 보관합니다. Firebase Spark에서는 EXE 직접 호스팅이 제한되어 EXE 하나를 담은 ZIP을 제공합니다.
+별도 런타임 설치 없이 실행하려면 [기존 3.2.1 호환판](https://horibbangu.web.app/releases/Horibbangu-Windows-Standalone-v3.2.1.zip)을 받을 수 있습니다. 엔진을 포함해 약 101 MB이며 새 경량판과 별도 설정을 사용합니다. 로컬 `downloads/`에는 작은 EXE·ZIP·사용방법을 보관합니다. Firebase Spark에서는 EXE 직접 호스팅이 제한되어 EXE 하나를 담은 ZIP을 제공합니다.
 
 기본은 투명한 바탕화면 위에 고양이와 가구만 표시합니다. 트레이의 **호수 배경 보이기**나 앱 메뉴의 **배경 켜기 / 끄기**로 풍경을 전환하고 선택을 저장합니다. 배경을 켜면 호수·구름·안개·날씨와 풍경 감상이 동작하고, 끄면 불필요한 Canvas 그리기를 멈춥니다. 빈 공간은 아래 프로그램을 클릭할 수 있으며 고양이는 쓰다듬거나 공기방울로 드래그할 수 있습니다. 제목 표시줄·테두리는 없습니다.
 
@@ -99,12 +99,12 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 ## Windows 개별판 · 박박사 / 김박사
 
-- [박박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Park-Windows.zip): 소양·소미만 처음부터 계속 함께합니다.
-- [김박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Kim-Windows.zip): 팡이만 처음부터 계속 함께합니다.
+- [박박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Park-Windows-v3.3.1.zip): 소양·소미만 처음부터 계속 함께합니다.
+- [김박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Kim-Windows-v3.3.1.zip): 팡이만 처음부터 계속 함께합니다.
 
-각 ZIP에는 해당 EXE 하나만 포함합니다. 기존 고양이 SVG·색상·체형과 방·호수 효과를 유지하며 다른 고양이를 자동 추가하거나 방문 후 퇴장시키지 않습니다. 체중 기록·로그인·네트워크 연결은 없습니다. Windows 10/11 x64와 공유 WebView2 런타임이 필요합니다. 기본판의 모니터 선택·투명도·항상 위/뒤·배경 전환·클릭 통과 기능을 함께 사용합니다. 웹 첫 화면을 탭하면 두 다운로드 버튼이 나타납니다.
+ZIP과 내부 EXE 이름 모두 `v3.3.1`처럼 버전을 포함합니다. 다음 빌드에서도 `desktop/windows/package.json`의 버전으로 파일명을 자동 생성합니다. 예전 공유 주소도 버전이 붙은 다운로드 파일명을 제공합니다. 각 ZIP에는 해당 EXE 하나만 포함합니다. 기존 고양이 SVG·색상·체형과 방·호수 효과를 유지하며 다른 고양이를 자동 추가하거나 방문 후 퇴장시키지 않습니다. 체중 기록·로그인·네트워크 연결은 없습니다. Windows 10/11 x64와 공유 WebView2 런타임이 필요합니다. 기본판의 모니터 선택·투명도·항상 위/뒤·배경 전환·클릭 통과 기능을 함께 사용합니다. 웹 첫 화면을 탭하면 두 다운로드 버튼이 나타납니다.
 
-실행파일은 `downloads/호리빵구-박박사.exe`, `downloads/호리빵구-김박사.exe`에 보관합니다. 각 개별판은 창 클래스·단일 실행 잠금·트레이 이름·설정·WebView2 프로필을 분리하여 기본판 및 서로와 함께 실행할 수 있습니다. 설정 폴더는 `%LOCALAPPDATA%\HoribbanguDesktop-Park`, `%LOCALAPPDATA%\HoribbanguDesktop-Kim`입니다.
+실행파일은 `downloads/호리빵구-박박사-v3.3.1.exe`, `downloads/호리빵구-김박사-v3.3.1.exe`에 보관합니다. 각 개별판은 창 클래스·단일 실행 잠금·트레이 이름·설정·WebView2 프로필을 분리하여 기본판 및 서로와 함께 실행할 수 있습니다. 설정 폴더는 `%LOCALAPPDATA%\HoribbanguDesktop-Park`, `%LOCALAPPDATA%\HoribbanguDesktop-Kim`입니다.
 
 재빌드는 `python3 desktop/windows/build-editions.py`이며, `--edition park` 또는 `--edition kim`으로 렌더러·네이티브 빌드·패키징 단계를 각각 실행할 수도 있습니다. `tests/desktop-editions.cjs`는 기본판 방문 고양이와 SVG·색상·크기를 대조하고, 정확한 고양이 목록·장시간 방문 방지·오프라인 동작·배경·드래그·웹 다운로드 링크를 검사합니다. Windows CI는 기본판·박박사판·김박사판을 각각 빌드하고 실제 창과 마우스 동작을 검사합니다. 2026-10-24 [세 판의 Windows 실행 검증](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/40026140563)이 모두 통과했으며, 배포한 두 개별판 EXE는 Windows 검증 파일과 바이트 단위로 일치합니다.
 

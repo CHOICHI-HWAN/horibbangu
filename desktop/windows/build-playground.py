@@ -49,7 +49,7 @@ html=html.replace("script-src 'unsafe-inline'", "script-src 'self'")
 if edition['cats']:
     guide=(root/'desktop/windows/사용방법.txt').read_text()
     guide=guide.replace('호리빵구 · 바탕화면 친구들 3.3.1',edition['title']+' 3.3.1')
-    guide=guide.replace('「호리빵구.exe」','「'+edition['exe']+'」')
+    guide=guide.replace('「호리빵구.exe」','「'+edition['download_exe']+'」')
     guide=re.sub(r'런타임 설치를 원하지 않으면 별도 .*?약 101 MB입니다\.\n','',guide,flags=re.S)
     guide=guide.replace('HoribbanguDesktop',edition['data'])
     guide+='\n이 버전에는 '+', '.join(edition['cats'])+'만 처음부터 계속 함께합니다. 다른 친구는 방문하지 않습니다.\n기본판 및 다른 개별판과 실행·설정 폴더가 분리되어 있습니다.\n'

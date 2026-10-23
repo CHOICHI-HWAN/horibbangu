@@ -2,6 +2,8 @@
 from pathlib import Path
 import json,re,runpy,shutil,sys
 sys.path.insert(0,str(Path(__file__).resolve().parent))
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'desktop/windows'))
+from editions import download_archives
 from compiler import compile_file
 root=Path(__file__).resolve().parents[1]
 runpy.run_path(str(root/'scripts/build-room.py'))
@@ -16,7 +18,7 @@ for name in ['index.html','records.html']:
 shutil.copyfile(root/'config.js',site/'config.js')
 (site/'room').mkdir(exist_ok=True);shutil.copyfile(root/'room/cats-extra.css',site/'room/cats-extra.css')
 (site/'releases').mkdir(exist_ok=True)
-for name in ['Horibbangu-Windows.zip','Horibbangu-Windows-Standalone.zip','Horibbangu-Park-Windows.zip','Horibbangu-Kim-Windows.zip','SHA256SUMS.txt']:
+for name in download_archives()+['SHA256SUMS.txt']:
     assert (root/'releases'/name).is_file(),'Build the portable desktop EXE first'
     shutil.copyfile(root/'releases'/name,site/'releases'/name)
 (root/'build').mkdir(exist_ok=True);(root/'build/compile-report.json').write_text(json.dumps(report,indent=2)+'\n')
