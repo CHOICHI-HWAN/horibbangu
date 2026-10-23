@@ -2,9 +2,9 @@
 * { box-sizing:border-box; }
 body { margin:0; height:100dvh; overflow:hidden; color:var(--ink); font:14px/1.5 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--wall); }
 button,a,select { -webkit-tap-highlight-color:transparent; }
-button,.login-link,select { font:inherit; color:inherit; }
-button,.login-link { border:1px solid #a98f6c44; background:#fffaf0b8; cursor:pointer; border-radius:99px; padding:8px 13px; backdrop-filter:blur(12px); text-decoration:none; }
-button:hover,.login-link:hover { background:#fffdf6; }
+button,.login-link,.download-link,select { font:inherit; color:inherit; }
+button,.login-link,.download-link { border:1px solid #a98f6c44; background:#fffaf0b8; cursor:pointer; border-radius:99px; padding:8px 13px; backdrop-filter:blur(12px); text-decoration:none; }
+button:hover,.login-link:hover,.download-link:hover { background:#fffdf6; }
 button:focus-visible,a:focus-visible,select:focus-visible { outline:2px solid #56818e; outline-offset:3px; }
 .room { position:fixed; inset:0; isolation:isolate; background:linear-gradient(90deg,#bdac9412,transparent 22%,transparent 78%,#bdac9412),var(--wall); }
 .room::after { content:''; position:absolute; inset:0; background:#172e59; opacity:calc(var(--night) * .32); pointer-events:none; z-index:9; }
@@ -46,7 +46,7 @@ button:focus-visible,a:focus-visible,select:focus-visible { outline:2px solid #5
 .tunnel-front { z-index:3; }
 .room-page #cats { z-index:10; }
 .room-page .tower { opacity:.9; } .room-page .bridges { opacity:.82; }
-@media(max-width:650px) { .room-header { top:18px; left:18px; right:18px; } .brand { font-size:22px; } .header-actions { max-width:155px; font-size:9px; } .header-actions button { padding:6px 9px; } .login-link { left:18px; top:112px; } .window-frame { left:18%; width:64%; top:25%; height:38%; padding:8px; } .art-wall { top:33%; width:12%; gap:24px; } .art-left{left:2%;}.art-right{right:2%;}.painting,.painting:nth-child(2){width:48px;padding:3px;}.painting figcaption{display:none;}.scene-label{left:18px;bottom:10px;} .weather-control{right:15px;bottom:12px;} .house{width:150px;height:160px;}.small-copy{font-size:9px;}.weather-control span{display:none;}.kicker{font-size:7px;letter-spacing:2px;} }
+@media(max-width:650px) { .room-header { top:18px; left:18px; right:18px; } .brand { font-size:22px; } .header-actions { max-width:155px; font-size:9px; } .header-actions button,.header-actions .download-link { padding:6px 9px; } .login-link { left:18px; top:112px; } .window-frame { left:18%; width:64%; top:25%; height:38%; padding:8px; } .art-wall { top:33%; width:12%; gap:24px; } .art-left{left:2%;}.art-right{right:2%;}.painting,.painting:nth-child(2){width:48px;padding:3px;}.painting figcaption{display:none;}.scene-label{left:18px;bottom:10px;} .weather-control{right:15px;bottom:12px;} .house{width:150px;height:160px;}.small-copy{font-size:9px;}.weather-control span{display:none;}.kicker{font-size:7px;letter-spacing:2px;} }
 @media(max-height:500px) { .room-header{top:10px}.brand{font-size:18px}.kicker,.small-copy{display:none}.login-link{top:60px}.window-frame{top:20%;height:47%;}.art-wall{top:25%} }
 @media(prefers-reduced-motion:reduce) { .shimmer { animation:none; } }
 
@@ -104,7 +104,7 @@ body[data-time="night"]>.cat-wall-clock { filter:brightness(.78) drop-shadow(0 5
 .painting {background:linear-gradient(125deg,#98805b,#d6bf8b 45%,#a28b5e);box-shadow:1px 3px 7px #64563c24;}
 .room-page .room-furniture svg,.room-page .cozy svg {filter:drop-shadow(0 1px 1px #6d62441a);}
 .room-page .cat> .flip >svg {filter:drop-shadow(0 1.2px .7px #5b563519);}
-button,.login-link,.weather-control select {background:#fff9e8de;border-color:#a99a704c;color:#58644c;box-shadow:0 1px 0 #fffbe6;}
+button,.login-link,.download-link,.weather-control select {background:#fff9e8de;border-color:#a99a704c;color:#58644c;box-shadow:0 1px 0 #fffbe6;}
 @media(prefers-reduced-motion:reduce){.room-header,.login-link,.scene-label,.weather-control{transition:none;}}
 
 .room::before {content:"";position:absolute;inset:0;z-index:8;pointer-events:none;opacity:.18;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.7%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%22.15%22%2F%3E%3C%2Fsvg%3E");}
@@ -428,7 +428,7 @@ svg.wheel.spin .ring {animation-duration:.75s;}
 <figure class="cat-wall-clock" aria-label="고양이 벽시계"><svg viewBox="0 0 120 180" role="img" aria-label="기기 시간에 맞춰 움직이는 고양이 시계"><g id="clockTail"><path d="M60 128Q38 149 61 164Q78 174 89 158" fill="none" stroke="#a08465" stroke-width="9" stroke-linecap="round"/><path d="M65 166q6 0 10-3" stroke="#f3e6cf" stroke-width="5" stroke-linecap="round"/></g><path d="M22 54 18 9Q20 2 28 9L45 30H75L94 8Q102 2 102 12L98 58V105Q96 135 60 137Q23 135 22 106Z" fill="#cab18c" stroke="#a78d6a" stroke-width="2"/><path d="M25 15 29 37 39 32ZM94 16 82 33 95 39Z" fill="#ddb6a6"/><circle cx="60" cy="78" r="37" fill="#fffaf0" stroke="#af9875" stroke-width="1.5"/><g fill="#958268" font-size="10" text-anchor="middle"><text x="60" y="51">12</text><text x="89" y="82">3</text><text x="60" y="109">6</text><text x="31" y="82">9</text></g><g class="clock-eyes" fill="#81745f"><ellipse cx="47" cy="66" rx="2.3" ry="3"/><ellipse cx="73" cy="66" rx="2.3" ry="3"/></g><path id="clockHour" d="M60 81V58" stroke="#6c7869" stroke-width="4" stroke-linecap="round"/><path id="clockMinute" d="M60 83V49" stroke="#8f7858" stroke-width="2.5" stroke-linecap="round"/><circle cx="60" cy="78" r="4" fill="#c1a576"/><path d="M29 120q5 4 10 0m42 0q5 4 10 0" fill="none" stroke="#f7e8cf" stroke-width="2.5" stroke-linecap="round"/>
 <g id="clockMoon" role="img" aria-label="오늘의 달 모양"><title id="clockMoonTitle">오늘의 문페이즈</title><circle cx="60" cy="122" r="11.5" fill="#4d5a61" stroke="#ebd5a0" stroke-width="1"/><circle cx="60" cy="122" r="9" fill="#718087" opacity=".4"/><path id="clockMoonLight" fill="#fff0bd"/><path d="M42 119h3m-1.5-1.5v3m31-1h3m-1.5-1.5v3" fill="none" stroke="#f6e4b5" stroke-width=".8"/></g></svg><figcaption id="catClockText"></figcaption></figure>
 </main>
-<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="viewBtn">풍경 감상</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><button id="closeControls">풍경만 보기</button></nav></header>
+<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="viewBtn">풍경 감상</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><a id="windowsDownload" class="download-link" href="https://github.com/CHOICHI-HWAN/horibbangu/releases/download/v2.4.2/Horibbangu-Windows-v2.4.2.zip" title="Windows 10/11 64비트용 · 압축을 풀고 실행하세요">Windows 다운로드 ↓</a><button id="closeControls">풍경만 보기</button></nav></header>
 <a class="login-link" id="recordsLink" href="records.html">로그인 · 체중 기록 ↗</a>
 <div id="cats" aria-label="고양이 놀이터"><div id="props"></div></div>
 <div class="scene-label"><div id="status" role="status"><strong>호수가 보이는 작은 방</strong>고양이를 끌어 옮기거나, 눈을 맞춰 보세요.</div><div id="roomClock"></div></div>
