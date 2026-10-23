@@ -1,11 +1,15 @@
 """Run on an interactive Windows CI desktop, never claim cross-compilation is execution."""
 from pathlib import Path
+import sys
 import ctypes as C,ctypes.wintypes as W,faulthandler,json,os,subprocess,time,urllib.request
 faulthandler.dump_traceback_later(120,exit=True)
 from PIL import ImageGrab
 ROOT=Path(__file__).resolve().parents[3]
+sys.path.insert(0,str(ROOT/'desktop/windows'))
+from editions import edition_config
+edition=edition_config(os.environ.get('HORIBBANGU_EDITION','default'))
 os.chdir(ROOT)
-OUT=ROOT/'build/native-verification';OUT.mkdir(parents=True,exist_ok=True)
+OUT=edition['verification'];OUT.mkdir(parents=True,exist_ok=True)
 u=C.WinDLL('user32',use_last_error=True)
 u.CreateWindowExW.argtypes=[W.DWORD,W.LPCWSTR,W.LPCWSTR,W.DWORD,C.c_int,C.c_int,C.c_int,C.c_int,W.HWND,W.HMENU,W.HINSTANCE,W.LPVOID];u.CreateWindowExW.restype=W.HWND
 u.FindWindowW.argtypes=[W.LPCWSTR,W.LPCWSTR];u.FindWindowW.restype=W.HWND
@@ -52,7 +56,7 @@ try:
    if any(t.get('url','').startswith('https://horibbangu.local/') for t in targets):break
   except OSError:pass
  else:raise AssertionError('WebView2 never became ready')
- hwnd=u.FindWindowW('HoribbanguWebView2Desktop',None);assert hwnd
+ hwnd=u.FindWindowW(edition['window_class'],None);assert hwnd
  # Keep app above white underlay without changing production's non-topmost default.
  u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(1)
  style=u.GetWindowLongPtrW(hwnd,-16);extended=u.GetWindowLongPtrW(hwnd,-20)
@@ -62,7 +66,7 @@ try:
  # Use the actual native settings controls: monitor enumeration, live opacity and stacking.
  evaluate('setDesktopBackground(true)');pump(.4)
  u.PostMessageW(hwnd,0x0111,110,0);pump(.4)
- settings=u.FindWindowW('HoribbanguDesktopSettings',None);assert settings
+ settings=u.FindWindowW(edition['settings_class'],None);assert settings
  ImageGrab.grab().save(OUT/'settings.png')
  combo=u.GetDlgItem(settings,201);slider=u.GetDlgItem(settings,202)
  assert u.SendMessageW(combo,0x0146,0,0)>=1  # CB_GETCOUNT
@@ -74,7 +78,7 @@ try:
  faded=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
  ImageGrab.grab().save(OUT/'opacity-50.png')
  assert sum(faded)>sum(base)+30,('Opacity did not blend with desktop',base,faded)
- ini=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/settings.ini'
+ ini=Path(os.environ['LOCALAPPDATA'])/edition['data']/'settings.ini'
  assert 'Transparency=50' in ini.read_text() and 'Monitor=' in ini.read_text()
  u.SendMessageW(settings,0x0111,205,0);pump(.2)
  assert u.GetWindowLongPtrW(hwnd,-20)&0x8  # WS_EX_TOPMOST
@@ -125,7 +129,7 @@ try:
  # after a stale hit rectangle and a shell-style Z-order change, not just styles.
  from test_background_input import verify_background_input
  print('Starting background icon regression.',flush=True)
- verify_background_input(u,pump,hwnd,under,evaluate,OUT,width,height)
+ verify_background_input(u,pump,hwnd,under,evaluate,OUT,width,height,edition["settings_class"])
  # Closing settings may asynchronously foreground its previous owner. Retire
  # the icon test application before testing an exposed interactive cat again.
  u.ShowWindow(under,0);u.SetForegroundWindow(hwnd)
@@ -140,7 +144,7 @@ try:
  print('Restored interactive drag verified; switching during a held gesture.',flush=True)
  # Switching to background during a held drag must release the bubble.
  u.PostMessageW(hwnd,0x0111,110,0);pump(.1)
- settings=u.FindWindowW('HoribbanguDesktopSettings',None);assert settings
+ settings=u.FindWindowW(edition['settings_class'],None);assert settings
  u.SendMessageW(settings,0x0111,206,0);pump(.1)
  u.mouse_event(0x0004,0,0,0,0);pump(.1)
  assert evaluate("cats[0].mode!=='bubble'"),'Entering background mode left a cat captured'
@@ -153,11 +157,11 @@ try:
  ImageGrab.grab().save(OUT/'painted-desktop.png')
  assert evaluate('desktopBackground && lastLakeFrame>0')
  # Read the current binary's embedded guide and notices after real extraction.
- assets=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.1'
+ assets=Path(os.environ['LOCALAPPDATA'])/edition['data']/'Native/3.3.1'
  assert (assets/'LICENSE').exists() and (assets/'WebView2-LICENSE.txt').exists()
  # Persist non-default native settings as well as the renderer's background choice.
  u.PostMessageW(hwnd,0x0111,110,0);pump(.2)
- settings=u.FindWindowW('HoribbanguDesktopSettings',None);slider=u.GetDlgItem(settings,202)
+ settings=u.FindWindowW(edition['settings_class'],None);slider=u.GetDlgItem(settings,202)
  u.SendMessageW(slider,0x0405,1,37);u.SendMessageW(settings,0x0114,0,slider)
  u.SendMessageW(settings,0x0111,206,0)
  u.PostMessageW(settings,0x0010,0,0);pump(.2)
@@ -167,10 +171,10 @@ try:
  moved=OUT/'relocated';moved.mkdir(exist_ok=True);shutil.copyfile(ROOT/'candidate.exe',moved/'cats.exe')
  app=subprocess.Popen([str(moved/'cats.exe')]);pump(5)
  assert app.poll() is None and evaluate('desktopBackground')
- hwnd=u.FindWindowW('HoribbanguWebView2Desktop',None)
+ hwnd=u.FindWindowW(edition['window_class'],None)
  assert u.GetWindowLongPtrW(hwnd,-20)&0x08000000
  u.PostMessageW(hwnd,0x0111,110,0);pump(.3)
- settings=u.FindWindowW('HoribbanguDesktopSettings',None)
+ settings=u.FindWindowW(edition['settings_class'],None)
  assert u.SendMessageW(u.GetDlgItem(settings,202),0x0400,0,0)==37  # TBM_GETPOS
  stop_rpc();u.PostMessageW(hwnd,0x0312,2,0);app.wait(timeout=15);assert app.returncode==0
  (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'transparentPixel':sample,'checks':['real Win32/WebView2 launch','monitor selection and opacity','top/behind modes','offline renderer','background and lake','persistent settings','transparent compositor','physical mouse click-through and drag','background icon selection/double-click/right-click/drag','interactive mode restoration and held-drag release','hotkey menu and exit','relocated EXE']},indent=2))
@@ -179,7 +183,7 @@ finally:
  if rpc:stop_rpc()
  ImageGrab.grab().save(OUT/'final-desktop.png')
  import shutil
- log=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.1/native-diagnostics.txt'
+ log=Path(os.environ['LOCALAPPDATA'])/edition['data']/'Native/3.3.1/native-diagnostics.txt'
  if log.exists():shutil.copyfile(log,OUT/'native-diagnostics.txt')
  titles=[]
  callbackType=C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)

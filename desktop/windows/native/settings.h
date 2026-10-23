@@ -7,7 +7,7 @@ static int displayCount=0,layer=0,transparency=0;
 static wchar_t selectedDisplay[32],settingsFile[2048];
 static HWND settingsWindow,monitorCombo,opacitySlider,opacityLabel;
 static HFONT settingsFont;
-static const wchar_t* settingsClass=L"HoribbanguDesktopSettings";
+static const wchar_t* settingsClass=APP_SETTINGS_CLASS;
 static void bounds();
 static BOOL CALLBACK collectDisplay(HMONITOR monitor,HDC,LPRECT,LPARAM){
  if(displayCount>=32)return TRUE;
@@ -75,7 +75,7 @@ static void openSettings(){
  if(settingsWindow){ShowWindow(settingsWindow,SW_SHOW);SetForegroundWindow(settingsWindow);return;}
  WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=settingsProcedure;cls.hInstance=GetModuleHandleW(nullptr);cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=settingsClass;cls.hbrBackground=(HBRUSH)(COLOR_BTNFACE+1);RegisterClassExW(&cls);
  int selected=refreshDisplays();RECT work=displayCount?displays[selected].work:RECT{0,0,800,600};
- settingsWindow=CreateWindowExW(WS_EX_TOOLWINDOW,settingsClass,L"호리빵구 · 화면 설정",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU,work.left+80,work.top+80,440,300,windowHandle,nullptr,cls.hInstance,nullptr);
+ settingsWindow=CreateWindowExW(WS_EX_TOOLWINDOW,settingsClass,APP_TITLE L" · 화면 설정",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU,work.left+80,work.top+80,440,300,windowHandle,nullptr,cls.hInstance,nullptr);
  if(!settingsWindow)return;
  int dpi=(int)GetDpiForWindow(settingsWindow);if(!dpi)dpi=96;
  auto scale=[dpi](int n){return MulDiv(n,dpi,96);};

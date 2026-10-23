@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include "WebView2.h"
 #include "webview-guids.h"
+#include "edition.h"
 
 static HWND windowHandle;
 static ICoreWebView2Environment* environment;
@@ -35,7 +36,7 @@ static const wchar_t* origin=L"https://horibbangu.local/";
 static const wchar_t* pageUrl=L"https://horibbangu.local/playground.html";
 static UINT taskbarCreated;
 static const UINT trayMessage=WM_APP+1,secondInstance=WM_APP+2;
-static const wchar_t* windowClass=L"HoribbanguWebView2Desktop";
+static const wchar_t* windowClass=APP_WINDOW_CLASS;
 
 static void updateMouseHook();
 #include "settings.h"
@@ -48,7 +49,7 @@ static void trace(const wchar_t* text){
 }
 static void error(const wchar_t* message,HRESULT hr=E_FAIL){
  wchar_t text[2048];swprintf(text,2048,L"%ls\n\n오류 코드: 0x%08lX",message,(unsigned long)hr);
- MessageBoxW(windowHandle,text,L"호리빵구",MB_OK|MB_ICONERROR);
+ MessageBoxW(windowHandle,text,APP_TITLE,MB_OK|MB_ICONERROR);
  if(windowHandle)DestroyWindow(windowHandle);
 }
 static void command(const wchar_t* text){if(webview)webview->PostWebMessageAsString(text);}
@@ -113,7 +114,7 @@ static void tray(bool remove=false){
  NOTIFYICONDATAW data={};data.cbSize=sizeof(data);data.hWnd=windowHandle;data.uID=1;
  data.uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP;data.uCallbackMessage=trayMessage;
  data.hIcon=(HICON)LoadImageW(GetModuleHandleW(nullptr),MAKEINTRESOURCEW(1),IMAGE_ICON,32,32,LR_SHARED);
- lstrcpynW(data.szTip,L"호리빵구 · 클릭: 메뉴 / 오른쪽 클릭: 배경·종료",128);
+ lstrcpynW(data.szTip,APP_TITLE L" · 클릭: 메뉴 / 오른쪽 클릭: 배경·종료",128);
  Shell_NotifyIconW(remove?NIM_DELETE:NIM_ADD,&data);
  if(!remove){data.uVersion=NOTIFYICON_VERSION_4;Shell_NotifyIconW(NIM_SETVERSION,&data);}
 }
@@ -125,7 +126,11 @@ static void menu(){
  AppendMenuW(m,MF_STRING|(layer==1?MF_CHECKED:0),103,L"항상 위에");
  AppendMenuW(m,MF_STRING|(layer==2?MF_CHECKED:0),106,L"항상 뒤에 (배경처럼)");
  AppendMenuW(m,MF_STRING,110,L"화면·투명도 설정…");
- AppendMenuW(m,MF_SEPARATOR,0,nullptr);AppendMenuW(m,MF_STRING,104,L"친구 초대");AppendMenuW(m,MF_STRING,105,L"움직임 켜기 / 쉬기");
+ AppendMenuW(m,MF_SEPARATOR,0,nullptr);
+#if APP_HAS_GUESTS
+ AppendMenuW(m,MF_STRING,104,L"친구 초대");
+#endif
+ AppendMenuW(m,MF_STRING,105,L"움직임 켜기 / 쉬기");
  AppendMenuW(m,MF_SEPARATOR,0,nullptr);AppendMenuW(m,MF_STRING,199,L"종료 (Ctrl+Alt+Q)");
  POINT p;GetCursorPos(&p);SetForegroundWindow(windowHandle);
  UINT choice=TrackPopupMenu(m,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,p.x,p.y,0,windowHandle,nullptr);DestroyMenu(m);
@@ -325,12 +330,12 @@ static bool resource(int id,const wchar_t* name){
 }
 int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
- HANDLE mutex=CreateMutexW(nullptr,FALSE,L"Local\\HoribbanguWebView2Desktop");
+ HANDLE mutex=CreateMutexW(nullptr,FALSE,APP_MUTEX);
  if(GetLastError()==ERROR_ALREADY_EXISTS){HWND old=FindWindowW(windowClass,nullptr);if(old)PostMessageW(old,secondInstance,0,0);CloseHandle(mutex);return 0;}
  if(FAILED(CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED))){CloseHandle(mutex);return 1;}
  PWSTR local=nullptr;if(FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData,0,nullptr,&local))){CoUninitialize();CloseHandle(mutex);return 1;}
- swprintf(settingsFile,2048,L"%ls\\HoribbanguDesktop\\settings.ini",local);
- swprintf(assetFolder,2048,L"%ls\\HoribbanguDesktop\\Native\\3.3.1",local);swprintf(profileFolder,2048,L"%ls\\HoribbanguDesktop\\WebView2",local);CoTaskMemFree(local);
+ swprintf(settingsFile,2048,L"%ls\\%ls\\settings.ini",local,APP_DATA_DIR);
+ swprintf(assetFolder,2048,L"%ls\\%ls\\Native\\3.3.1",local,APP_DATA_DIR);swprintf(profileFolder,2048,L"%ls\\%ls\\WebView2",local,APP_DATA_DIR);CoTaskMemFree(local);
  SHCreateDirectoryExW(nullptr,assetFolder,nullptr);SHCreateDirectoryExW(nullptr,profileFolder,nullptr);loadSettings();
  wchar_t diagnosticFlag[4]={};diagnostics=GetEnvironmentVariableW(L"HORIBBANGU_NATIVE_DIAGNOSTICS",diagnosticFlag,4)>0&&diagnosticFlag[0]==L'1';
  const wchar_t* names[]={L"playground.html",L"playground.js",L"WebView2Loader.dll",L"사용방법.txt",L"LICENSE",L"THIRD_PARTY_NOTICES.md",L"WebView2-LICENSE.txt",L"WebView2-NOTICE.txt",L"NativeRuntime-LICENSES.txt"};
@@ -343,13 +348,18 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  auto create=loader?(CreateFn)GetProcAddress(loader,"CreateCoreWebView2EnvironmentWithOptions"):nullptr;
  LPWSTR installed=nullptr;HRESULT hr=version?version(nullptr,&installed):E_FAIL;CoTaskMemFree(installed);
  if(FAILED(hr)||!create){
-  if(MessageBoxW(nullptr,L"이 작은 실행파일은 Microsoft Edge WebView2 런타임을 사용합니다.\n\n런타임을 찾지 못했습니다. Microsoft 공식 설치 안내를 열까요?\n설치를 원하지 않으면 브라우저 엔진을 포함한 호환판을 사용할 수 있습니다.",L"호리빵구 · WebView2 필요",MB_YESNO|MB_ICONINFORMATION)==IDYES)
+  const wchar_t* prompt=L"이 작은 실행파일은 Microsoft Edge WebView2 런타임을 사용합니다.\n\n런타임을 찾지 못했습니다. Microsoft 공식 설치 안내를 열까요?"
+#if APP_HAS_GUESTS
+  L"\n설치를 원하지 않으면 브라우저 엔진을 포함한 호환판을 사용할 수 있습니다."
+#endif
+  ;
+  if(MessageBoxW(nullptr,prompt,APP_TITLE L" · WebView2 필요",MB_YESNO|MB_ICONINFORMATION)==IDYES)
    ShellExecuteW(nullptr,L"open",L"https://developer.microsoft.com/microsoft-edge/webview2/",nullptr,nullptr,SW_SHOWNORMAL);
   if(loader)FreeLibrary(loader);CoUninitialize();CloseHandle(mutex);return 2;
  }
  INITCOMMONCONTROLSEX controls={sizeof(controls),ICC_BAR_CLASSES};InitCommonControlsEx(&controls);
  WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=procedure;cls.hInstance=instance;cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=windowClass;cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(1));RegisterClassExW(&cls);
- windowHandle=CreateWindowExW(WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP,windowClass,L"호리빵구 · 바탕화면 친구들",WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
+ windowHandle=CreateWindowExW(WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP,windowClass,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
  SetLayeredWindowAttributes(windowHandle,0,255,LWA_ALPHA);MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
  taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");bounds();tray();RegisterHotKey(windowHandle,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(windowHandle,2,MOD_CONTROL|MOD_ALT,'Q');
  auto callback=new EnvironmentHandler;hr=create(nullptr,profileFolder,nullptr,callback);callback->Release();if(FAILED(hr))error(L"WebView2 환경을 만들지 못했습니다.",hr);

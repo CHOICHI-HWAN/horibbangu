@@ -97,6 +97,17 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 `native/test_binary.py`는 최종 PE의 x64·GUI 형식, 권한·DPI 선언, 내장 리소스 전체의 해시와 오프라인 화면을 검사합니다. `.github/workflows/windows-native.yml`은 저장소 읽기 권한으로 Windows에서 직접 빌드하고 `native/test_windows.py`로 실제 WebView2 실행·투명 합성·물리 마우스 드래그·배경 전환·설정 유지·모니터 목록·투명도·위/뒤 모드·종료를 검사합니다. 2026-10-23 [3.3.1 Windows CI 검증](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/39957308671)을 통과했고, Mac 교차 빌드와 Windows 빌드의 EXE 바이트가 일치했습니다. 배경 그림 켜짐·꺼짐 양쪽에서 Win32 아이콘 ListView의 실제 마우스 선택·더블클릭·우클릭·드래그를 검사하고, 이전 클릭 영역 정보와 창 순서가 바뀌어도 입력이 통과함을 확인했습니다. 보통 모드의 고양이 드래그 복원과 드래그 중 배경 모드 전환도 검사합니다. 이 검사는 Windows CI 환경에 대한 결과이며 모든 PC의 드라이버·다중 모니터·터치 동작을 보장하지 않습니다. 기존 Electron 검사도 `test_binary.py`, `test_portable.py`, `tests/desktop.cjs`로 남겨둡니다.
 
+## Windows 개별판 · 박박사 / 김박사
+
+- [박박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Park-Windows.zip): 소양·소미만 처음부터 계속 함께합니다.
+- [김박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Kim-Windows.zip): 팡이만 처음부터 계속 함께합니다.
+
+각 ZIP에는 해당 EXE 하나만 포함합니다. 기존 고양이 SVG·색상·체형과 방·호수 효과를 유지하며 다른 고양이를 자동 추가하거나 방문 후 퇴장시키지 않습니다. 체중 기록·로그인·네트워크 연결은 없습니다. Windows 10/11 x64와 공유 WebView2 런타임이 필요합니다. 기본판의 모니터 선택·투명도·항상 위/뒤·배경 전환·클릭 통과 기능을 함께 사용합니다. 웹 첫 화면을 탭하면 두 다운로드 버튼이 나타납니다.
+
+실행파일은 `downloads/호리빵구-박박사.exe`, `downloads/호리빵구-김박사.exe`에 보관합니다. 각 개별판은 창 클래스·단일 실행 잠금·트레이 이름·설정·WebView2 프로필을 분리하여 기본판 및 서로와 함께 실행할 수 있습니다. 설정 폴더는 `%LOCALAPPDATA%\HoribbanguDesktop-Park`, `%LOCALAPPDATA%\HoribbanguDesktop-Kim`입니다.
+
+재빌드는 `python3 desktop/windows/build-editions.py`이며, `--edition park` 또는 `--edition kim`으로 렌더러·네이티브 빌드·패키징 단계를 각각 실행할 수도 있습니다. `tests/desktop-editions.cjs`는 기본판 방문 고양이와 SVG·색상·크기를 대조하고, 정확한 고양이 목록·장시간 방문 방지·오프라인 동작·배경·드래그·웹 다운로드 링크를 검사합니다. Windows CI는 기본판·박박사판·김박사판을 각각 빌드하고 실제 창과 마우스 동작을 검사합니다.
+
 ## 고양이 방 (2.2)
 
 `index.html`은 로그인·체중 데이터·외부 요청이 없는 고양이 방입니다. 기본 화면은 고양이와 풍경만 표시합니다. 빈 공간을 탭하면 조작·로그인·날씨 버튼이 나타나고 다시 탭하면 닫힙니다. 키보드는 Tab으로 조작을 표시하고 Escape로 닫을 수 있습니다. 고양이 쓰다듬기·드래그와 메뉴 조작은 화면 숨김 토글과 구분됩니다.

@@ -7,10 +7,15 @@ permissions:
   contents: read
 jobs:
   native:
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [default, park, kim]
     runs-on: windows-latest
     timeout-minutes: 15
     env:
       PYTHONUTF8: '1'
+      HORIBBANGU_EDITION: ${{ matrix.edition }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,13 +36,16 @@ jobs:
           $env:ZIG = "$env:RUNNER_TEMP\zig\zig-x86_64-windows-0.15.2\zig.exe"
           $env:HORIBBANGU_NATIVE_CACHE = "$env:RUNNER_TEMP\hori-native"
           npm ci --ignore-scripts
-          python desktop/windows/build-playground.py
+          python desktop/windows/build-playground.py --edition ${{ matrix.edition }}
           if ($LASTEXITCODE -ne 0) { throw 'Renderer build failed' }
-          python desktop/windows/native/build.py
+          python desktop/windows/native/build.py --edition ${{ matrix.edition }}
           if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
-          python desktop/windows/native/test_binary.py
+          python desktop/windows/native/test_binary.py --edition ${{ matrix.edition }}
           if ($LASTEXITCODE -ne 0) { throw 'Binary validation failed' }
-          Copy-Item 'build/windows-native/호리빵구.exe' candidate.exe
+          $edition = '${{ matrix.edition }}'
+          $folder = if ($edition -eq 'default') { 'build/windows-native' } else { "build/windows-native-$edition" }
+          $manifest = Get-Content "$folder/manifest.json" -Raw | ConvertFrom-Json
+          Copy-Item "$folder/$($manifest.exe)" candidate.exe
       - name: Prepare isolated test dependencies
         shell: pwsh
         run: |
@@ -81,8 +89,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: windows-native-verification
+          name: windows-native-verification-${{ matrix.edition }}
           path: |
-            build/native-verification/
-            build/windows-native/호리빵구.exe
-            build/windows-native/manifest.json
+            build/native-verification*/
+            build/windows-native*/*.exe
+            build/windows-native*/manifest.json

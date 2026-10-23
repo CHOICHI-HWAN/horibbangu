@@ -1,8 +1,11 @@
 """Validate the final native PE and every embedded resource, independently of its build."""
 from pathlib import Path
-import hashlib,json,struct
+import hashlib,json,struct,sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from editions import requested_edition
+edition=requested_edition()
 ROOT=Path(__file__).resolve().parents[3]
-folder=ROOT/'build/windows-native';data=(folder/'호리빵구.exe').read_bytes()
+folder=edition['build'];data=(folder/edition['exe']).read_bytes()
 u16=lambda p:struct.unpack_from('<H',data,p)[0]
 u32=lambda p:struct.unpack_from('<I',data,p)[0]
 assert data[:2]==b'MZ';pe=u32(0x3c);assert data[pe:pe+4]==b'PE\0\0'
@@ -27,7 +30,7 @@ def tree(directory):
  return result
 resources=tree(0)
 manifest=json.loads((folder/'manifest.json').read_text())
-source=ROOT/'desktop/windows'
+source=edition['renderer']
 for id,info in manifest['files'].items():
  languages=resources[10][int(id)];assert len(languages)==1
  payload=next(iter(languages.values()))
@@ -40,7 +43,7 @@ assert 'asInvoker' in appmanifest and 'PerMonitorV2' in appmanifest
 html=(source/'playground.html').read_text();js=(source/'playground.js').read_text()
 assert 'id="landscape"' in html and 'data:image/webp' in html
 assert '<script src="playground.js"></script>' in html and "script-src 'self'" in html
-assert all(x not in html for x in ['id="recordsLink"','id="windowsDownload"','id="windowsStandalone"'])
+assert all(x not in html for x in ['id="recordsLink"','id="windowsDownload"','id="windowsStandalone"','id="windowsPark"','id="windowsKim"'])
 assert 'firebase' not in (html+js).lower() and 'state.records' not in js
 assert len(data)<2_000_000,'Native package size regression'
 print(f'Verified native x64 GUI PE, embedded offline assets/notices, asInvoker/DPI manifest: {len(data):,} bytes.')

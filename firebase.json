@@ -89,6 +89,32 @@
             "value": "attachment; filename=\"Horibbangu-Windows-Standalone.zip\""
           }
         ]
+      },
+      {
+        "source": "/releases/Horibbangu-Park-Windows.zip",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/zip"
+          },
+          {
+            "key": "Content-Disposition",
+            "value": "attachment; filename=\"Horibbangu-Park-Windows.zip\""
+          }
+        ]
+      },
+      {
+        "source": "/releases/Horibbangu-Kim-Windows.zip",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/zip"
+          },
+          {
+            "key": "Content-Disposition",
+            "value": "attachment; filename=\"Horibbangu-Kim-Windows.zip\""
+          }
+        ]
       }
     ],
     "predeploy": [

@@ -9,7 +9,7 @@ import threading
 import time
 
 
-def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height):
+def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height, settings_class='HoribbanguDesktopSettings'):
  class InitControls(C.Structure):
   _fields_=[('size',W.DWORD),('classes',W.DWORD)]
  common=C.WinDLL('comctl32');common.InitCommonControlsEx(C.byref(InitControls(8,1)))
@@ -42,7 +42,7 @@ def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height):
  checks=[]
  def mode(value):
   u.PostMessageW(hwnd,0x0111,110,0);pump(.08)
-  settings=u.FindWindowW('HoribbanguDesktopSettings',None);assert settings
+  settings=u.FindWindowW(settings_class,None);assert settings
   u.SendMessageW(settings,0x0111,204+value,0)
   u.SendMessageW(settings,0x0010,0,0);pump(.08)
  def expose():
@@ -99,7 +99,7 @@ def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height):
    checks.append(f'icon drag with background {background}')
   # Native tray/hotkey access must stay usable in display-only mode.
   u.PostMessageW(hwnd,0x0312,1,0);pump(.1)
-  settings=u.FindWindowW('HoribbanguDesktopSettings',None);assert settings
+  settings=u.FindWindowW(settings_class,None);assert settings
   u.SendMessageW(settings,0x0111,204,0);u.SendMessageW(settings,0x0010,0,0);pump(.1)
   evaluate('setDesktopBackground(false);removeEventListener("pointerdown",backgroundCount,true)')
   (out/'background-input.json').write_text(json.dumps({'ok':True,'checks':checks},indent=2))

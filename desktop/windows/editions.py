@@ -1,0 +1,23 @@
+"""Build-time desktop editions; never read remote or user-supplied configuration."""
+from pathlib import Path
+import argparse
+
+ROOT=Path(__file__).resolve().parents[2]
+EDITIONS={
+ 'default': {'title':'호리빵구 · 바탕화면 친구들','label':'기본','suffix':'','cats':None,'exe':'호리빵구.exe','archive':'Horibbangu-Windows.zip'},
+ 'park': {'title':'호리빵구 · 박박사 버전','label':'박박사','suffix':'-Park','cats':['소양','소미'],'exe':'호리빵구-박박사.exe','archive':'Horibbangu-Park-Windows.zip'},
+ 'kim': {'title':'호리빵구 · 김박사 버전','label':'김박사','suffix':'-Kim','cats':['팡이'],'exe':'호리빵구-김박사.exe','archive':'Horibbangu-Kim-Windows.zip'},
+}
+def edition_config(key='default'):
+ e=dict(EDITIONS[key]);e['key']=key
+ e['build']=ROOT/('build/windows-native'+('' if key=='default' else '-'+key))
+ e['renderer']=ROOT/'desktop/windows' if key=='default' else ROOT/'build/editions'/key
+ e['data']='HoribbanguDesktop'+e['suffix']
+ e['window_class']='HoribbanguWebView2Desktop'+e['suffix']
+ e['settings_class']='HoribbanguDesktopSettings'+e['suffix']
+ e['mutex']='Local\\'+e['window_class']
+ e['verification']=ROOT/('build/native-verification'+('' if key=='default' else '-'+key))
+ return e
+def requested_edition():
+ parser=argparse.ArgumentParser();parser.add_argument('--edition',choices=EDITIONS,default='default')
+ return edition_config(parser.parse_args().edition)

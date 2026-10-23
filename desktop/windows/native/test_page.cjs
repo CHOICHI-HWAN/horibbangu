@@ -1,12 +1,22 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {chromium}=require('playwright');
+const edition=process.env.HORIBBANGU_EDITION||'default';
+const expected=edition==='park'?['소양','소미']:edition==='kim'?['팡이']:null;
+const count=expected?.length||8;
+const output='build/native-verification'+(edition==='default'?'':'-'+edition);
 (async()=>{
  const browser=await chromium.connectOverCDP('http://127.0.0.1:9223');
  const context=browser.contexts()[0];
  const page=context.pages().find(p=>p.url().startsWith('https://horibbangu.local/'))||context.pages()[0];
  const errors=[];page.on('pageerror',e=>errors.push(String(e)));
- await page.waitForFunction(()=>window.desktopHost&&cats.length===8);
+ await page.waitForFunction(n=>window.desktopHost&&cats.length===n,count);
+ if(expected){
+  assert.deepEqual(await page.evaluate(()=>cats.map(c=>c.name)),expected);
+  await page.evaluate(()=>{inviteRoomFriends();for(let t=0;t<3600;t+=60)tickRoomGuests(performance.now()+t*1000,60);renderCats();});
+  assert.deepEqual(await page.evaluate(()=>cats.map(c=>c.name)),expected);
+  assert(await page.locator('#friendsBtn').isHidden());assert(await page.locator('#wingsBtn').isHidden());
+ }
  await page.evaluate(()=>{setDesktopBackground(false);setRoomControls(false);});
  assert.equal(await page.locator('#recordsLink').count(),0);
  assert.equal(await page.locator('#windowsDownload').count(),0);
@@ -21,8 +31,8 @@ const {chromium}=require('playwright');
  await page.evaluate(()=>{setRoomControls(false);setDesktopBackground(true);});
  await page.waitForFunction(()=>lastLakeFrame>0);
  const frame=await page.evaluate(()=>lastLakeFrame);await page.waitForFunction(f=>lastLakeFrame>f+100,frame);
- await page.screenshot({path:'build/native-verification/background.png'});
- await page.reload();await page.waitForFunction(()=>desktopBackground&&cats.length===8);
+ await page.screenshot({path:output+'/background.png'});
+ await page.reload();await page.waitForFunction(n=>desktopBackground&&cats.length===n,count);
  assert.equal(await page.evaluate(()=>localStorage.getItem('horibbangu-desktop-background')),'true');
  await page.evaluate(()=>setDesktopBackground(false));
  assert(await page.locator('#viewBtn').isHidden());
@@ -30,7 +40,7 @@ const {chromium}=require('playwright');
  // Put a stationary cat on a blank part of the desktop for the physical mouse test.
  await page.evaluate(()=>{cats.slice(1).forEach(c=>c.el.style.pointerEvents='none');const c=cats[0];c.x=200;c.y=0;c.stand=GROUND;c.air=false;c.mode='sit';c.until=1e12;renderCatPosition(c);});
  const box=await page.locator('.cat').first().boundingBox();
- fs.writeFileSync('build/native-verification/cat.json',JSON.stringify(box));
+ fs.writeFileSync(output+'/cat.json',JSON.stringify(box));
  assert.deepEqual(errors,[]);
  console.log('Offline cats, restricted renderer, background toggle/persistence and active/paused lake verified.');
  // Detach only; the Python harness continues with physical input and tray tests.
