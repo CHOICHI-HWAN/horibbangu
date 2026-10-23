@@ -8,5 +8,6 @@
   "devDependencies": {
     "electron-builder": "26.15.3",
     "esbuild": "0.28.2"
-  }
+  },
+  "license": "SEE LICENSE IN LICENSE"
 }
