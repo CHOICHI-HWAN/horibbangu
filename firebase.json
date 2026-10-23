@@ -14,7 +14,6 @@
       ".git/**",
       ".firebase/**",
       "**/*.exe",
-      "**/*.zip",
       "room/shell.html",
       "room/room.js",
       "room/room.css",
@@ -52,6 +51,28 @@
           {
             "key": "Cache-Control",
             "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/releases/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/releases/Horibbangu-Windows.zip",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/zip"
+          },
+          {
+            "key": "Content-Disposition",
+            "value": "attachment; filename=\"Horibbangu-Windows.zip\""
           }
         ]
       }
