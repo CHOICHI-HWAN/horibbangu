@@ -142,7 +142,7 @@
   .cat.fluffy .cheek, .cat.dongle .cheek { display: inline; }
   .cat.fluffy .tailp, .cat.fluffy .tailst { stroke-width: 8; }
   .cat .eyec { display: none; }
-  .cat.sleep .eyes { display: none; } .cat.sleep .eyec { display: inline; }
+  .cat.sleep .eyes, .cat.sleep .blink-lid { display: none; } .cat.sleep .eyec { display: inline; }
   .cat.alert .ear-unit { transform: scaleY(1.08); animation: perk .7s ease-out; }
   .cat.alert .tail { animation-duration: .5s; }
   @keyframes breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.06); } }
@@ -164,7 +164,9 @@
 
   /* 포근한 인형 비율과 아이마다 다른 표정 */
   .cat .head { transform-origin: 50% 65%; }
-  .cat .eyes { animation: cat-blink 7s infinite; transform-box: fill-box; transform-origin: center; }
+  .cat .eyes { animation: cat-blink 7s infinite; transform-box: view-box; transform-origin: 46.75px 21.2px; }
+  .cat .blink-lid { opacity:0; animation:cat-lid 7s infinite; animation-delay:var(--blink-delay,0s); }
+  @keyframes cat-lid { 0%,43%,47%,100% { opacity:0; } 44.7%,45.3% { opacity:1; } }
   .cat.dongle .head { transform: translate(-1px, 2px) scale(1.08, .91); }
   .cat .flat-nose { display: none; }
   .cat.dongle .flat-nose { display: inline; }
@@ -199,7 +201,7 @@
   .cat.roll svg .all { transform-origin: 31px 30px; animation: tummy-roll 3.6s ease-in-out both; }
   .cat.roll .leg { animation: paw-wiggle .7s ease-in-out infinite alternate; }
   .cat.roll .tail { animation-duration: .6s; }
-  @keyframes cat-blink { 0%, 43%, 47%, 100% { transform: scaleY(1); } 45% { transform: scaleY(.08); } }
+  @keyframes cat-blink { 0%, 43%, 47%, 100% { transform: scaleY(1); } 45% { transform: scaleY(0); } }
   @keyframes crinkle { 0%, 100% { transform: skewX(-2deg); } 50% { transform: skewX(2deg) scaleX(1.03); } }
   @keyframes tummy-roll { 0%, 100% { transform: rotate(0); } 22% { transform: translateY(5px) rotate(-165deg); } 38%, 65% { transform: translateY(5px) rotate(-185deg); } 78% { transform: translateY(5px) rotate(-155deg); } }
   @keyframes paw-wiggle { from { transform: rotate(-12deg); } to { transform: rotate(15deg); } }
@@ -334,7 +336,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.1.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.2.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -864,6 +866,7 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
       <path d="M38 19.3q2-1.5 4.7 0m7.8 0q2-1.5 4.7 0" fill="none" stroke="#51473d" stroke-width=".75"/>
       <circle cx="40" cy="20" r="1" fill="white"/><circle cx="52" cy="20" r="1" fill="white"/>
     </g>
+    <path class="blink-lid" d="M38 21.2q2.5 1.6 5 0m7.5 0q2.5 1.6 5 0" fill="none" stroke="#51473d" stroke-width=".9" stroke-linecap="round"/>
     <g class="skin-folds" fill="none" stroke="#a97872" stroke-opacity=".5" stroke-width=".6">
       <path d="M38 12q8 4 16 0m-15 3q7 3 14 0m-10 2 2 2m5-2-1 2M33 26q0 4 4 5m20-5q0 4-3 5M39 33q7 4 14 0m-13 2q7 4 12 0"/>
     </g>
@@ -897,13 +900,14 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
 // 고양이 생김새: 사진을 참고해 이름별로 지정 (없는 아이는 자연스러운 털색으로 자동 배정)
 const NONE = 'transparent';
 const EAR_SHAPES = {
+ geonppang:['M31 22Q29 16 30 8Q30 4 33.5 6L43 16Z','M49 16 57 6Q60 3 61 7L61 22Z','M32 8.5 34 17 39 14Z','M58.5 8 53 15 58.5 18Z'],
  normal:['M31 21Q29 14 29.5 5Q30 2 33 4L43 15Z','M49 15 57 4Q60 1 61 5L61 21Z','M32 7 34 16 39 13Z','M58 7 53 14 58.5 18Z'],
  exotic:['M30 22Q27 12 30 5Q32 2 35 6L43 16Z','M49 16 58 5Q61 2 63 5Q66 12 60 22Z','M31 8 33 17 38 14Z','M61 8 54 15 59 18Z'],
  russian:['M31 21Q28 12 30 2Q31-1 34 3L43 15Z','M49 15 58 2Q61-1 62 3L61 21Z','M32 5 34 16 39 13Z','M59 5 53 14 58.5 18Z'],
  sphynx:['M32 21Q29 13 28 2Q28-3 32-1Q38 3 43 15Z','M49 15Q55 4 61 0Q65-3 65 2Q65 12 59 22Z','M31 3Q31 10 34 15L39 13Z','M62 3 54 14 59 16Q62 10 62 3Z']
 };
 function catDrawing(p){
- const key=p.name==='동글이'?'exotic':p.name==='소양'?'russian':p.name==='팡이'?'sphynx':'normal',shape=EAR_SHAPES[key];
+ const key=p.name==='건빵'?'geonppang':p.name==='동글이'?'exotic':p.name==='소양'?'russian':p.name==='팡이'?'sphynx':'normal',shape=EAR_SHAPES[key];
  return ['__EAR_L__','__EAR_R__','__INNER_L__','__INNER_R__'].reduce((svg,token,i)=>svg.replaceAll(token,shape[i]),CAT_SVG);
 }
 const LOOKS = {

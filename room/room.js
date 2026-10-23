@@ -22,7 +22,7 @@ function roomCatSVG(svg,pet){
   return svg.replaceAll('cx="26" cy="28" rx="19.5" ry="13"','cx="26" cy="30" rx="16.5" ry="10"');
 }
 function chooseRoomScenery(c,t){
-  if(typeof desktopOverlay!=='undefined'&&desktopOverlay)return false;
+  if(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground)return false;
   if(reduceMotion||c.air||c.mode==='bubble'||c.mode==='guestExit')return false;
   if(cats.filter(o=>o!==c&&o.sceneryGoal).length>=3)return false;
   const spots=highSpots().filter(p=>p.h>innerHeight*.20&&p.h<innerHeight*.84&&p.xc>innerWidth*.08&&p.xc<innerWidth*.92&&distTo(p).has(nodeOf(c))&&!cats.some(o=>o!==c&&o.sceneryGoal===p));
@@ -208,7 +208,7 @@ function drawLake(t){
 }
 function drawWeather(t){
   weatherFrame=requestAnimationFrame(drawWeather);
-  if(document.hidden||t-lastWeatherFrame<33)return;lastWeatherFrame=t;
+  if(document.hidden||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground)||t-lastWeatherFrame<33)return;lastWeatherFrame=t;
   drawLake(t);
   const canvas=$('weatherCanvas');if(!canvas)return;
   const dimensions=sceneDimensions||(sceneDimensions={width:canvas.clientWidth,height:canvas.clientHeight});

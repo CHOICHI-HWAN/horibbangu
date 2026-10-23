@@ -17,12 +17,36 @@ host?.onCommand(command=>{
  if(command==='controls')setRoomControls(!document.body.classList.contains('controls-visible'));
  if(command==='friends')inviteRoomFriends();
  if(command==='motion')$('motionBtn').click();
+ if(command==='background-on'||command==='background-off')setDesktopBackground(command==='background-on',false);
  updateDesktopHit();
 });
 const quit=document.createElement('button');quit.id='desktopQuit';quit.textContent='종료';quit.onclick=()=>host?.quit();$('roomControls').append(quit);
 $('closeControls').textContent='메뉴 접기';
 document.querySelector('.brand').textContent='바탕화면의 작은 친구들';
 document.querySelector('.small-copy').textContent='트레이의 고양이 아이콘에서 메뉴를 열 수 있어요.';
-// No lake in desktop mode, so cats keep their play, rest and wheel habits.
-$('viewBtn').hidden=true;
+// Keep the user's choice in the existing stable Electron profile.
+const backgroundButton=document.createElement('button');backgroundButton.id='desktopBackground';
+backgroundButton.onclick=()=>setDesktopBackground(!desktopBackground);
+$('roomControls').insertBefore(backgroundButton,quit);
+function setDesktopBackground(enabled,notify=true){
+ desktopBackground=!!enabled;document.body.classList.toggle('desktop-background',desktopBackground);
+ backgroundButton.textContent=desktopBackground?'배경 끄기':'배경 켜기';
+ backgroundButton.setAttribute('aria-pressed',String(desktopBackground));
+ $('viewBtn').hidden=!desktopBackground;
+ try{localStorage.setItem('horibbangu-desktop-background',String(desktopBackground));}catch(e){}
+ sceneDimensions=null;lastLakeFrame=-Infinity;lastWeatherFrame=-Infinity;
+ if(!desktopBackground){
+  const t=performance.now();
+  for(const c of cats){
+   if(c.sceneryGoal||['goScenery','scenery'].includes(c.mode)){
+    leave(c,t);c.goal=null;c.edge=null;setMode(c,'sit',t,1500);
+   }
+  }
+ }
+ if(notify)host?.setBackground(desktopBackground);
+ updateDesktopHit();
+}
+let savedBackground=false;
+try{savedBackground=localStorage.getItem('horibbangu-desktop-background')==='true';}catch(e){}
+setDesktopBackground(savedBackground);
 setRoomControls(false);updateDesktopHit();

@@ -14,8 +14,11 @@
 .cat.watch .all { transform:translateY(-1px) scaleX(.9) scaleY(1.03); }
 .cat.watch .head { transform:translateX(-6px) scale(1.15); }
 .cat.watch .eyes { animation:cat-blink 8s infinite; }
-.cat.kiss .eyes { animation:eye-kiss 2.8s ease-in-out; }
-@keyframes eye-kiss { 0%,100% { transform:scaleY(1); } 32%,65% { transform:scaleY(.08); } }
+.cat.kiss .eyes { animation:eye-kiss 2.8s ease-in-out; animation-delay:0s; }
+@keyframes eye-kiss { 0%,100% { transform:scaleY(1); } 32%,65% { transform:scaleY(0); } }
+.cat.watch .blink-lid {animation-duration:8s;}
+.cat.kiss .blink-lid {animation:kiss-lid 2.8s ease-in-out;animation-delay:0s;}
+@keyframes kiss-lid {0%,27%,70%,100%{opacity:0;}32%,65%{opacity:1;}}
 .cat.stretch .all { animation:cat-stretch 3s ease-in-out; }
 .cat.stretch .l2,.cat.stretch .l4 { transform:rotate(-50deg); }
 .cat.stretch .tail { transform:rotate(-32deg); }
@@ -66,7 +69,6 @@
 
 .cat.pang .ground-shadow {rx:19;}
 .cat.pang .skin-folds {opacity:.65;}
-.cat.pang .eyes {transform-origin:46px 22px;}
 
 .cat .scenery-back {display:none;}
 .cat.scenery .all {display:none;}

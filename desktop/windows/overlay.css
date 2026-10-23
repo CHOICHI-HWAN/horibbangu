@@ -1,7 +1,8 @@
-html,body,.room {background:transparent!important;}
-.room::before,.room::after,.floor,.sunbeam,.balcony-opening,.balcony-step,.weather-control,.scene-label {display:none!important;}
-.room {box-shadow:none;}
-.room-header {filter:drop-shadow(0 1px 2px #fff8);}
-.brand {font-size:21px;}
-.kicker {display:none;}
+html {background:transparent!important;}
+body.desktop-overlay:not(.desktop-background),.desktop-overlay:not(.desktop-background) .room {background:transparent!important;}
+.desktop-overlay:not(.desktop-background) .room::before,.desktop-overlay:not(.desktop-background) .room::after,.desktop-overlay:not(.desktop-background) :is(.floor,.sunbeam,.balcony-opening,.balcony-step,.weather-control,.scene-label) {display:none!important;}
+.desktop-overlay:not(.desktop-background) .room {box-shadow:none;}
+.desktop-overlay:not(.desktop-background) .room-header {filter:drop-shadow(0 1px 2px #fff8);}
+.desktop-overlay:not(.desktop-background) .brand {font-size:21px;}
+.desktop-overlay:not(.desktop-background) .kicker {display:none;}
 .cat-wall-clock,.wall-calendar,.art-wall {pointer-events:none;}

@@ -25,8 +25,8 @@ with tempfile.TemporaryDirectory() as temp:
         assert (folder/'resources/app'/name).read_bytes()==target.read_bytes(),name
 html=(source/'playground.html').read_text()
 script=(source/'playground.js').read_text()
-assert 'id="landscape"' not in html and 'id="weatherCanvas"' not in html
-assert 'data:image/webp' not in html and 'desktop-overlay' in html
+assert 'id="landscape"' in html and 'id="weatherCanvas"' in html
+assert 'data:image/webp' in html and 'desktop-overlay' in html
 assert 'state.records' not in script and 'firebase' not in (html+script).lower()
 assert '<script src="playground.js"></script>' in html and "script-src 'self'" in html
 assert not (folder/'resources/default_app.asar').exists()

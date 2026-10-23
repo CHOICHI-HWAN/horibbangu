@@ -61,13 +61,13 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 `PLAYWRIGHT_MODULE`로 모듈 경로, `BROWSER_EXECUTABLE`로 설치된 Chromium 계열 브라우저 경로를 지정할 수도 있습니다.
 검사는 별도 브라우저 세션에서 실행하며 Firebase 연결을 차단하고 실제 체중기록을 저장하지 않습니다.
 
-## Windows 바탕화면 친구들 (3.1.1)
+## Windows 바탕화면 친구들 (3.2)
 
 [Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)에서 ZIP을 받아 안에 있는 **`호리빵구.exe` 하나**만 꺼내 실행합니다. 설치·관리자 권한·별도 DLL 폴더가 필요 없습니다. 바탕화면에 EXE 자체를 두어도 됩니다. ZIP 안에는 EXE 하나만 들어 있습니다. 로컬 `downloads/호리빵구.exe`나 GitHub 릴리즈에서는 EXE 자체도 받을 수 있습니다. Firebase Spark 요금제는 EXE 직접 호스팅을 제한하므로 웹에서는 ZIP으로 제공합니다.
 
 단일 EXE는 [electron-builder의 portable 타깃](https://www.electron.build/v26/docs/targets/)으로 묶습니다. 실행 중에는 런타임을 실행별 Windows 임시 폴더에 자동으로 풀고 종료 시 정리합니다. 첫 실행 시 압축 해제 시간이 걸리며 강제 종료·전원 종료 시 임시 파일이 남을 수 있습니다. 설정은 임시 폴더와 별도로 유지됩니다.
 
-Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그림·시계·달력만 투명한 바탕화면 위에 표시합니다. 제목 표시줄과 테두리가 없고 빈 공간은 클릭이 아래 프로그램으로 통과합니다. 고양이 클릭·공기방울 드래그와 기존 행동은 유지하며, 호수가 없는 데스크톱 모드에서는 풍경 감상 행동을 사용하지 않습니다. 웹앱은 기존 호수 배경을 유지합니다.
+Windows 실행본은 기본적으로 고양이와 가구·그림·시계·달력만 투명한 바탕화면 위에 표시합니다. 트레이의 **호수 배경 보이기** 또는 앱 메뉴의 **배경 켜기 / 끄기**로 할슈타트 호수와 방 배경을 전환할 수 있습니다. 선택은 기존 Electron 프로필의 localStorage에 저장되어 다음 실행에도 유지됩니다. 제목 표시줄과 테두리가 없고 빈 공간은 클릭이 아래 프로그램으로 통과합니다. 고양이 클릭·공기방울 드래그와 기존 행동은 유지하며, 배경이 켜졌을 때 풍경 감상 행동을 사용할 수 있습니다. 배경을 끄면 감상 이동을 끝내고 호수·날씨 Canvas 그리기를 중단합니다. 웹앱은 기존 호수 배경을 유지합니다.
 
 알림 영역의 고양이 아이콘을 클릭하면 메뉴가 열리고 오른쪽 클릭하면 숨김·항상 위·친구 초대·종료를 선택할 수 있습니다. 항상 위는 기본 꺼짐입니다. `Ctrl+Alt+H`는 메뉴, `Ctrl+Alt+Q`는 종료입니다. 인터넷·로그인·체중 기록·별도 브라우저 설치는 필요하지 않습니다. 설정은 `%APPDATA%\HoribbanguDesktop`에 저장됩니다.
 
@@ -91,7 +91,7 @@ Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그
 
 크기는 최근 양수 체중의 세제곱근에 사진 기준 체형을 곱해 0.82~1.42배로 제한합니다. 동글이와 로이는 사진 기준 체형을 유지합니다. 공개 화면에는 빌드 시 기본 기록의 크기 비율만 들어갑니다. 기록 페이지에서 동기화한 기기는 최신 크기 비율을 방에 전달합니다. 다른 기기의 최신 서버 크기를 반영하려면 그 기기에서 기록 페이지를 한 번 동기화해야 합니다.
 
-`desktop/windows/build.sh`는 같은 고양이 엔진에서 기록 링크와 방 배경을 제거한 투명 데스크톱 앱을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에 보관하며, Firebase용 ZIP·체크섬을 `releases/`에 복사합니다. Firebase Hosting은 ZIP을, GitHub Releases는 EXE와 ZIP을 제공합니다. Windows 실기기 실행은 아직 미확인입니다.
+`desktop/windows/build.sh`는 같은 고양이 엔진에서 기록 링크를 제거하고 배경을 전환할 수 있는 투명 데스크톱 앱을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에 보관하며, Firebase용 ZIP·체크섬을 `releases/`에 복사합니다. Firebase Hosting은 ZIP을, GitHub Releases는 EXE와 ZIP을 제공합니다. Windows 실기기 실행은 아직 미확인입니다.
 
 검사: `tests/room.cjs`(공개 화면·터치/키보드 메뉴·시간·날씨·행동·모바일 입력), `tests/room-routes.cjs`(전체 타워/발판 이동), `tests/playground.cjs`(기록 페이지 엔진), `tests/offline-playground.cjs`(오프라인), `tests/sizes.cjs`(체중과 크기 전달), `node tests/sync.cjs`(저장 중 재수정). 브라우저 검사는 `PLAYWRIGHT_MODULE`, 필요하면 `BROWSER_EXECUTABLE` 환경 변수를 지정합니다.
 
@@ -105,6 +105,6 @@ Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그
 
 데스크톱의 renderer는 `playground.js`로 컴파일하고 엄격한 로컬 CSP로 불러옵니다. main/preload도 패키징할 때 컴파일합니다. Electron은 V8 코드 캐시 정책을 사용합니다. esbuild는 JavaScript 변환·압축 도구이며 네이티브 코드로 바꾸는 것은 아닙니다. 실제 실행 비용은 위치·크기 DOM 쓰기 생략, 발판 조회 캐시, 물결의 좁은 이미지 영역 그리기와 Canvas 재사용, 날씨 30fps 및 맑은 날 중복 그리기 제거로 줄였습니다.
 
-`tests/performance.cjs`는 같은 1440×960 화면·고양이 8마리·5회 중앙값으로 정지/걷기 틱을 측정하고, 물결 180프레임 평균도 진단용으로 측정합니다. Canvas의 비동기 GPU 처리 편차가 커서 이 물결 수치는 속도 개선 판단에 사용하지 않습니다. CPU 처리 구간의 마이크로벤치마크이며 전체 앱 FPS나 Windows 성능의 보장은 아닙니다. `BENCH_OUT`으로 결과 JSON을 저장하고 `HORI_SITE_DIR`로 컴파일 배포 폴더를 지정할 수 있습니다. JavaScript 크기는 `build/compile-report.json`에 기록됩니다. 귀 정렬과 귀 밑동 고정축은 `tests/ears.cjs`가 11마리·6가지 자세에서 검사합니다.
+`tests/performance.cjs`는 같은 1440×960 화면·고양이 8마리·5회 중앙값으로 정지/걷기 틱을 측정하고, 물결 180프레임 평균도 진단용으로 측정합니다. Canvas의 비동기 GPU 처리 편차가 커서 이 물결 수치는 속도 개선 판단에 사용하지 않습니다. CPU 처리 구간의 마이크로벤치마크이며 전체 앱 FPS나 Windows 성능의 보장은 아닙니다. `BENCH_OUT`으로 결과 JSON을 저장하고 `HORI_SITE_DIR`로 컴파일 배포 폴더를 지정할 수 있습니다. JavaScript 크기는 `build/compile-report.json`에 기록됩니다. 귀 정렬과 귀 밑동 고정축은 `tests/ears.cjs`가 11마리·6가지 자세에서 검사합니다. `tests/expressions.cjs`는 눈을 뜨고 감을 때 눈 중심이 이동하지 않는지, 눈꺼풀과 눈 키스 타이밍이 맞는지 검사합니다.
 
 2026-10-23 macOS/Brave headless에서 v3.0.0 원본과 3.1 컴파일 배포본을 같은 조건으로 비교했습니다. 정지 틱은 약 0.00533→0.00100ms, 걷기 틱은 약 0.00656→0.00444ms였습니다. 프레임당 위치·크기 transform 쓰기는 정지 16→0회, 걷기 16→8회로 줄었습니다. 이 구간의 CPU 비용 감소이며 전체 앱 FPS 향상률로 해석하지 않습니다.

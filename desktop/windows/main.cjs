@@ -1,17 +1,19 @@
 'use strict';
 const {app,BrowserWindow,Tray,Menu,ipcMain,screen,globalShortcut,session,nativeImage}=require('electron');
 const path=require('node:path');
-let win,tray,interactive=false;
+let win,tray,interactive=false,background=false;
 const testing=process.env.HORIBBANGU_DESKTOP_TEST==='1';
 app.setName('호리빵구');
 app.setPath('userData',testing?path.join(app.getPath('temp'),'HoribbanguDesktopTest'):path.join(app.getPath('appData'),'HoribbanguDesktop'));
 function send(command){if(win&&!win.isDestroyed())win.webContents.send('desktop:command',command);}
 function showControls(){if(win&&!win.isDestroyed()){win.showInactive();send('controls');}}
+function setBackground(value){background=value;send(value?'background-on':'background-off');updateTray();}
 function updateTray(){
  if(!tray||!win||win.isDestroyed())return;
  tray.setContextMenu(Menu.buildFromTemplate([
   {label:'고양이 메뉴 열기 / 접기',click:showControls},
   {label:'잠깐 숨기기',type:'checkbox',checked:!win.isVisible(),click:item=>item.checked?win.hide():win.showInactive()},
+  {label:'호수 배경 보이기',type:'checkbox',checked:background,click:item=>setBackground(item.checked)},
   {label:'항상 위에',type:'checkbox',checked:win.isAlwaysOnTop(),click:item=>{win.setAlwaysOnTop(item.checked);updateTray();}},
   {type:'separator'},
   {label:'친구 초대',click:()=>send('friends')},
@@ -40,6 +42,7 @@ async function start(){
   if(!win||win.isDestroyed()||event.sender!==win.webContents||typeof value!=='boolean'||value===interactive)return;
   interactive=value;win.setIgnoreMouseEvents(!value,{forward:true});
  });
+ ipcMain.on('desktop:background',(event,value)=>{if(win&&!win.isDestroyed()&&event.sender===win.webContents&&typeof value==='boolean')setBackground(value);});
  ipcMain.on('desktop:quit',event=>{if(win&&!win.isDestroyed()&&event.sender===win.webContents)app.quit();});
  if(!testing){
   tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'tray.png')).resize({width:24,height:24}));

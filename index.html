@@ -223,7 +223,7 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
   .cat.fluffy .cheek, .cat.dongle .cheek { display: inline; }
   .cat.fluffy .tailp, .cat.fluffy .tailst { stroke-width: 8; }
   .cat .eyec { display: none; }
-  .cat.sleep .eyes { display: none; } .cat.sleep .eyec { display: inline; }
+  .cat.sleep .eyes, .cat.sleep .blink-lid { display: none; } .cat.sleep .eyec { display: inline; }
   .cat.alert .ear-unit { transform: scaleY(1.08); animation: perk .7s ease-out; }
   .cat.alert .tail { animation-duration: .5s; }
   @keyframes breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.06); } }
@@ -245,7 +245,9 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
 
   /* 포근한 인형 비율과 아이마다 다른 표정 */
   .cat .head { transform-origin: 50% 65%; }
-  .cat .eyes { animation: cat-blink 7s infinite; transform-box: fill-box; transform-origin: center; }
+  .cat .eyes { animation: cat-blink 7s infinite; transform-box: view-box; transform-origin: 46.75px 21.2px; }
+  .cat .blink-lid { opacity:0; animation:cat-lid 7s infinite; animation-delay:var(--blink-delay,0s); }
+  @keyframes cat-lid { 0%,43%,47%,100% { opacity:0; } 44.7%,45.3% { opacity:1; } }
   .cat.dongle .head { transform: translate(-1px, 2px) scale(1.08, .91); }
   .cat .flat-nose { display: none; }
   .cat.dongle .flat-nose { display: inline; }
@@ -280,7 +282,7 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
   .cat.roll svg .all { transform-origin: 31px 30px; animation: tummy-roll 3.6s ease-in-out both; }
   .cat.roll .leg { animation: paw-wiggle .7s ease-in-out infinite alternate; }
   .cat.roll .tail { animation-duration: .6s; }
-  @keyframes cat-blink { 0%, 43%, 47%, 100% { transform: scaleY(1); } 45% { transform: scaleY(.08); } }
+  @keyframes cat-blink { 0%, 43%, 47%, 100% { transform: scaleY(1); } 45% { transform: scaleY(0); } }
   @keyframes crinkle { 0%, 100% { transform: skewX(-2deg); } 50% { transform: skewX(2deg) scaleX(1.03); } }
   @keyframes tummy-roll { 0%, 100% { transform: rotate(0); } 22% { transform: translateY(5px) rotate(-165deg); } 38%, 65% { transform: translateY(5px) rotate(-185deg); } 78% { transform: translateY(5px) rotate(-155deg); } }
   @keyframes paw-wiggle { from { transform: rotate(-12deg); } to { transform: rotate(15deg); } }
@@ -321,8 +323,11 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
 .cat.watch .all { transform:translateY(-1px) scaleX(.9) scaleY(1.03); }
 .cat.watch .head { transform:translateX(-6px) scale(1.15); }
 .cat.watch .eyes { animation:cat-blink 8s infinite; }
-.cat.kiss .eyes { animation:eye-kiss 2.8s ease-in-out; }
-@keyframes eye-kiss { 0%,100% { transform:scaleY(1); } 32%,65% { transform:scaleY(.08); } }
+.cat.kiss .eyes { animation:eye-kiss 2.8s ease-in-out; animation-delay:0s; }
+@keyframes eye-kiss { 0%,100% { transform:scaleY(1); } 32%,65% { transform:scaleY(0); } }
+.cat.watch .blink-lid {animation-duration:8s;}
+.cat.kiss .blink-lid {animation:kiss-lid 2.8s ease-in-out;animation-delay:0s;}
+@keyframes kiss-lid {0%,27%,70%,100%{opacity:0;}32%,65%{opacity:1;}}
 .cat.stretch .all { animation:cat-stretch 3s ease-in-out; }
 .cat.stretch .l2,.cat.stretch .l4 { transform:rotate(-50deg); }
 .cat.stretch .tail { transform:rotate(-32deg); }
@@ -373,7 +378,6 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
 
 .cat.pang .ground-shadow {rx:19;}
 .cat.pang .skin-folds {opacity:.65;}
-.cat.pang .eyes {transform-origin:46px 22px;}
 
 .cat .scenery-back {display:none;}
 .cat.scenery .all {display:none;}
@@ -492,7 +496,7 @@ function roomCatSVG(svg,pet){
   return svg.replaceAll('cx="26" cy="28" rx="19.5" ry="13"','cx="26" cy="30" rx="16.5" ry="10"');
 }
 function chooseRoomScenery(c,t){
-  if(typeof desktopOverlay!=='undefined'&&desktopOverlay)return false;
+  if(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground)return false;
   if(reduceMotion||c.air||c.mode==='bubble'||c.mode==='guestExit')return false;
   if(cats.filter(o=>o!==c&&o.sceneryGoal).length>=3)return false;
   const spots=highSpots().filter(p=>p.h>innerHeight*.20&&p.h<innerHeight*.84&&p.xc>innerWidth*.08&&p.xc<innerWidth*.92&&distTo(p).has(nodeOf(c))&&!cats.some(o=>o!==c&&o.sceneryGoal===p));
@@ -678,7 +682,7 @@ function drawLake(t){
 }
 function drawWeather(t){
   weatherFrame=requestAnimationFrame(drawWeather);
-  if(document.hidden||t-lastWeatherFrame<33)return;lastWeatherFrame=t;
+  if(document.hidden||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground)||t-lastWeatherFrame<33)return;lastWeatherFrame=t;
   drawLake(t);
   const canvas=$('weatherCanvas');if(!canvas)return;
   const dimensions=sceneDimensions||(sceneDimensions={width:canvas.clientWidth,height:canvas.clientHeight});
@@ -797,6 +801,7 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
       <path d="M38 19.3q2-1.5 4.7 0m7.8 0q2-1.5 4.7 0" fill="none" stroke="#51473d" stroke-width=".75"/>
       <circle cx="40" cy="20" r="1" fill="white"/><circle cx="52" cy="20" r="1" fill="white"/>
     </g>
+    <path class="blink-lid" d="M38 21.2q2.5 1.6 5 0m7.5 0q2.5 1.6 5 0" fill="none" stroke="#51473d" stroke-width=".9" stroke-linecap="round"/>
     <g class="skin-folds" fill="none" stroke="#a97872" stroke-opacity=".5" stroke-width=".6">
       <path d="M38 12q8 4 16 0m-15 3q7 3 14 0m-10 2 2 2m5-2-1 2M33 26q0 4 4 5m20-5q0 4-3 5M39 33q7 4 14 0m-13 2q7 4 12 0"/>
     </g>
@@ -830,13 +835,14 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
 // 고양이 생김새: 사진을 참고해 이름별로 지정 (없는 아이는 자연스러운 털색으로 자동 배정)
 const NONE = 'transparent';
 const EAR_SHAPES = {
+ geonppang:['M31 22Q29 16 30 8Q30 4 33.5 6L43 16Z','M49 16 57 6Q60 3 61 7L61 22Z','M32 8.5 34 17 39 14Z','M58.5 8 53 15 58.5 18Z'],
  normal:['M31 21Q29 14 29.5 5Q30 2 33 4L43 15Z','M49 15 57 4Q60 1 61 5L61 21Z','M32 7 34 16 39 13Z','M58 7 53 14 58.5 18Z'],
  exotic:['M30 22Q27 12 30 5Q32 2 35 6L43 16Z','M49 16 58 5Q61 2 63 5Q66 12 60 22Z','M31 8 33 17 38 14Z','M61 8 54 15 59 18Z'],
  russian:['M31 21Q28 12 30 2Q31-1 34 3L43 15Z','M49 15 58 2Q61-1 62 3L61 21Z','M32 5 34 16 39 13Z','M59 5 53 14 58.5 18Z'],
  sphynx:['M32 21Q29 13 28 2Q28-3 32-1Q38 3 43 15Z','M49 15Q55 4 61 0Q65-3 65 2Q65 12 59 22Z','M31 3Q31 10 34 15L39 13Z','M62 3 54 14 59 16Q62 10 62 3Z']
 };
 function catDrawing(p){
- const key=p.name==='동글이'?'exotic':p.name==='소양'?'russian':p.name==='팡이'?'sphynx':'normal',shape=EAR_SHAPES[key];
+ const key=p.name==='건빵'?'geonppang':p.name==='동글이'?'exotic':p.name==='소양'?'russian':p.name==='팡이'?'sphynx':'normal',shape=EAR_SHAPES[key];
  return ['__EAR_L__','__EAR_R__','__INNER_L__','__INNER_R__'].reduce((svg,token,i)=>svg.replaceAll(token,shape[i]),CAT_SVG);
 }
 const LOOKS = {
