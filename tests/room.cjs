@@ -52,7 +52,7 @@ const roomURL = pathToFileURL(path.join(__dirname, '../index.html')).href;
     });
     assert.notEqual(scenes.morning.x,scenes.afternoon);assert.equal(scenes.clock,'rotate(120 60 78)');assert(scenes.night.moon&&+scenes.night.shade===1);assert.deepEqual(scenes.weather,['clear','rain','snow','hail']);assert(scenes.kiss);assert.equal(scenes.shared[0].kind,'house-top');assert.equal(scenes.shared[1].kind,'house-top');assert.notEqual(scenes.shared[0].x,scenes.shared[1].x);assert.equal(scenes.shared[2].kind,'house-low');
     // Pointer-driven dragging must show the bubble and release the cat back to physics.
-    await page.evaluate(()=>{const c=cats[0];c.x=140;c.y=20;c.air=false;c.mode='sit';c.until=1e9;renderCatPosition(c);});
+    await page.evaluate(()=>{cats.slice(1).forEach(c=>{c.el.style.pointerEvents='none';});const c=cats[0];c.x=140;c.y=20;c.air=false;c.mode='sit';c.until=1e9;renderCatPosition(c);});
     const box=await page.locator('.cat').first().boundingBox();await page.mouse.move(box.x+32,box.y+20);await page.mouse.down();await page.mouse.move(box.x+230,box.y-180,{steps:8});
     assert(await page.locator('.cat').first().evaluate(el=>el.classList.contains('in-bubble')));await page.mouse.up();
     assert(await page.evaluate(()=>cats[0].air&&cats[0].mode!=='bubble'));
