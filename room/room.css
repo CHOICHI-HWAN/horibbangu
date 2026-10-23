@@ -127,3 +127,18 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
 @keyframes cloud-drift {from{transform:translate(-34px,0);}to{transform:translate(55px,6px);}}
 @keyframes mist-drift {from{transform:translate(-65px,4px);opacity:.5;}to{transform:translate(60px,-6px);opacity:.95;}}
 [data-motion="paused"] .sky-cloud,[data-motion="paused"] .mountain-mist {animation-play-state:paused;}
+
+/* A small paper calendar on the wall, updated from the device's local date. */
+.wall-calendar {position:absolute;right:4.2%;top:12px;width:106px;padding:8px 7px 7px;border:1px solid #c5b18d;border-radius:3px 3px 8px 3px;background:linear-gradient(105deg,#fff9e9,#f1e7cd);box-shadow:1px 4px 5px #72604724;transform:rotate(2deg);color:#6b6853;pointer-events:none;}
+.calendar-rings {position:absolute;top:-5px;left:22%;right:22%;height:9px;background:repeating-linear-gradient(90deg,#958674 0 2px,transparent 2px 13px);border-radius:2px;}
+.calendar-header {display:flex;flex-direction:column;align-items:center;border-bottom:1px solid #d6c4a1;padding:2px 0 5px;gap:2px;}
+.calendar-caption {font-size:6px;color:#aa8c69;letter-spacing:1px;}
+#calendarMonth {font-size:11px;color:#727e62;font-family:Georgia,'Apple SD Gothic Neo',serif;white-space:nowrap;}
+.calendar-weekdays,.calendar-days {display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:8px;line-height:15px;}
+.calendar-weekdays {font-size:7px;color:#9a917a;padding-top:3px;}
+.calendar-days>span {min-height:15px;}
+.calendar-weekdays>span:first-child,.calendar-days>span:nth-child(7n+1) {color:#b78271;}
+.calendar-weekdays>span:last-child,.calendar-days>span:nth-child(7n) {color:#7b9296;}
+.calendar-days .calendar-today {border-radius:50%;background:#819073;color:#fff9e6!important;box-shadow:0 0 0 1px #6b7c5a44;}
+@media(max-width:650px){.wall-calendar{right:3%;top:7.5%;width:72px;padding:5px 4px 4px;}.calendar-caption{font-size:4px;letter-spacing:.5px;}#calendarMonth{font-size:8px;}.calendar-header{padding-bottom:2px;gap:0;}.calendar-weekdays,.calendar-days{font-size:6px;line-height:9px;}.calendar-days>span{min-height:9px;}.calendar-weekdays{font-size:5px;padding-top:2px;}.calendar-rings{height:7px;top:-4px;}}
+@media(max-height:500px){.wall-calendar{top:8px;right:4%;width:70px;padding:4px;}.calendar-caption{display:none;}#calendarMonth{font-size:8px;}.calendar-weekdays,.calendar-days{font-size:6px;line-height:8px;}.calendar-days>span{min-height:8px;}}

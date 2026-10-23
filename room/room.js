@@ -133,6 +133,20 @@ function updateClockMoon(date){
   $('clockMoon').setAttribute('aria-label',description);$('clockMoonTitle').textContent=description;
   document.querySelector('.cat-wall-clock>svg').setAttribute('aria-label','기기 시간에 맞춰 움직이는 고양이 시계, '+description);
 }
+let lastCalendarDate='';
+function updateRoomCalendar(date){
+  const year=date.getFullYear(),month=date.getMonth(),day=date.getDate(),key=`${year}-${month}-${day}`;
+  if(key===lastCalendarDate)return;lastCalendarDate=key;
+  $('calendarMonth').textContent=`${year}년 ${month+1}월`;
+  $('calendarMonth').dateTime=`${year}-${String(month+1).padStart(2,'0')}`;
+  $('wallCalendar').setAttribute('aria-label',`${year}년 ${month+1}월 달력, 오늘 ${day}일 ${['일','월','화','수','목','금','토'][date.getDay()]}요일`);
+  const first=new Date(year,month,1).getDay(),days=new Date(year,month+1,0).getDate();
+  $('calendarDays').replaceChildren(...Array.from({length:42},(_,i)=>{
+    const cell=document.createElement('span'),n=i-first+1;
+    if(n>0&&n<=days){cell.textContent=n;if(n===day){cell.className='calendar-today';cell.setAttribute('aria-current','date');}}
+    return cell;
+  }));
+}
 function updateRoomTime(date=new Date()){
   const hour=date.getHours()+date.getMinutes()/60+date.getSeconds()/3600;
   const daylight=hour>=6&&hour<18, progress=((hour-(daylight?6:18)+24)%24)/12;
@@ -144,7 +158,7 @@ function updateRoomTime(date=new Date()){
   $('moon').hidden=daylight;$('moon').style.left=x+'%';$('moon').style.top=top+'%';
   $('clockHour').setAttribute('transform',`rotate(${(hour%12)*30} 60 78)`);
   $('clockMinute').setAttribute('transform',`rotate(${(date.getMinutes()+date.getSeconds()/60)*6} 60 78)`);
-  updateClockMoon(date);
+  updateClockMoon(date);updateRoomCalendar(date);
   $('catClockText').textContent=date.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
   $('roomClock').textContent=date.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+(night>.7?' · 달빛의 방':hour>16?' · 노을의 방':' · 호수의 방');
   document.body.dataset.time=night>.7?'night':'day';
