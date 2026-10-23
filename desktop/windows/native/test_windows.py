@@ -126,7 +126,11 @@ try:
  from test_background_input import verify_background_input
  print('Starting background icon regression.',flush=True)
  verify_background_input(u,pump,hwnd,under,evaluate,OUT,width,height)
- u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.2)
+ # Closing settings may asynchronously foreground its previous owner. Retire
+ # the icon test application before testing an exposed interactive cat again.
+ u.ShowWindow(under,0);u.SetForegroundWindow(hwnd)
+ u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.3)
+ evaluate("(()=>{const c=cats[0];c.x=200;c.y=0;c.stand=GROUND;c.air=false;c.goal=null;c.edge=null;c.mode='sit';c.until=1e12;renderCatPosition(c);})()")
  box=evaluate("(()=>{const r=cats[0].el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()")
  x=int(box['x']+box['width']/2);y=int(box['y']+box['height']/2)
  u.SetCursorPos(x,y);pump(.3)
