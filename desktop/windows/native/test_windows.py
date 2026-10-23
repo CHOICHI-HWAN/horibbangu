@@ -98,6 +98,7 @@ try:
  assert min(sample)>240,('Transparency failed',sample)
  assert u.GetWindowLongPtrW(hwnd,-20)&0x20,'Empty pixels must pass clicks through'
  box=evaluate("(()=>{const r=cats[0].el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()")
+ evaluate("window.nativeEvents=[];for(const type of ['pointerdown','pointermove','pointerup','pointercancel','lostpointercapture','gotpointercapture'])addEventListener(type,e=>window.nativeEvents.push({type,buttons:e.buttons,x:e.clientX,y:e.clientY,cat:e.target.closest?.('.cat')?.dataset?.name}),true);")
  # The Windows native mouse pump must enable hit testing over a visible cat.
  x=int(box['x']+box['width']/2);y=int(box['y']+box['height']/2)
  u.SetCursorPos(x,y);pump(.5)
@@ -106,6 +107,7 @@ try:
  assert json.loads(pointer)['interactive'],'Cat did not become interactive'
  u.mouse_event(0x0002,0,0,0,0);pump(.1)
  for step in range(1,9):u.SetCursorPos(x+step*12,y-step*9);pump(.06)
+ (OUT/'drag-events.json').write_text(json.dumps(evaluate('({events:window.nativeEvents,mode:cats[0].mode,holding})')),encoding='utf-8')
  assert evaluate("cats[0].mode==='bubble'"),'Native drag never entered bubble mode'
  u.mouse_event(0x0004,0,0,0,0);pump(.2)
  assert evaluate("cats[0].mode!=='bubble'")

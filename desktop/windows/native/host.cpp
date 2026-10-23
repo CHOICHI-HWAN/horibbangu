@@ -142,6 +142,11 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_APP+3:
   if(composition&&(w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_DOWN||w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP||w==COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE)){
    POINT point={GET_X_LPARAM(l),GET_Y_LPARAM(l)};
+   if(w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_DOWN){
+    if(layer!=2){SetForegroundWindow(windowHandle);SetFocus(windowHandle);}
+    if(controller)controller->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
+   }
+   if(diagnostics){wchar_t text[96];swprintf(text,96,L"forward %llu %ld %ld",(unsigned long long)w,point.x,point.y);trace(text);}
    composition->SendMouseInput((COREWEBVIEW2_MOUSE_EVENT_KIND)w,w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP?COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_NONE:COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_LEFT_BUTTON,0,point);
   }return 0;
  case WM_COMMAND:if(LOWORD(w)==110)openSettings();return 0;
