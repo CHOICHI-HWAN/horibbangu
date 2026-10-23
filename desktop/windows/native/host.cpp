@@ -50,7 +50,13 @@ static void showControls(){ShowWindow(windowHandle,SW_SHOWNOACTIVATE);command(L"
 static void hitTest(bool enabled){
  if(interactive==enabled)return;interactive=enabled;
  LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_EXSTYLE);
- SetLastError(0);SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,enabled?style&~WS_EX_TRANSPARENT:style|WS_EX_TRANSPARENT);
+ // A layered HWND has no alpha bitmap for the DirectComposition pixels, so
+ // Windows would pass even cat clicks through. Use normal DComp hit testing
+ // while hovering/dragging a cat, and a layered click-through window elsewhere.
+ LONG_PTR next=enabled?style&~(WS_EX_TRANSPARENT|WS_EX_LAYERED):style|WS_EX_TRANSPARENT|WS_EX_LAYERED;
+ SetLastError(0);SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,next);
+ if(!enabled)SetLayeredWindowAttributes(windowHandle,0,255,LWA_ALPHA);
+ SetWindowPos(windowHandle,nullptr,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_NOACTIVATE|SWP_FRAMECHANGED);
  wchar_t text[160];swprintf(text,160,L"hit %d style %llx error %lu",enabled,(unsigned long long)GetWindowLongPtrW(windowHandle,GWL_EXSTYLE),GetLastError());trace(text);
 }
 static void tray(bool remove=false){
@@ -90,6 +96,7 @@ static COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS keys(){
 }
 static void mouse(UINT message,WPARAM w,LPARAM l){
  if(!composition)return;POINT p={GET_X_LPARAM(l),GET_Y_LPARAM(l)};
+ if(message==WM_LBUTTONDOWN){wchar_t log[100];swprintf(log,100,L"native down %ld %ld",p.x,p.y);trace(log);}
  if(message==WM_MOUSEWHEEL||message==WM_MOUSEHWHEEL)ScreenToClient(windowHandle,&p);
  UINT data=(message==WM_MOUSEWHEEL||message==WM_MOUSEHWHEEL)?(UINT)(short)GET_WHEEL_DELTA_WPARAM(w):0;
  if(message==WM_LBUTTONDOWN||message==WM_MBUTTONDOWN||message==WM_RBUTTONDOWN){SetCapture(windowHandle);if(layer!=2)SetFocus(windowHandle);}

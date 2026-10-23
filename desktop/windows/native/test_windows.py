@@ -114,13 +114,23 @@ try:
  # Read the current binary's embedded guide and notices after real extraction.
  assets=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.0'
  assert (assets/'LICENSE').exists() and (assets/'WebView2-LICENSE.txt').exists()
- # Exit and relaunch from a different location: same profile, same background preference.
+ # Persist non-default native settings as well as the renderer's background choice.
+ u.PostMessageW(hwnd,0x0111,110,0);pump(.2)
+ settings=u.FindWindowW('HoribbanguDesktopSettings',None);slider=u.GetDlgItem(settings,202)
+ u.SendMessageW(slider,0x0405,1,37);u.SendMessageW(settings,0x0114,0,slider)
+ u.SendMessageW(settings,0x0111,206,0)
+ u.PostMessageW(settings,0x0010,0,0);pump(.2)
+ # Exit and relaunch from a different location: same profile and native settings.
  stop_rpc();u.PostMessageW(hwnd,0x0010,0,0);app.wait(timeout=15)
  import shutil
  moved=OUT/'relocated';moved.mkdir(exist_ok=True);shutil.copyfile(ROOT/'candidate.exe',moved/'cats.exe')
  app=subprocess.Popen([str(moved/'cats.exe')]);pump(5)
  assert app.poll() is None and evaluate('desktopBackground')
  hwnd=u.FindWindowW('HoribbanguWebView2Desktop',None)
+ assert u.GetWindowLongPtrW(hwnd,-20)&0x08000000
+ u.PostMessageW(hwnd,0x0111,110,0);pump(.3)
+ settings=u.FindWindowW('HoribbanguDesktopSettings',None)
+ assert u.SendMessageW(u.GetDlgItem(settings,202),0x0400,0,0)==37  # TBM_GETPOS
  stop_rpc();u.PostMessageW(hwnd,0x0312,2,0);app.wait(timeout=15);assert app.returncode==0
  (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'transparentPixel':sample,'checks':['real Win32/WebView2 launch','monitor selection and opacity','top/behind modes','offline renderer','background and lake','persistent settings','transparent compositor','physical mouse click-through and drag','hotkey menu and exit','relocated EXE']},indent=2))
  print('Windows native runtime verification passed.')
