@@ -44,7 +44,7 @@ static void bounds(){
  SetWindowPos(windowHandle,layer==1?HWND_TOPMOST:layer==2?HWND_BOTTOM:HWND_NOTOPMOST,work.left,work.top,work.right-work.left,work.bottom-work.top,SWP_NOACTIVATE);
  if(controller){RECT area;GetClientRect(windowHandle,&area);controller->put_Bounds(area);controller->NotifyParentWindowPositionChanged();}
 }
-static void setLayer(int value){layer=value;bounds();if(settingsWindow)CheckRadioButton(settingsWindow,204,206,204+layer);saveSettings();}
+static void setLayer(int value){layer=value;updateMouseHook();bounds();if(settingsWindow)CheckRadioButton(settingsWindow,204,206,204+layer);saveSettings();}
 static void labelOpacity(){
  wchar_t text[96];swprintf(text,96,L"투명도: %d%%  (0%% = 선명하게)",transparency);SetWindowTextW(opacityLabel,text);
 }

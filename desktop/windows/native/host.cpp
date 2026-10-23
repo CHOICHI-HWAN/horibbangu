@@ -37,6 +37,7 @@ static UINT taskbarCreated;
 static const UINT trayMessage=WM_APP+1,secondInstance=WM_APP+2;
 static const wchar_t* windowClass=L"HoribbanguWebView2Desktop";
 
+static void updateMouseHook();
 #include "settings.h"
 
 static bool diagnostics=false;
@@ -51,7 +52,7 @@ static void error(const wchar_t* message,HRESULT hr=E_FAIL){
  if(windowHandle)DestroyWindow(windowHandle);
 }
 static void command(const wchar_t* text){if(webview)webview->PostWebMessageAsString(text);}
-static void showControls(){ShowWindow(windowHandle,SW_SHOWNOACTIVATE);command(L"controls");}
+static void showControls(){if(layer==2){openSettings();return;}ShowWindow(windowHandle,SW_SHOWNOACTIVATE);command(L"controls");}
 static void hitTest(bool enabled){
  interactive=enabled;
  // Keep the visual window permanently click-through. Composition pixels have no
@@ -70,7 +71,7 @@ static bool visibleAt(POINT point){
  }return false;
 }
 static LRESULT CALLBACK desktopMouse(int code,WPARAM kind,LPARAM data){
- if(code==HC_ACTION&&ready&&composition){
+ if(code==HC_ACTION&&ready&&composition&&layer!=2){
   auto info=(MSLLHOOKSTRUCT*)data;POINT point=info->pt;
   if(diagnostics&&kind==WM_LBUTTONDOWN){wchar_t text[96];swprintf(text,96,L"hook down interactive %d visible %d",interactive,visibleAt(point));trace(text);}
   POINT localPoint=point;ScreenToClient(windowHandle,&localPoint);
@@ -90,6 +91,23 @@ static LRESULT CALLBACK desktopMouse(int code,WPARAM kind,LPARAM data){
   }
  }
  return CallNextHookEx(mouseHook,code,kind,data);
+}
+static void updateMouseHook(){
+ // Background mode is display-only: a desktop icon must win even when a cat
+ // overlaps it. Z-order alone cannot stop a low-level hook swallowing clicks.
+ if(layer==2||!ready){
+  if(mouseHook){UnhookWindowsHookEx(mouseHook);mouseHook=nullptr;trace(L"mouse hook disabled");}
+  if(catGesture&&composition){
+   POINT point;GetCursorPos(&point);ScreenToClient(windowHandle,&point);
+   composition->SendMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP,COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_NONE,0,point);
+  }
+  catGesture=false;return;
+ }
+ if(!mouseHook){
+  mouseHook=SetWindowsHookExW(WH_MOUSE_LL,desktopMouse,GetModuleHandleW(nullptr),0);
+  if(!mouseHook)error(L"고양이 마우스 입력을 연결하지 못했습니다.",HRESULT_FROM_WIN32(GetLastError()));
+  else trace(L"mouse hook enabled");
+ }
 }
 static void tray(bool remove=false){
  NOTIFYICONDATAW data={};data.cbSize=sizeof(data);data.hWnd=windowHandle;data.uID=1;
@@ -140,7 +158,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  if(message==secondInstance){showControls();return 0;}
  switch(message){
  case WM_APP+3:
-  if(composition&&(w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_DOWN||w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP||w==COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE)){
+  if(layer!=2&&composition&&(w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_DOWN||w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_UP||w==COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE)){
    POINT point={GET_X_LPARAM(l),GET_Y_LPARAM(l)};
    if(w==COREWEBVIEW2_MOUSE_EVENT_KIND_LEFT_BUTTON_DOWN){
     if(layer!=2){SetForegroundWindow(windowHandle);SetFocus(windowHandle);}
@@ -159,10 +177,10 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_SETFOCUS:if(controller&&layer!=2)controller->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);return 0;
  case WM_SETCURSOR:if(composition){HCURSOR cursor=nullptr;composition->get_Cursor(&cursor);if(cursor){SetCursor(cursor);return TRUE;}}break;
  case WM_MOUSEMOVE:case WM_LBUTTONDOWN:case WM_LBUTTONUP:case WM_LBUTTONDBLCLK:
- case WM_RBUTTONDOWN:case WM_RBUTTONUP:case WM_MBUTTONDOWN:case WM_MBUTTONUP:case WM_MOUSEWHEEL:case WM_MOUSEHWHEEL:mouse(message,w,l);return 0;
+ case WM_RBUTTONDOWN:case WM_RBUTTONUP:case WM_MBUTTONDOWN:case WM_MBUTTONUP:case WM_MOUSEWHEEL:case WM_MOUSEHWHEEL:if(layer!=2)mouse(message,w,l);return 0;
  case WM_TIMER:
   if(layer==2&&IsWindowVisible(h)){static ULONGLONG lastBehind=0;ULONGLONG now=GetTickCount64();if(now-lastBehind>=1000){SetWindowPos(h,HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);lastBehind=now;}}
-  if(ready&&composition&&IsWindowVisible(h)&&GetCapture()!=h){
+  if(layer!=2&&ready&&composition&&IsWindowVisible(h)&&GetCapture()!=h){
    POINT p;GetCursorPos(&p);ScreenToClient(h,&p);RECT r;GetClientRect(h,&r);
    composition->SendMouseInput(catGesture||PtInRect(&r,p)?COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE:COREWEBVIEW2_MOUSE_EVENT_KIND_LEAVE,catGesture?COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_LEFT_BUTTON:keys(),0,p);
   }return 0;
@@ -233,8 +251,7 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
  HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2*,ICoreWebView2NavigationCompletedEventArgs* args) override{
   BOOL success=FALSE;args->get_IsSuccess(&success);if(!success){error(L"고양이 화면을 불러오지 못했습니다.");return S_OK;}
   ready=true;
-  if(!mouseHook)mouseHook=SetWindowsHookExW(WH_MOUSE_LL,desktopMouse,GetModuleHandleW(nullptr),0);
-  if(!mouseHook){error(L"고양이 마우스 입력을 연결하지 못했습니다.",HRESULT_FROM_WIN32(GetLastError()));return S_OK;}
+  updateMouseHook();if(layer!=2&&!mouseHook)return S_OK;
   ShowWindow(windowHandle,SW_SHOWNOACTIVATE);SetTimer(windowHandle,1,50,nullptr);return S_OK;
  }
 };
@@ -313,7 +330,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  if(FAILED(CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED))){CloseHandle(mutex);return 1;}
  PWSTR local=nullptr;if(FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData,0,nullptr,&local))){CoUninitialize();CloseHandle(mutex);return 1;}
  swprintf(settingsFile,2048,L"%ls\\HoribbanguDesktop\\settings.ini",local);
- swprintf(assetFolder,2048,L"%ls\\HoribbanguDesktop\\Native\\3.3.0",local);swprintf(profileFolder,2048,L"%ls\\HoribbanguDesktop\\WebView2",local);CoTaskMemFree(local);
+ swprintf(assetFolder,2048,L"%ls\\HoribbanguDesktop\\Native\\3.3.1",local);swprintf(profileFolder,2048,L"%ls\\HoribbanguDesktop\\WebView2",local);CoTaskMemFree(local);
  SHCreateDirectoryExW(nullptr,assetFolder,nullptr);SHCreateDirectoryExW(nullptr,profileFolder,nullptr);loadSettings();
  wchar_t diagnosticFlag[4]={};diagnostics=GetEnvironmentVariableW(L"HORIBBANGU_NATIVE_DIAGNOSTICS",diagnosticFlag,4)>0&&diagnosticFlag[0]==L'1';
  const wchar_t* names[]={L"playground.html",L"playground.js",L"WebView2Loader.dll",L"사용방법.txt",L"LICENSE",L"THIRD_PARTY_NOTICES.md",L"WebView2-LICENSE.txt",L"WebView2-NOTICE.txt",L"NativeRuntime-LICENSES.txt"};

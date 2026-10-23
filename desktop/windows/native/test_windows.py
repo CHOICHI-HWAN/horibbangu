@@ -120,7 +120,25 @@ try:
  u.SetCursorPos(int(box['x']+box['width']/2),int(box['y']+box['height']/2));pump(.3)
  u.mouse_event(0x0002,0,0,0,0);pump(.1);u.mouse_event(0x0004,0,0,0,0);pump(.1)
  assert evaluate('window.nativeDowns')==0,'A covered cat intercepted foreground input'
+ # Background mode must also pass real desktop-icon gestures through. Check
+ # after a stale hit rectangle and a shell-style Z-order change, not just styles.
+ from test_background_input import verify_background_input
+ verify_background_input(u,pump,hwnd,under,evaluate,OUT,width,height)
  u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.2)
+ box=evaluate("(()=>{const r=cats[0].el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()")
+ x=int(box['x']+box['width']/2);y=int(box['y']+box['height']/2)
+ u.SetCursorPos(x,y);pump(.3)
+ u.mouse_event(0x0002,0,0,0,0);pump(.05)
+ u.mouse_event(0x8001,round((x+25)*65535/(width-1)),round((y-25)*65535/(height-1)),0,0);pump(.1)
+ assert evaluate("cats[0].mode==='bubble'"),'Interactive cat drag did not return after background mode'
+ # Switching to background during a held drag must release the bubble.
+ u.PostMessageW(hwnd,0x0111,110,0);pump(.1)
+ settings=u.FindWindowW('HoribbanguDesktopSettings',None);assert settings
+ u.SendMessageW(settings,0x0111,206,0);pump(.1)
+ u.mouse_event(0x0004,0,0,0,0);pump(.1)
+ assert evaluate("cats[0].mode!=='bubble'"),'Entering background mode left a cat captured'
+ u.SendMessageW(settings,0x0111,204,0);u.SendMessageW(settings,0x0010,0,0);pump(.1)
+ u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.1)
  # Exercise the actual Win32 hotkey route used by Ctrl+Alt+H.
  u.PostMessageW(hwnd,0x0312,1,0);pump(.3)
  assert evaluate("document.body.classList.contains('controls-visible')")
@@ -128,7 +146,7 @@ try:
  ImageGrab.grab().save(OUT/'painted-desktop.png')
  assert evaluate('desktopBackground && lastLakeFrame>0')
  # Read the current binary's embedded guide and notices after real extraction.
- assets=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.0'
+ assets=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.1'
  assert (assets/'LICENSE').exists() and (assets/'WebView2-LICENSE.txt').exists()
  # Persist non-default native settings as well as the renderer's background choice.
  u.PostMessageW(hwnd,0x0111,110,0);pump(.2)
@@ -148,13 +166,13 @@ try:
  settings=u.FindWindowW('HoribbanguDesktopSettings',None)
  assert u.SendMessageW(u.GetDlgItem(settings,202),0x0400,0,0)==37  # TBM_GETPOS
  stop_rpc();u.PostMessageW(hwnd,0x0312,2,0);app.wait(timeout=15);assert app.returncode==0
- (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'transparentPixel':sample,'checks':['real Win32/WebView2 launch','monitor selection and opacity','top/behind modes','offline renderer','background and lake','persistent settings','transparent compositor','physical mouse click-through and drag','hotkey menu and exit','relocated EXE']},indent=2))
+ (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'transparentPixel':sample,'checks':['real Win32/WebView2 launch','monitor selection and opacity','top/behind modes','offline renderer','background and lake','persistent settings','transparent compositor','physical mouse click-through and drag','background icon selection/double-click/right-click/drag','interactive mode restoration and held-drag release','hotkey menu and exit','relocated EXE']},indent=2))
  print('Windows native runtime verification passed.')
 finally:
  if rpc:stop_rpc()
  ImageGrab.grab().save(OUT/'final-desktop.png')
  import shutil
- log=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.0/native-diagnostics.txt'
+ log=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.1/native-diagnostics.txt'
  if log.exists():shutil.copyfile(log,OUT/'native-diagnostics.txt')
  titles=[]
  callbackType=C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
