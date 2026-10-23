@@ -56,7 +56,22 @@ jobs:
         shell: pwsh
         env:
           WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: --remote-debugging-port=9223
-        run: python desktop/windows/native/test_windows.py
+        run: |
+          # Elevated CI runners ignore WEBVIEW2_* environment overrides (runtime 150+).
+          # Apply Microsoft's supported policy only to these two disposable test EXEs.
+          $policy = 'HKLM:\Software\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments'
+          New-Item -Path $policy -Force | Out-Null
+          try {
+            foreach ($exe in @('candidate.exe','cats.exe')) {
+              New-ItemProperty -Path $policy -Name $exe -Value '--remote-debugging-port=9223' -PropertyType String -Force | Out-Null
+            }
+            python desktop/windows/native/test_windows.py
+            if ($LASTEXITCODE -ne 0) { throw 'Native runtime validation failed' }
+          } finally {
+            foreach ($exe in @('candidate.exe','cats.exe')) {
+              Remove-ItemProperty -Path $policy -Name $exe -ErrorAction SilentlyContinue
+            }
+          }
       - uses: actions/cache/save@v4
         if: always() && steps.native-cache.outputs.cache-hit != 'true'
         with:
