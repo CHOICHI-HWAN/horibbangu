@@ -56,6 +56,7 @@ jobs:
         shell: pwsh
         env:
           WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: --remote-debugging-port=9223
+          HORIBBANGU_NATIVE_DIAGNOSTICS: '1'
         run: |
           # Elevated CI runners ignore WEBVIEW2_* environment overrides (runtime 150+).
           # Apply Microsoft's supported policy only to these two disposable test EXEs.

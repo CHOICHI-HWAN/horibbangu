@@ -40,6 +40,6 @@ for i,p in enumerate(files):
 env={**os.environ,'ZIG_GLOBAL_CACHE_DIR':str(CACHE/'zig-cache'),'ZIG_LOCAL_CACHE_DIR':str(CACHE/'local-cache')}
 subprocess.run([zig,'rc','/fo',str(BUILD/'app.res'),str(BUILD/'app.rc')],env=env,check=True,cwd=BUILD)
 output=BUILD/'호리빵구.exe'
-subprocess.run([zig,'c++','-target','x86_64-windows-gnu','-std=c++17','-Os','-fno-exceptions','-fno-rtti','-municode','-Wl,--subsystem,windows','-I'+str(sdk/'build/native/include'),'-I'+str(BUILD),'-I'+str(SOURCE),str(SOURCE/'host.cpp'),str(BUILD/'app.res'),'-luser32','-lole32','-lshell32','-luuid','-ldwmapi','-ldcomp','-lgdi32','-o',str(output)],env=env,check=True)
+subprocess.run([zig,'c++','-target','x86_64-windows-gnu','-std=c++17','-Os','-fno-exceptions','-fno-rtti','-municode','-Wl,--subsystem,windows','-I'+str(sdk/'build/native/include'),'-I'+str(BUILD),'-I'+str(SOURCE),str(SOURCE/'host.cpp'),str(BUILD/'app.res'),'-luser32','-lole32','-lshell32','-luuid','-ldwmapi','-ldcomp','-lgdi32','-lcomctl32','-o',str(output)],env=env,check=True)
 (BUILD/'manifest.json').write_text(json.dumps({'sdk':SDK_VERSION,'sdkSHA256':SDK_SHA256,'files':{str(101+i):{'name':p.name,'size':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for i,p in enumerate(files)}},indent=2)+'\n')
 print('Built native WebView2 host:',output.stat().st_size,'bytes')

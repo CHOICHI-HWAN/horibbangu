@@ -11,6 +11,9 @@ u.FindWindowW.argtypes=[W.LPCWSTR,W.LPCWSTR];u.FindWindowW.restype=W.HWND
 u.GetWindowLongPtrW.argtypes=[W.HWND,C.c_int];u.GetWindowLongPtrW.restype=C.c_ssize_t
 u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
 u.PostMessageW.argtypes=[W.HWND,W.UINT,W.WPARAM,W.LPARAM]
+u.GetDlgItem.argtypes=[W.HWND,C.c_int];u.GetDlgItem.restype=W.HWND
+u.SendMessageW.argtypes=[W.HWND,W.UINT,W.WPARAM,W.LPARAM];u.SendMessageW.restype=C.c_ssize_t
+u.GetWindowRect.argtypes=[W.HWND,C.POINTER(W.RECT)]
 u.SetForegroundWindow.argtypes=[W.HWND]
 u.SetFocus.argtypes=[W.HWND]
 # The STATIC window paints white under the transparent host. Keep its message queue alive.
@@ -47,13 +50,42 @@ try:
  assert not(style&0x00C00000),'Title bar unexpectedly present'
  assert extended&0x80000 and extended&0x80,'Layered/tool window missing'
  subprocess.run(['node','desktop/windows/native/test_page.cjs'],check=True)
+ # Use the actual native settings controls: monitor enumeration, live opacity and stacking.
+ evaluate('setDesktopBackground(true)');pump(.4)
+ u.PostMessageW(hwnd,0x0111,110,0);pump(.4)
+ settings=u.FindWindowW('HoribbanguDesktopSettings',None);assert settings
+ ImageGrab.grab().save(OUT/'settings.png')
+ combo=u.GetDlgItem(settings,201);slider=u.GetDlgItem(settings,202)
+ assert u.SendMessageW(combo,0x0146,0,0)>=1  # CB_GETCOUNT
+ u.SendMessageW(combo,0x014E,0,0)  # CB_SETCURSEL
+ u.SendMessageW(settings,0x0111,201|(1<<16),combo)
+ base=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
+ u.SendMessageW(slider,0x0405,1,50)  # TBM_SETPOS
+ u.SendMessageW(settings,0x0114,0,slider);pump(.4)
+ faded=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
+ ImageGrab.grab().save(OUT/'opacity-50.png')
+ assert sum(faded)>sum(base)+30,('Opacity did not blend with desktop',base,faded)
+ ini=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/settings.ini'
+ assert 'Transparency=50' in ini.read_text() and 'Monitor=' in ini.read_text()
+ u.SendMessageW(settings,0x0111,205,0);pump(.2)
+ assert u.GetWindowLongPtrW(hwnd,-20)&0x8  # WS_EX_TOPMOST
+ u.SendMessageW(settings,0x0111,206,0);pump(.2)
+ style=u.GetWindowLongPtrW(hwnd,-20)
+ assert not(style&0x8) and style&0x08000000  # behind: non-topmost and no activation
+ u.SendMessageW(settings,0x0111,204,0);pump(.2)
+ assert not(u.GetWindowLongPtrW(hwnd,-20)&(0x8|0x08000000))
+ u.SendMessageW(slider,0x0405,1,0);u.SendMessageW(settings,0x0114,0,slider)
+ u.PostMessageW(settings,0x0010,0,0);pump(.3)
+ evaluate('setDesktopBackground(false)');pump(.3)
+ print('Native monitor selection, opacity and top/behind/normal settings verified.',flush=True)
+
  pump(.6)
  # Blank middle pixel must show actual white underlay, not black compositor fill.
  screen=ImageGrab.grab();screen.save(OUT/'transparent-desktop.png')
  sample=screen.getpixel((width//2,height//2))[:3]
  assert min(sample)>240,('Transparency failed',sample)
  assert u.GetWindowLongPtrW(hwnd,-20)&0x20,'Empty pixels must pass clicks through'
- box=json.loads((OUT/'cat.json').read_text())
+ box=evaluate("(()=>{const r=cats[0].el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()")
  # The Windows native mouse pump must enable hit testing over a visible cat.
  x=int(box['x']+box['width']/2);y=int(box['y']+box['height']/2)
  u.SetCursorPos(x,y);pump(.5)
@@ -82,10 +114,13 @@ try:
  assert app.poll() is None and evaluate('desktopBackground')
  hwnd=u.FindWindowW('HoribbanguWebView2Desktop',None)
  u.PostMessageW(hwnd,0x0312,2,0);app.wait(timeout=15);assert app.returncode==0
- (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'transparentPixel':sample,'checks':['real Win32/WebView2 launch','offline renderer','background and lake','persistent settings','transparent compositor','physical mouse click-through and drag','hotkey menu and exit','relocated EXE']},indent=2))
+ (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'transparentPixel':sample,'checks':['real Win32/WebView2 launch','monitor selection and opacity','top/behind modes','offline renderer','background and lake','persistent settings','transparent compositor','physical mouse click-through and drag','hotkey menu and exit','relocated EXE']},indent=2))
  print('Windows native runtime verification passed.')
 finally:
  ImageGrab.grab().save(OUT/'final-desktop.png')
+ import shutil
+ log=Path(os.environ['LOCALAPPDATA'])/'HoribbanguDesktop/Native/3.3.0/native-diagnostics.txt'
+ if log.exists():shutil.copyfile(log,OUT/'native-diagnostics.txt')
  titles=[]
  callbackType=C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
  u.GetWindowTextW.argtypes=[W.HWND,W.LPWSTR,C.c_int]

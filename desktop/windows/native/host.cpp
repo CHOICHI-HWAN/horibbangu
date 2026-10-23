@@ -23,7 +23,8 @@ static ICoreWebView2* webview;
 static IDCompositionDevice* device;
 static IDCompositionTarget* target;
 static IDCompositionVisual* visual;
-static bool background=false,topmost=false,ready=false,interactive=false;
+static IDCompositionEffectGroup* opacityEffect;
+static bool background=false,ready=false,interactive=false;
 static wchar_t assetFolder[2048],profileFolder[2048];
 static const wchar_t* origin=L"https://horibbangu.local/";
 static const wchar_t* pageUrl=L"https://horibbangu.local/playground.html";
@@ -31,6 +32,14 @@ static UINT taskbarCreated;
 static const UINT trayMessage=WM_APP+1,secondInstance=WM_APP+2;
 static const wchar_t* windowClass=L"HoribbanguWebView2Desktop";
 
+#include "settings.h"
+
+static bool diagnostics=false;
+static void trace(const wchar_t* text){
+ if(!diagnostics)return;wchar_t path[2048];swprintf(path,2048,L"%ls\\native-diagnostics.txt",assetFolder);
+ HANDLE file=CreateFileW(path,FILE_APPEND_DATA,FILE_SHARE_READ|FILE_SHARE_WRITE,nullptr,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,nullptr);
+ if(file!=INVALID_HANDLE_VALUE){char utf8[4096];int n=WideCharToMultiByte(CP_UTF8,0,text,-1,utf8,sizeof(utf8),nullptr,nullptr);DWORD written;if(n>0)WriteFile(file,utf8,n-1,&written,nullptr);WriteFile(file,"\r\n",2,&written,nullptr);CloseHandle(file);}
+}
 static void error(const wchar_t* message,HRESULT hr=E_FAIL){
  wchar_t text[2048];swprintf(text,2048,L"%ls\n\n오류 코드: 0x%08lX",message,(unsigned long)hr);
  MessageBoxW(windowHandle,text,L"호리빵구",MB_OK|MB_ICONERROR);
@@ -41,12 +50,8 @@ static void showControls(){ShowWindow(windowHandle,SW_SHOWNOACTIVATE);command(L"
 static void hitTest(bool enabled){
  if(interactive==enabled)return;interactive=enabled;
  LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_EXSTYLE);
- SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,enabled?style&~WS_EX_TRANSPARENT:style|WS_EX_TRANSPARENT);
-}
-static void bounds(){
- RECT work;SystemParametersInfoW(SPI_GETWORKAREA,0,&work,0);
- SetWindowPos(windowHandle,topmost?HWND_TOPMOST:HWND_NOTOPMOST,work.left,work.top,work.right-work.left,work.bottom-work.top,SWP_NOACTIVATE);
- if(controller){RECT area;GetClientRect(windowHandle,&area);controller->put_Bounds(area);controller->NotifyParentWindowPositionChanged();}
+ SetLastError(0);SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,enabled?style&~WS_EX_TRANSPARENT:style|WS_EX_TRANSPARENT);
+ wchar_t text[160];swprintf(text,160,L"hit %d style %llx error %lu",enabled,(unsigned long long)GetWindowLongPtrW(windowHandle,GWL_EXSTYLE),GetLastError());trace(text);
 }
 static void tray(bool remove=false){
  NOTIFYICONDATAW data={};data.cbSize=sizeof(data);data.hWnd=windowHandle;data.uID=1;
@@ -61,7 +66,9 @@ static void menu(){
  AppendMenuW(m,MF_STRING,100,L"고양이 메뉴 열기 / 접기");
  AppendMenuW(m,MF_STRING|(background?MF_CHECKED:0),101,L"호수 배경 보이기");
  AppendMenuW(m,MF_STRING|(!IsWindowVisible(windowHandle)?MF_CHECKED:0),102,L"잠깐 숨기기");
- AppendMenuW(m,MF_STRING|(topmost?MF_CHECKED:0),103,L"항상 위에");
+ AppendMenuW(m,MF_STRING|(layer==1?MF_CHECKED:0),103,L"항상 위에");
+ AppendMenuW(m,MF_STRING|(layer==2?MF_CHECKED:0),106,L"항상 뒤에 (배경처럼)");
+ AppendMenuW(m,MF_STRING,110,L"화면·투명도 설정…");
  AppendMenuW(m,MF_SEPARATOR,0,nullptr);AppendMenuW(m,MF_STRING,104,L"친구 초대");AppendMenuW(m,MF_STRING,105,L"움직임 켜기 / 쉬기");
  AppendMenuW(m,MF_SEPARATOR,0,nullptr);AppendMenuW(m,MF_STRING,199,L"종료 (Ctrl+Alt+Q)");
  POINT p;GetCursorPos(&p);SetForegroundWindow(windowHandle);
@@ -69,7 +76,7 @@ static void menu(){
  if(choice==100)showControls();
  if(choice==101){background=!background;command(background?L"background-on":L"background-off");}
  if(choice==102)ShowWindow(windowHandle,IsWindowVisible(windowHandle)?SW_HIDE:SW_SHOWNOACTIVATE);
- if(choice==103){topmost=!topmost;bounds();}
+ if(choice==103)setLayer(layer==1?0:1);if(choice==106)setLayer(layer==2?0:2);if(choice==110)openSettings();
  if(choice==104)command(L"friends");if(choice==105)command(L"motion");if(choice==199)DestroyWindow(windowHandle);
  PostMessageW(windowHandle,WM_NULL,0,0);
 }
@@ -85,7 +92,7 @@ static void mouse(UINT message,WPARAM w,LPARAM l){
  if(!composition)return;POINT p={GET_X_LPARAM(l),GET_Y_LPARAM(l)};
  if(message==WM_MOUSEWHEEL||message==WM_MOUSEHWHEEL)ScreenToClient(windowHandle,&p);
  UINT data=(message==WM_MOUSEWHEEL||message==WM_MOUSEHWHEEL)?(UINT)(short)GET_WHEEL_DELTA_WPARAM(w):0;
- if(message==WM_LBUTTONDOWN||message==WM_MBUTTONDOWN||message==WM_RBUTTONDOWN){SetCapture(windowHandle);SetFocus(windowHandle);}
+ if(message==WM_LBUTTONDOWN||message==WM_MBUTTONDOWN||message==WM_RBUTTONDOWN){SetCapture(windowHandle);if(layer!=2)SetFocus(windowHandle);}
  composition->SendMouseInput((COREWEBVIEW2_MOUSE_EVENT_KIND)message,keys(),data,p);
  if(message==WM_LBUTTONUP||message==WM_MBUTTONUP||message==WM_RBUTTONUP)ReleaseCapture();
 }
@@ -93,15 +100,19 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  if(taskbarCreated&&message==taskbarCreated){tray();return 0;}
  if(message==secondInstance){showControls();return 0;}
  switch(message){
+ case WM_COMMAND:if(LOWORD(w)==110)openSettings();return 0;
+ case WM_MOUSEACTIVATE:if(layer==2)return MA_NOACTIVATE;break;
+ case WM_WINDOWPOSCHANGING:if(layer==2){auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
  case WM_ERASEBKGND:return 1;
  case WM_PAINT:{PAINTSTRUCT ps;BeginPaint(h,&ps);EndPaint(h,&ps);return 0;}
- case WM_DISPLAYCHANGE:case WM_SETTINGCHANGE:bounds();return 0;
+ case WM_DISPLAYCHANGE:case WM_SETTINGCHANGE:bounds();if(settingsWindow)fillMonitors();return 0;
  case WM_DPICHANGED:bounds();return 0;
- case WM_SETFOCUS:if(controller)controller->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);return 0;
+ case WM_SETFOCUS:if(controller&&layer!=2)controller->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);return 0;
  case WM_SETCURSOR:if(composition){HCURSOR cursor=nullptr;composition->get_Cursor(&cursor);if(cursor){SetCursor(cursor);return TRUE;}}break;
  case WM_MOUSEMOVE:case WM_LBUTTONDOWN:case WM_LBUTTONUP:case WM_LBUTTONDBLCLK:
  case WM_RBUTTONDOWN:case WM_RBUTTONUP:case WM_MBUTTONDOWN:case WM_MBUTTONUP:case WM_MOUSEWHEEL:case WM_MOUSEHWHEEL:mouse(message,w,l);return 0;
  case WM_TIMER:
+  if(layer==2&&IsWindowVisible(h)){static ULONGLONG lastBehind=0;ULONGLONG now=GetTickCount64();if(now-lastBehind>=1000){SetWindowPos(h,HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);lastBehind=now;}}
   if(ready&&composition&&IsWindowVisible(h)&&GetCapture()!=h){
    POINT p;GetCursorPos(&p);ScreenToClient(h,&p);RECT r;GetClientRect(h,&r);
    composition->SendMouseInput(PtInRect(&r,p)?COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE:COREWEBVIEW2_MOUSE_EVENT_KIND_LEAVE,keys(),0,p);
@@ -112,7 +123,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
   if(LOWORD(l)==WM_CONTEXTMENU||LOWORD(l)==WM_RBUTTONUP)menu();return 0;
  case WM_CLOSE:DestroyWindow(h);return 0;
  case WM_DESTROY:
-  ready=false;KillTimer(h,1);tray(true);UnregisterHotKey(h,1);UnregisterHotKey(h,2);
+  ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);tray(true);UnregisterHotKey(h,1);UnregisterHotKey(h,2);
   if(controller)controller->Close();PostQuitMessage(0);return 0;
  }return DefWindowProcW(h,message,w,l);
 }
@@ -125,9 +136,9 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
 struct MessageHandler:ICoreWebView2WebMessageReceivedEventHandler{
  CALLBACK_BASE(ICoreWebView2WebMessageReceivedEventHandler)
  HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2*,ICoreWebView2WebMessageReceivedEventArgs* args) override{
-  LPWSTR source=nullptr,message=nullptr;args->get_Source(&source);
+  LPWSTR source=nullptr,message=nullptr;args->get_Source(&source);trace(source?source:L"message source null");
   if(!source||wcscmp(source,pageUrl)){CoTaskMemFree(source);return S_OK;}CoTaskMemFree(source);
-  if(SUCCEEDED(args->TryGetWebMessageAsString(&message))&&message){
+  if(SUCCEEDED(args->TryGetWebMessageAsString(&message))&&message){trace(message);
    if(!wcscmp(message,L"pointer:1"))hitTest(true);if(!wcscmp(message,L"pointer:0"))hitTest(false);
    if(!wcscmp(message,L"background:1"))background=true;if(!wcscmp(message,L"background:0"))background=false;
    if(!wcscmp(message,L"quit"))PostMessageW(windowHandle,WM_CLOSE,0,0);
@@ -194,6 +205,9 @@ struct CompositionHandler:ICoreWebView2CreateCoreWebView2CompositionControllerCo
   hr=DCompositionCreateDevice(nullptr,MY_IDCompositionDevice,(void**)&device);
   if(SUCCEEDED(hr))hr=device->CreateTargetForHwnd(windowHandle,TRUE,&target);
   if(SUCCEEDED(hr))hr=device->CreateVisual(&visual);
+  if(SUCCEEDED(hr))hr=device->CreateEffectGroup(&opacityEffect);
+  if(SUCCEEDED(hr))hr=opacityEffect->SetOpacity((100-transparency)/100.0f);
+  if(SUCCEEDED(hr))hr=visual->SetEffect(opacityEffect);
   if(SUCCEEDED(hr))hr=target->SetRoot(visual);
   if(SUCCEEDED(hr))hr=composition->put_RootVisualTarget(visual);
   if(SUCCEEDED(hr))hr=device->Commit();
@@ -204,7 +218,7 @@ struct CompositionHandler:ICoreWebView2CreateCoreWebView2CompositionControllerCo
   ICoreWebView2Settings* settings=nullptr;webview->get_Settings(&settings);
   if(settings){settings->put_AreDevToolsEnabled(FALSE);settings->put_AreDefaultContextMenusEnabled(FALSE);settings->put_IsStatusBarEnabled(FALSE);settings->put_AreHostObjectsAllowed(FALSE);settings->Release();}
   EventRegistrationToken token;
-  auto a=new MessageHandler;webview->add_WebMessageReceived(a,&token);a->Release();
+  auto a=new MessageHandler;HRESULT messageResult=webview->add_WebMessageReceived(a,&token);a->Release();wchar_t messageLog[96];swprintf(messageLog,96,L"register message: %08lX",(unsigned long)messageResult);trace(messageLog);
   auto b=new NavigationHandler;webview->add_NavigationStarting(b,&token);b->Release();
   auto c=new NewWindowHandler;webview->add_NewWindowRequested(c,&token);c->Release();
   auto d=new PermissionHandler;webview->add_PermissionRequested(d,&token);d->Release();
@@ -237,8 +251,10 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  if(GetLastError()==ERROR_ALREADY_EXISTS){HWND old=FindWindowW(windowClass,nullptr);if(old)PostMessageW(old,secondInstance,0,0);CloseHandle(mutex);return 0;}
  if(FAILED(CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED))){CloseHandle(mutex);return 1;}
  PWSTR local=nullptr;if(FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData,0,nullptr,&local))){CoUninitialize();CloseHandle(mutex);return 1;}
+ swprintf(settingsFile,2048,L"%ls\\HoribbanguDesktop\\settings.ini",local);
  swprintf(assetFolder,2048,L"%ls\\HoribbanguDesktop\\Native\\3.3.0",local);swprintf(profileFolder,2048,L"%ls\\HoribbanguDesktop\\WebView2",local);CoTaskMemFree(local);
- SHCreateDirectoryExW(nullptr,assetFolder,nullptr);SHCreateDirectoryExW(nullptr,profileFolder,nullptr);
+ SHCreateDirectoryExW(nullptr,assetFolder,nullptr);SHCreateDirectoryExW(nullptr,profileFolder,nullptr);loadSettings();
+ wchar_t diagnosticFlag[4]={};diagnostics=GetEnvironmentVariableW(L"HORIBBANGU_NATIVE_DIAGNOSTICS",diagnosticFlag,4)>0&&diagnosticFlag[0]==L'1';
  const wchar_t* names[]={L"playground.html",L"playground.js",L"WebView2Loader.dll",L"사용방법.txt",L"LICENSE",L"THIRD_PARTY_NOTICES.md",L"WebView2-LICENSE.txt",L"WebView2-NOTICE.txt",L"NativeRuntime-LICENSES.txt"};
  for(int i=0;i<9;i++)if(!resource(101+i,names[i])){error(L"앱 파일을 사용자 폴더에 준비하지 못했습니다.");CoUninitialize();CloseHandle(mutex);return 1;}
  wchar_t loaderPath[2048];swprintf(loaderPath,2048,L"%ls\\WebView2Loader.dll",assetFolder);
@@ -253,12 +269,13 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
    ShellExecuteW(nullptr,L"open",L"https://developer.microsoft.com/microsoft-edge/webview2/",nullptr,nullptr,SW_SHOWNORMAL);
   if(loader)FreeLibrary(loader);CoUninitialize();CloseHandle(mutex);return 2;
  }
+ INITCOMMONCONTROLSEX controls={sizeof(controls),ICC_BAR_CLASSES};InitCommonControlsEx(&controls);
  WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=procedure;cls.hInstance=instance;cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=windowClass;cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(1));RegisterClassExW(&cls);
  windowHandle=CreateWindowExW(WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP,windowClass,L"호리빵구 · 바탕화면 친구들",WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
  SetLayeredWindowAttributes(windowHandle,0,255,LWA_ALPHA);MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
  taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");bounds();tray();RegisterHotKey(windowHandle,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(windowHandle,2,MOD_CONTROL|MOD_ALT,'Q');
  auto callback=new EnvironmentHandler;hr=create(nullptr,profileFolder,nullptr,callback);callback->Release();if(FAILED(hr))error(L"WebView2 환경을 만들지 못했습니다.",hr);
- MSG message;while(GetMessageW(&message,nullptr,0,0)>0){TranslateMessage(&message);DispatchMessageW(&message);}
+ MSG message;while(GetMessageW(&message,nullptr,0,0)>0){if(settingsWindow&&IsDialogMessageW(settingsWindow,&message))continue;TranslateMessage(&message);DispatchMessageW(&message);}
  if(webview)webview->Release();if(controller)controller->Release();if(composition)composition->Release();if(environment)environment->Release();
- if(visual)visual->Release();if(target)target->Release();if(device)device->Release();FreeLibrary(loader);CoUninitialize();CloseHandle(mutex);return 0;
+ if(opacityEffect)opacityEffect->Release();if(visual)visual->Release();if(target)target->Release();if(device)device->Release();FreeLibrary(loader);CoUninitialize();CloseHandle(mutex);return 0;
 }
