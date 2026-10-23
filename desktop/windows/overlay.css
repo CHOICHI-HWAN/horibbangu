@@ -1,0 +1,7 @@
+html,body,.room {background:transparent!important;}
+.room::before,.room::after,.floor,.sunbeam,.balcony-opening,.balcony-step,.weather-control,.scene-label {display:none!important;}
+.room {box-shadow:none;}
+.room-header {filter:drop-shadow(0 1px 2px #fff8);}
+.brand {font-size:21px;}
+.kicker {display:none;}
+.cat-wall-clock,.wall-calendar,.art-wall {pointer-events:none;}

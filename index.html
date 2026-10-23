@@ -494,6 +494,7 @@ function roomCatSVG(svg,pet){
     .replaceAll('cx="26" cy="28" rx="19.5" ry="13"','cx="26" cy="30" rx="16.5" ry="10"');
 }
 function chooseRoomScenery(c,t){
+  if(typeof desktopOverlay!=='undefined'&&desktopOverlay)return false;
   if(reduceMotion||c.air||c.mode==='bubble'||c.mode==='guestExit')return false;
   if(cats.filter(o=>o!==c&&o.sceneryGoal).length>=3)return false;
   const spots=highSpots().filter(p=>p.h>innerHeight*.20&&p.h<innerHeight*.84&&p.xc>innerWidth*.08&&p.xc<innerWidth*.92&&distTo(p).has(nodeOf(c))&&!cats.some(o=>o!==c&&o.sceneryGoal===p));
@@ -622,7 +623,7 @@ function updateRoomTime(date=new Date()){
   const root=document.documentElement;root.style.setProperty('--night',Math.max(0,Math.min(1,night)).toFixed(3));
   root.style.setProperty('--reflection-x',x+'%');
   root.style.setProperty('--sun-angle',`${-30+progress*60}deg`);root.style.setProperty('--warmth',daylight?(hour<9||hour>16?.85:.4):.04);
-  $('moon').hidden=daylight;$('moon').style.left=x+'%';$('moon').style.top=top+'%';
+  if($('moon')){$('moon').hidden=daylight;$('moon').style.left=x+'%';$('moon').style.top=top+'%';}
   $('clockHour').setAttribute('transform',`rotate(${(hour%12)*30} 60 78)`);
   $('clockMinute').setAttribute('transform',`rotate(${(date.getMinutes()+date.getSeconds()/60)*6} 60 78)`);
   updateClockMoon(date);updateRoomCalendar(date);
@@ -689,7 +690,7 @@ function drawWeather(t){
       else{ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x-4,yy+13);ctx.stroke();}
     }
   }
-  weatherFrame=requestAnimationFrame(drawWeather);
+  if($('weatherCanvas'))weatherFrame=requestAnimationFrame(drawWeather);
 }
 function setRoomControls(visible){
   document.body.classList.toggle('controls-visible',visible);
@@ -720,7 +721,7 @@ function initRoom(){
   $('restBtn').onclick=()=>{const t=performance.now();cats.forEach(c=>{if(!c.air&&!['angel','bubble'].includes(c.mode)){leave(c,t);if(!chooseFavorite(c,t))sleepNow(c,t);}});$('status').textContent='각자 좋아하는 폭신한 자리로 가요.';};
   $('wingsBtn').onclick=()=>{if(reduceMotion){$('status').textContent='움직임을 켜면 로이와 동글이가 날개를 펼쳐요.';return;}const t=performance.now();cats.filter(c=>['로이','동글이'].includes(c.name)).forEach(c=>{c.angelAfter=0;c.restUntil=0;if(!c.air)startAngelFlight(c,t);});};
   setRoomControls(false);updateRoomTime();setInterval(updateRoomTime,1000);
-  weatherFrame=requestAnimationFrame(drawWeather);
+  if($('weatherCanvas'))weatherFrame=requestAnimationFrame(drawWeather);
 }
 
 // ---------- 돌아다니는 고양이 ----------

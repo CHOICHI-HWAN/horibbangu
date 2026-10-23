@@ -20,6 +20,7 @@
 | `index.html` | 생성된 공개 고양이 방 (로그인 없음) |
 | `records.html` | 체중 기록과 공유 고양이 엔진 원본 |
 | `room/` | 고양이 방 풍경·가구·이벤트 원본 |
+| `desktop/windows/` | 투명 데스크톱 창·트레이·오프라인 패키징 |
 | `scripts/build-room.py` | 공개 고양이 방 생성 |
 | `config.js` | Firebase 웹 설정값 (비워두면 이 기기에만 저장) |
 | `firestore.rules` | 허용한 이메일만 읽기/쓰기 |
@@ -60,18 +61,19 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 `PLAYWRIGHT_MODULE`로 모듈 경로, `BROWSER_EXECUTABLE`로 설치된 Chromium 계열 브라우저 경로를 지정할 수도 있습니다.
 검사는 별도 브라우저 세션에서 실행하며 Firebase 연결을 차단하고 실제 체중기록을 저장하지 않습니다.
 
-## Windows 고양이 놀이터
+## Windows 바탕화면 친구들 (3.0)
 
-로컬 `downloads/호리빵구.exe`는 체중기록 기능이 없는 오프라인 고양이 놀이터입니다. 실행 파일과 ZIP은 소스 Git에서 제외합니다. 공개 ZIP은 [Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)와 [GitHub Releases](https://github.com/CHOICHI-HWAN/horibbangu/releases/latest)에서 제공합니다. 원본 실행 파일과 로컬 downloads/ 폴더는 Firebase 배포에서 제외하고, releases/의 ZIP과 체크섬만 포함합니다.
-Windows 바탕화면에 저장하고 더블클릭하면 됩니다. Edge/Chrome/Brave가 있으면 별도 창으로 열립니다.
-고양이와 가구·투명해먹·날개 비행만 포함하며 Firebase와 체중 데이터는 포함하지 않습니다.
-Windows x64 GUI 파일이며, 서명되지 않은 개인용 빌드입니다. Windows 실기기 실행은 아직 미확인입니다.
+[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)에서 ZIP을 받고 **폴더 전체를 압축 해제한 뒤 `호리빵구/호리빵구.exe`**를 실행합니다. EXE만 따로 옮기면 동작하지 않습니다. 바탕화면 바로가기는 만들 수 있습니다.
 
-재빌드: Zig 0.15.2와 Python 3가 있는 환경에서 `desktop/windows/build.sh`를 실행합니다.
-`ZIG_BIN`으로 Zig 실행 경로를 지정할 수 있습니다. `python3 desktop/windows/test_binary.py`로
-GUI 형식·리소스·아이콘·내장 HTML 일치·시스템 DLL 의존성을 검사합니다.
-웹 코드를 바꾼 뒤에는 실행 파일도 다시 빌드해야 합니다.
+Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그림·시계·달력만 투명한 바탕화면 위에 표시합니다. 제목 표시줄과 테두리가 없고 빈 공간은 클릭이 아래 프로그램으로 통과합니다. 고양이 클릭·공기방울 드래그와 기존 행동은 유지하며, 호수가 없는 데스크톱 모드에서는 풍경 감상 행동을 사용하지 않습니다. 웹앱은 기존 호수 배경을 유지합니다.
 
+알림 영역의 고양이 아이콘을 클릭하면 메뉴가 열리고 오른쪽 클릭하면 숨김·항상 위·친구 초대·종료를 선택할 수 있습니다. 항상 위는 기본 꺼짐입니다. `Ctrl+Alt+H`는 메뉴, `Ctrl+Alt+Q`는 종료입니다. 인터넷·로그인·체중 기록·별도 브라우저 설치는 필요하지 않습니다. 설정은 `%APPDATA%\HoribbanguDesktop`에 저장됩니다.
+
+실행 환경은 [Electron 투명 창](https://www.electronjs.org/docs/latest/tutorial/custom-window-styles)과 [클릭 통과 API](https://www.electronjs.org/docs/latest/tutorial/custom-window-interactions)를 사용합니다. `main.cjs`가 네이티브 창과 트레이를 담당하고 `preload.cjs`가 제한된 IPC만 제공합니다. 렌더러는 sandbox/contextIsolation을 사용하며 Node·외부 네트워크·외부 탐색을 허용하지 않습니다.
+
+재빌드는 Python 3로 `desktop/windows/build.sh`를 실행합니다. `runtime-lock.json`에 고정한 공식 Windows x64 런타임 ZIP을 SHA-256으로 확인한 뒤 앱 파일과 함께 패키징합니다. `HORIBBANGU_ELECTRON_CACHE`로 런타임 캐시 위치를 지정할 수 있습니다. 기본값은 `/tmp/horibbangu-build/electron`입니다. ZIP과 실행 폴더는 Git에서 제외되고 공개 ZIP·체크섬만 `releases/`를 통해 Firebase에 배포됩니다.
+
+`test_binary.py`는 공식 런타임 일치·PE 형식·필수 파일·앱 파일 일치를 확인합니다. `tests/desktop.cjs`는 실제 Electron 창에서 투명 렌더링·IPC·드래그·메뉴를 검증합니다 (`ELECTRON_EXECUTABLE`, `PLAYWRIGHT_MODULE` 지정). Mac에서 앱 구조를 검증했으며 Windows 실기기의 투명 합성과 클릭 통과는 아직 미확인입니다. 실행파일은 코드 서명이 되어 있지 않습니다.
 
 ## 고양이 방 (2.2)
 
@@ -87,7 +89,7 @@ GUI 형식·리소스·아이콘·내장 HTML 일치·시스템 DLL 의존성을
 
 크기는 최근 양수 체중의 세제곱근에 사진 기준 체형을 곱해 0.82~1.42배로 제한합니다. 동글이와 로이는 사진 기준 체형을 유지합니다. 공개 화면에는 빌드 시 기본 기록의 크기 비율만 들어갑니다. 기록 페이지에서 동기화한 기기는 최신 크기 비율을 방에 전달합니다. 다른 기기의 최신 서버 크기를 반영하려면 그 기기에서 기록 페이지를 한 번 동기화해야 합니다.
 
-`desktop/windows/build.sh`는 같은 방에서 기록 링크를 제거한 오프라인 실행 파일을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에 보관하며, Firebase용 ZIP과 체크섬을 `releases/`에 복사합니다. 공개 ZIP은 Firebase Hosting과 GitHub Releases에 배포합니다. Windows 실기기 실행은 아직 미확인입니다.
+`desktop/windows/build.sh`는 같은 고양이 엔진에서 기록 링크와 방 배경을 제거한 투명 데스크톱 앱을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에 보관하며, Firebase용 ZIP과 체크섬을 `releases/`에 복사합니다. 공개 ZIP은 Firebase Hosting과 GitHub Releases에 배포합니다. Windows 실기기 실행은 아직 미확인입니다.
 
 검사: `tests/room.cjs`(공개 화면·터치/키보드 메뉴·시간·날씨·행동·모바일 입력), `tests/room-routes.cjs`(전체 타워/발판 이동), `tests/playground.cjs`(기록 페이지 엔진), `tests/offline-playground.cjs`(오프라인), `tests/sizes.cjs`(체중과 크기 전달), `node tests/sync.cjs`(저장 중 재수정). 브라우저 검사는 `PLAYWRIGHT_MODULE`, 필요하면 `BROWSER_EXECUTABLE` 환경 변수를 지정합니다.
 
