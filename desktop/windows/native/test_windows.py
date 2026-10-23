@@ -86,10 +86,14 @@ try:
  u.PostMessageW(settings,0x0010,0,0);pump(.3)
  evaluate('setDesktopBackground(false)');pump(.3)
  print('Native monitor selection, opacity and top/behind/normal settings verified.',flush=True)
+ # Closing a settings window restores the foreground white test application.
+ # Explicitly expose the cats before testing their actual clicks.
+ u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.5)
 
  pump(.6)
  # Blank middle pixel must show actual white underlay, not black compositor fill.
  screen=ImageGrab.grab();screen.save(OUT/'transparent-desktop.png')
+ assert sum(min(p[:3])<200 for p in screen.getdata())>5000,'Cats and furniture were occluded before the input test'
  sample=screen.getpixel((width//2,height//2))[:3]
  assert min(sample)>240,('Transparency failed',sample)
  assert u.GetWindowLongPtrW(hwnd,-20)&0x20,'Empty pixels must pass clicks through'
@@ -105,6 +109,14 @@ try:
  assert evaluate("cats[0].mode==='bubble'"),'Native drag never entered bubble mode'
  u.mouse_event(0x0004,0,0,0,0);pump(.2)
  assert evaluate("cats[0].mode!=='bubble'")
+ # A real foreground application must retain its click even over a cat's DOM rect.
+ evaluate("window.nativeDowns=0;addEventListener('pointerdown',()=>window.nativeDowns++);")
+ u.SetWindowPos(under,0,0,0,0,0,0x43);u.SetForegroundWindow(under);pump(.3)
+ box=evaluate("(()=>{const r=cats[0].el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()")
+ u.SetCursorPos(int(box['x']+box['width']/2),int(box['y']+box['height']/2));pump(.3)
+ u.mouse_event(0x0002,0,0,0,0);pump(.1);u.mouse_event(0x0004,0,0,0,0);pump(.1)
+ assert evaluate('window.nativeDowns')==0,'A covered cat intercepted foreground input'
+ u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.2)
  # Exercise the actual Win32 hotkey route used by Ctrl+Alt+H.
  u.PostMessageW(hwnd,0x0312,1,0);pump(.3)
  assert evaluate("document.body.classList.contains('controls-visible')")
