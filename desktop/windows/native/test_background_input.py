@@ -5,6 +5,8 @@ Run only on the disposable Windows test desktop. No user desktop files are made.
 import ctypes as C
 import ctypes.wintypes as W
 import json
+import threading
+import time
 
 
 def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height):
@@ -53,8 +55,13 @@ def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height):
   evaluate(f"desktopHost.setInteractive(true,[{x-10},{y-10},{x+10},{y+10}])")
   pump(.03)
  def click(right=False):
-  u.mouse_event(0x0008 if right else 0x0002,0,0,0,0);pump(.03)
-  u.mouse_event(0x0010 if right else 0x0004,0,0,0,0);pump(.06)
+  # ListView's mouse-down handler runs a tracking loop until button-up. Its
+  # owning thread must keep dispatching while a different thread releases it.
+  def buttons():
+   u.mouse_event(0x0008 if right else 0x0002,0,0,0,0);time.sleep(.03)
+   u.mouse_event(0x0010 if right else 0x0004,0,0,0,0)
+  producer=threading.Thread(target=buttons);producer.start();pump(.13);producer.join(timeout=1)
+  assert not producer.is_alive()
  try:
   print('Icon control ready; entering background mode.',flush=True)
   mode(2)
@@ -79,10 +86,13 @@ def verify_background_input(u, pump, hwnd, under, evaluate, out, width, height):
    print('Icon right-click passed.',flush=True)
    checks.append(f'icon right-click with background {background}')
    notifications.clear();expose()
-   u.mouse_event(0x0002,0,0,0,0);pump(.03)
-   for step in range(1,5):
-    u.mouse_event(0x8001,round((x+step*12)*65535/(width-1)),round((y+step*6)*65535/(height-1)),0,0);pump(.03)
-   u.mouse_event(0x0004,0,0,0,0);pump(.05)
+   def drag():
+    u.mouse_event(0x0002,0,0,0,0);time.sleep(.03)
+    for step in range(1,5):
+     u.mouse_event(0x8001,round((x+step*12)*65535/(width-1)),round((y+step*6)*65535/(height-1)),0,0);time.sleep(.03)
+    u.mouse_event(0x0004,0,0,0,0)
+   producer=threading.Thread(target=drag);producer.start();pump(.25);producer.join(timeout=1)
+   assert not producer.is_alive()
    assert -109 in notifications,('Background overlay swallowed icon drag',notifications)
    print('Icon drag passed.',flush=True)
    assert evaluate('backgroundDowns')==0,'Background app consumed desktop input'
