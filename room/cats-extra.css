@@ -86,3 +86,20 @@
 .cat.pang .rear-ears {transform:scaleY(1.25);transform-origin:32px 15px;}
 @keyframes scenery-tail {0%,100%{transform:rotate(-5deg);}50%{transform:rotate(9deg);}}
 @keyframes scenery-ears {0%,40%,60%,100%{transform:rotate(0);}47%{transform:rotate(-4deg);}54%{transform:rotate(3deg);}}
+
+/* A planted, four-paw gallop inside the wheel, distinct from an ordinary walk. */
+.cat.wheel-running.fast svg .all {transition:none;animation:wheel-drive .30s ease-in-out infinite;}
+.cat.wheel-running.fast .head {animation:wheel-focus .30s ease-in-out infinite;}
+.cat.wheel-running.fast .l1,.cat.wheel-running.fast .l3 {animation:wheel-hind-stride .30s linear infinite;}
+.cat.wheel-running.fast .l2,.cat.wheel-running.fast .l4 {animation:wheel-front-stride .30s linear infinite;}
+.cat.wheel-running.fast .l3 {animation-delay:-.045s;}
+.cat.wheel-running.fast .l4 {animation-delay:-.045s;}
+.cat.wheel-running.fast.walking .head,.cat.wheel-running.fast.walking .leg {animation-duration:.30s;animation-direction:normal;}
+.cat.wheel-running.fast .tail {animation:wheel-tail .60s ease-in-out infinite;}
+.wheel.spin svg .ring {animation-duration:.75s;}
+@keyframes wheel-drive {0%,100%{transform:translate(0,1px) rotate(-4deg) scale(1.1,.9);}50%{transform:translate(0,-1.3px) rotate(-6deg) scale(1.12,.91);}}
+@keyframes wheel-hind-stride {0%,100%{transform:rotate(42deg) translateY(-1px);}35%{transform:rotate(-40deg);}65%{transform:rotate(-22deg) translateY(-3px);}}
+@keyframes wheel-front-stride {0%,100%{transform:rotate(-38deg);}35%{transform:rotate(42deg) translateY(-2px);}65%{transform:rotate(20deg) translateY(-4px);}}
+@keyframes wheel-focus {0%,100%{transform:translate(2px,1px) rotate(5deg);}50%{transform:translate(2px,2px) rotate(7deg);}}
+@keyframes wheel-tail {0%,100%{transform:rotate(-26deg);}50%{transform:rotate(-14deg);}}
+[data-motion="paused"] .wheel.spin .ring {animation:none;}

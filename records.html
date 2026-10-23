@@ -335,7 +335,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '2.4.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '2.4.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -1608,12 +1608,12 @@ function tickCats(t) {
       case 'goWheel': {   // 캣휠 안으로 들어가 달리기
         const dx = c.tx - cx;
         if (!wheel) { setMode(c, 'sit', t, 1000); break; }
-        if (Math.abs(dx) < 5 && c.stand?.kind === 'wheel') { c.dir = 1; setMode(c, 'run', t, rnd(6000, 12000)); say(c, '두두두두!', 1400); break; }
+        if (Math.abs(dx) < 5 && c.stand?.kind === 'wheel') { c.dir = 1; setMode(c, 'run', t, rnd(8000, 15000)); say(c, '두두두두!', 1400); break; }
         c.dir = dx < 0 ? -1 : 1; c.x += c.dir * 60 * dt; pose = 'walking'; break;
       }
       case 'run':   // 제자리 달리기 (바퀴 안에서 앞뒤로 조금씩 흔들림)
         if (!wheel) { setMode(c, 'sit', t, 1000); break; }
-        c.x = wheel.xc - CAT_W / 2 + Math.sin(t / 160) * 6; pose = 'walking fast'; break;
+        c.x = wheel.xc - CAT_W / 2 + Math.sin(t / 95) * 1.5; pose = 'walking fast wheel-running'; break;
       case 'goScratch': {   // 캣타워 기둥 앞으로 가서 스크래칭
         const dx = c.tx - cx;
         if (Math.abs(dx) < 4) { c.x = c.tx - CAT_W / 2; c.noteAt = 0; setMode(c, 'scratch', t, rnd(4000, 7500)); say(c, '벅벅벅~', 1300); break; }

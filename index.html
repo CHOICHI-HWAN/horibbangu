@@ -379,6 +379,23 @@ button,.login-link,.weather-control select {background:#fff9e8de;border-color:#a
 .cat.pang .rear-ears {transform:scaleY(1.25);transform-origin:32px 15px;}
 @keyframes scenery-tail {0%,100%{transform:rotate(-5deg);}50%{transform:rotate(9deg);}}
 @keyframes scenery-ears {0%,40%,60%,100%{transform:rotate(0);}47%{transform:rotate(-4deg);}54%{transform:rotate(3deg);}}
+
+/* A planted, four-paw gallop inside the wheel, distinct from an ordinary walk. */
+.cat.wheel-running.fast svg .all {transition:none;animation:wheel-drive .30s ease-in-out infinite;}
+.cat.wheel-running.fast .head {animation:wheel-focus .30s ease-in-out infinite;}
+.cat.wheel-running.fast .l1,.cat.wheel-running.fast .l3 {animation:wheel-hind-stride .30s linear infinite;}
+.cat.wheel-running.fast .l2,.cat.wheel-running.fast .l4 {animation:wheel-front-stride .30s linear infinite;}
+.cat.wheel-running.fast .l3 {animation-delay:-.045s;}
+.cat.wheel-running.fast .l4 {animation-delay:-.045s;}
+.cat.wheel-running.fast.walking .head,.cat.wheel-running.fast.walking .leg {animation-duration:.30s;animation-direction:normal;}
+.cat.wheel-running.fast .tail {animation:wheel-tail .60s ease-in-out infinite;}
+.wheel.spin svg .ring {animation-duration:.75s;}
+@keyframes wheel-drive {0%,100%{transform:translate(0,1px) rotate(-4deg) scale(1.1,.9);}50%{transform:translate(0,-1.3px) rotate(-6deg) scale(1.12,.91);}}
+@keyframes wheel-hind-stride {0%,100%{transform:rotate(42deg) translateY(-1px);}35%{transform:rotate(-40deg);}65%{transform:rotate(-22deg) translateY(-3px);}}
+@keyframes wheel-front-stride {0%,100%{transform:rotate(-38deg);}35%{transform:rotate(42deg) translateY(-2px);}65%{transform:rotate(20deg) translateY(-4px);}}
+@keyframes wheel-focus {0%,100%{transform:translate(2px,1px) rotate(5deg);}50%{transform:translate(2px,2px) rotate(7deg);}}
+@keyframes wheel-tail {0%,100%{transform:rotate(-26deg);}50%{transform:rotate(-14deg);}}
+[data-motion="paused"] .wheel.spin .ring {animation:none;}
 </style></head><body class="room-page"><main id="roomScene" class="room" tabindex="0" aria-expanded="false" aria-controls="roomControls" aria-label="할슈타트 호수를 바라보는 발코니 고양이 방">
 <div class="floor"></div><div class="sunbeam"></div>
 <div class="window-frame balcony-opening"><div class="window-view">
@@ -1472,12 +1489,12 @@ function tickCats(t) {
       case 'goWheel': {   // 캣휠 안으로 들어가 달리기
         const dx = c.tx - cx;
         if (!wheel) { setMode(c, 'sit', t, 1000); break; }
-        if (Math.abs(dx) < 5 && c.stand?.kind === 'wheel') { c.dir = 1; setMode(c, 'run', t, rnd(6000, 12000)); say(c, '두두두두!', 1400); break; }
+        if (Math.abs(dx) < 5 && c.stand?.kind === 'wheel') { c.dir = 1; setMode(c, 'run', t, rnd(8000, 15000)); say(c, '두두두두!', 1400); break; }
         c.dir = dx < 0 ? -1 : 1; c.x += c.dir * 60 * dt; pose = 'walking'; break;
       }
       case 'run':   // 제자리 달리기 (바퀴 안에서 앞뒤로 조금씩 흔들림)
         if (!wheel) { setMode(c, 'sit', t, 1000); break; }
-        c.x = wheel.xc - CAT_W / 2 + Math.sin(t / 160) * 6; pose = 'walking fast'; break;
+        c.x = wheel.xc - CAT_W / 2 + Math.sin(t / 95) * 1.5; pose = 'walking fast wheel-running'; break;
       case 'goScratch': {   // 캣타워 기둥 앞으로 가서 스크래칭
         const dx = c.tx - cx;
         if (Math.abs(dx) < 4) { c.x = c.tx - CAT_W / 2; c.noteAt = 0; setMode(c, 'scratch', t, rnd(4000, 7500)); say(c, '벅벅벅~', 1300); break; }
