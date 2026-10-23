@@ -10,19 +10,20 @@ subprocess.run([node,str(root/'node_modules/electron-builder/cli.js'),
     '--config',str(source/'portable.json'),'--win','portable','--x64','--publish','never'],check=True,cwd=root)
 subprocess.run([sys.executable,str(source/'test_portable.py')],check=True,cwd=root)
 folder=root/'downloads';folder.mkdir(exist_ok=True)
-exe=folder/'호리빵구.exe';shutil.copyfile(root/'build/windows-portable/호리빵구.exe',exe)
-shutil.copyfile(source/'사용방법.txt',folder/'사용방법.txt')
-archive=folder/'호리빵구-Windows.zip'
+exe=folder/('호리빵구-호환판.exe' if '--standalone' in sys.argv else '호리빵구.exe');shutil.copyfile(root/'build/windows-portable/호리빵구.exe',exe)
+shutil.copyfile(source/'사용방법-호환판.txt',folder/'사용방법-호환판.txt')
+archive=folder/('호리빵구-Windows-Standalone.zip' if '--standalone' in sys.argv else '호리빵구-Windows.zip')
 with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_STORED) as bundle:
     bundle.write(exe,exe.name)
 public=root/'releases';public.mkdir(exist_ok=True)
 checksums=[]
 for local,name in [(exe,'Horibbangu-Windows.exe'),(archive,'Horibbangu-Windows.zip')]:
+    if '--standalone' in sys.argv:name=name.replace('Windows.','Windows-Standalone.')
     shutil.copyfile(local,public/name)
     digest=hashlib.sha256(local.read_bytes()).hexdigest()
     if name.endswith('.zip'):checksums.append(digest+'  '+name+'\n')
     print(f'Published {name}: {local.stat().st_size:,} bytes; SHA-256: {digest}')
-(public/'SHA256SUMS.txt').write_text(''.join(checksums))
+(public/'SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in sorted(public.glob('*.zip'))))
 (folder/'SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in [exe,archive]))
 # Remove only the obsolete generated distribution folder after the new file passes.
 legacy=folder/'호리빵구'

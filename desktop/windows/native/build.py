@@ -30,7 +30,7 @@ for name in sorted(set(needed)):
 (BUILD/'webview-guids.h').write_text('\n'.join(lines)+'\n')
 manifest='''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0"><assemblyIdentity version="3.3.0.0" processorArchitecture="amd64" name="Horibbangu.Desktop" type="win32"/><trustInfo xmlns="urn:schemas-microsoft-com:asm.v3"><security><requestedPrivileges><requestedExecutionLevel level="asInvoker" uiAccess="false"/></requestedPrivileges></security></trustInfo><application xmlns="urn:schemas-microsoft-com:asm.v3"><windowsSettings><dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware><dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness></windowsSettings></application></assembly>'''
 (BUILD/'app.manifest').write_text(manifest)
-files=[ROOT/'desktop/windows/playground.html',ROOT/'desktop/windows/playground.js',sdk/'build/native/x64/WebView2Loader.dll',ROOT/'desktop/windows/사용방법.txt',ROOT/'LICENSE',ROOT/'THIRD_PARTY_NOTICES.md',sdk/'LICENSE.txt',sdk/'NOTICE.txt']
+files=[ROOT/'desktop/windows/playground.html',ROOT/'desktop/windows/playground.js',sdk/'build/native/x64/WebView2Loader.dll',ROOT/'desktop/windows/사용방법.txt',ROOT/'LICENSE',ROOT/'THIRD_PARTY_NOTICES.md',sdk/'LICENSE.txt',sdk/'NOTICE.txt',ROOT/'legal/third-party/NativeRuntime-LICENSES.txt']
 shutil.copyfile(ROOT/'desktop/windows/app.ico',BUILD/'app.ico')
 resources=['// Embedded application assets.','#pragma code_page(65001)','1 ICON "app.ico"','1 24 "app.manifest"']
 for i,p in enumerate(files):

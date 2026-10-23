@@ -239,8 +239,8 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  PWSTR local=nullptr;if(FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData,0,nullptr,&local))){CoUninitialize();CloseHandle(mutex);return 1;}
  swprintf(assetFolder,2048,L"%ls\\HoribbanguDesktop\\Native\\3.3.0",local);swprintf(profileFolder,2048,L"%ls\\HoribbanguDesktop\\WebView2",local);CoTaskMemFree(local);
  SHCreateDirectoryExW(nullptr,assetFolder,nullptr);SHCreateDirectoryExW(nullptr,profileFolder,nullptr);
- const wchar_t* names[]={L"playground.html",L"playground.js",L"WebView2Loader.dll",L"사용방법.txt",L"LICENSE",L"THIRD_PARTY_NOTICES.md",L"WebView2-LICENSE.txt",L"WebView2-NOTICE.txt"};
- for(int i=0;i<8;i++)if(!resource(101+i,names[i])){error(L"앱 파일을 사용자 폴더에 준비하지 못했습니다.");CoUninitialize();CloseHandle(mutex);return 1;}
+ const wchar_t* names[]={L"playground.html",L"playground.js",L"WebView2Loader.dll",L"사용방법.txt",L"LICENSE",L"THIRD_PARTY_NOTICES.md",L"WebView2-LICENSE.txt",L"WebView2-NOTICE.txt",L"NativeRuntime-LICENSES.txt"};
+ for(int i=0;i<9;i++)if(!resource(101+i,names[i])){error(L"앱 파일을 사용자 폴더에 준비하지 못했습니다.");CoUninitialize();CloseHandle(mutex);return 1;}
  wchar_t loaderPath[2048];swprintf(loaderPath,2048,L"%ls\\WebView2Loader.dll",assetFolder);
  HMODULE loader=LoadLibraryExW(loaderPath,nullptr,LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|LOAD_LIBRARY_SEARCH_SYSTEM32);
  typedef HRESULT(STDAPICALLTYPE* VersionFn)(PCWSTR,LPWSTR*);

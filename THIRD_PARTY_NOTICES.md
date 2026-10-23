@@ -6,6 +6,7 @@
 
 | 구성요소 | 사용 위치 | 라이선스·고지 |
 |---|---|---|
+| Zig 0.15.2·LLVM libc++/libc++abi·MinGW-w64 런타임 | 네이티브 빌드·일부 정적 실행 보조 코드 | MIT·Apache-2.0 WITH LLVM-exception·ZPL 등. 배포 도구의 원문을 `NativeRuntime-LICENSES.txt`에 보관·내장합니다. |
 | Microsoft.Web.WebView2 1.0.4258.31 | 경량 Windows 앱의 WebView2Loader.dll 및 SDK | Microsoft의 BSD형 라이선스. `WebView2-LICENSE.txt`, `WebView2-NOTICE.txt` 원문을 함께 포함합니다. |
 | Microsoft Edge WebView2 Runtime | PC에 별도로 설치된 공유 실행 환경 | Microsoft의 런타임 조건을 따릅니다. 경량 EXE에는 브라우저 엔진을 포함하지 않습니다. |
 | Electron 45.0.0 | 기존 Windows 호환판 실행 환경 | MIT. 공식 런타임의 `LICENSE` 원문을 유지합니다. |
