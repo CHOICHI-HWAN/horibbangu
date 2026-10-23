@@ -335,7 +335,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '2.3.5';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '2.4.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -882,6 +882,18 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
   </g>
   <g class="tail-scarf" fill="none" stroke-linecap="round"><path d="M14 30C4 42 28 45 47 39Q55 35 46 35" stroke="#54483e" stroke-opacity=".25" stroke-width="8"/><path d="M14 30C4 42 28 45 47 39Q55 35 46 35" stroke="var(--tail)" stroke-width="6.5"/><path d="M27 41l-1-4m9 4-1-4" stroke="var(--stripe)" stroke-opacity=".35" stroke-width="2"/></g>
 </g>
+<g class="scenery-back" stroke-linecap="round" stroke-linejoin="round">
+ <g class="rear-tail"><path d="M22 35Q4 32 8 40Q12 48 30 40" fill="none" stroke="#65564b" stroke-opacity=".28" stroke-width="6.6"/><path d="M22 35Q4 32 8 40Q12 48 30 40" fill="none" stroke="var(--tail)" stroke-width="5.5"/></g>
+ <ellipse cx="32" cy="31" rx="14.5" ry="11.5" fill="var(--coat-paint,var(--body))" stroke="#665a4e" stroke-opacity=".3" stroke-width=".65"/>
+ <path d="M24 41q-3-3-4 0m21 0q3-3 4 0" fill="none" stroke="var(--leg)" stroke-width="4"/>
+ <path class="rear-ruff" d="M22 18 17 23 20 26 18 29 23 29 25 33 29 31 33 34 37 30 42 31 43 26 47 24 42 18Z" fill="var(--muzzle)"/>
+ <g class="rear-head">
+  <path class="rear-ears" d="M21 15 19 3Q19 0 22 2L29 10M36 10 43 2Q46 0 45 4L43 16" fill="var(--ear)" stroke="#665a4e" stroke-opacity=".4" stroke-width=".7"/>
+  <ellipse cx="32" cy="17" rx="13" ry="11" fill="var(--face-paint,var(--head))" stroke="#665a4e" stroke-opacity=".3" stroke-width=".65"/>
+  <path d="M20 11Q32 2 44 11L44 18Q38 17 33 13Q26 19 20 18Z" fill="var(--cap)"/>
+  <g class="rear-stripes" fill="none" stroke="var(--stripe)" stroke-width="1.5" opacity=".55"><path d="m26 9 2 5m4-6v6m6-5-2 5M21 22l4-1m18 1-4-1"/></g>
+ </g>
+</g>
 <g class="favorite-prop chin-prop"><rect x="38" y="40" width="27" height="5" rx="2.5" fill="#dbc8b4"/><path d="M41 43H62" stroke="#c2aa90" stroke-width=".6"/></g>
 <g class="favorite-prop box-prop" stroke="#ac855a" stroke-width=".7"><path d="M1 31 30 34 61 30V43H1Z" fill="#dfbb8e"/><path d="M30 34V43"/><path d="m23 37 5-1m-5 3 5-1" stroke="#ac855a"/></g>
 <g class="favorite-prop basket-prop" stroke="#b69c77" stroke-width=".65"><path d="M0 29Q30 42 61 29L57 39Q30 49 4 39Z" fill="#e4cba7"/><path d="M3 34Q30 44 58 34M5 38Q30 47 56 38M10 34l1 8m8-6v8m10-7v8m10-9v8m9-10-1 8" fill="none"/><ellipse cx="30" cy="29" rx="31" ry="9" fill="none" stroke="#f4e9d5" stroke-width="3"/></g>
@@ -1110,7 +1122,7 @@ function layoutProps() {
   }
   layoutCozySpots();
   if (typeof roomCozySpots === 'function') roomCozySpots();
-  cats.forEach(c => { c.goal = null; c.edge = null; c.flight = null; c.cozy = null; c.zoom = 0; if (['travel', 'goFavorite', 'jump', 'angel'].includes(c.mode)) setMode(c, 'sit', performance.now(), 1200); });
+  cats.forEach(c => { c.goal = null; c.edge = null; c.flight = null; c.cozy = null; c.sceneryGoal = null; c.zoom = 0; if (['travel', 'goFavorite', 'goScenery', 'scenery', 'jump', 'angel'].includes(c.mode)) setMode(c, 'sit', performance.now(), 1200); });
 }
 // 실제 발판 충돌과 화면 경계를 미리 확인해 출발한 칸으로 돌아오는 점프를 제외한다.
 function jumpPlan(P, Q) {
@@ -1275,10 +1287,11 @@ function chooseFavorite(c, t) {
   c.goal = null; c.edge = null; c.zoom = 0; setMode(c, 'goFavorite', t, 45000); return true;
 }
 function pickIdle(c, t) {
-  c.goal = null; c.edge = null; c.zoom = 0; c.cozy = null;
+  c.goal = null; c.edge = null; c.zoom = 0; c.cozy = null; c.sceneryGoal = null;
   if (c.restUntil > t) { sleepNow(c, t); return; }
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (isHigh(c) && c.stand.kind !== 'ramp') return pickPerch(c, t);
+  if (typeof chooseRoomScenery === 'function' && Math.random() < .24 && chooseRoomScenery(c,t)) return;
   if (Math.random() < .55 && chooseFavorite(c, t)) return;
   const r = Math.random();
   const cushions = platforms.filter(p => p.kind === 'cushion');
@@ -1300,6 +1313,7 @@ function pickIdle(c, t) {
 }
 // 높은 곳(타워·다리)에서의 행동
 function pickPerch(c, t) {
+  if (typeof chooseRoomScenery === 'function' && Math.random() < .28 && chooseRoomScenery(c,t)) return;
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (Math.random() < .45 && chooseFavorite(c, t)) return;
   const r = Math.random(), spots = highSpots();
@@ -1335,7 +1349,7 @@ function pounce(c, t, h) {
   c.vy = Math.sqrt(2 * G * Math.max(25, Math.min(110, h) + 15));
   c.vx = c.dir * 130; c.y += .5; c.air = true; c.stand = null; setMode(c, 'pounce', t, 3000);
 }
-function leave(c, t) { c.cozy = null; if (c.mode === 'angel') { c.angel = null; c.air = true; c.vy = 0; c.vx = 0; } if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
+function leave(c, t) { c.cozy = null; c.sceneryGoal = null; if (c.mode === 'angel') { c.angel = null; c.air = true; c.vy = 0; c.vx = 0; } if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
 function onLand(c, t) {
   if (c.mode === 'pounce') {
     const hit = t - mouse.t < 2500 && Math.abs(mouse.x - (c.x + CAT_W / 2)) < 45;
@@ -1459,7 +1473,7 @@ function tickCats(t) {
     // 시간이 다 되면 다음 행동
     if (t > c.until && !still) {
       if (c.mode === 'angel') finishAngelFlight(c, t);
-      else if (c.mode === 'stretch' || c.mode === 'kiss' || c.mode === 'watch') pickIdle(c, t);
+      else if (c.mode === 'stretch' || c.mode === 'kiss' || c.mode === 'watch' || c.mode === 'scenery') pickIdle(c, t);
       else if (c.mode === 'sleep' || c.mode === 'chin') { setMode(c, 'stretch', t, 3000); }
       else if (c.mode === 'alert') {
         if (mouseOn && hunters.includes(c) && c.y < 20 && Math.random() < .35) startHunt(c, t);
@@ -1489,6 +1503,14 @@ function tickCats(t) {
       }
       case 'stretch': pose = 'stretch'; break;
       case 'watch': pose = 'watch'; break;
+      case 'scenery': pose = 'scenery'; break;
+      case 'goScenery': {
+        if (!c.sceneryGoal) { setMode(c,'sit',t,1000); break; }
+        const dx=c.sceneryGoal.xc-cx;
+        if(Math.abs(dx)<3) { c.goal=null;c.edge=null;setMode(c,'scenery',t,rnd(18000,32000));pose='scenery'; }
+        else {c.dir=dx<0?-1:1;c.x+=c.dir*Math.min(Math.abs(dx),28*dt);pose='walking';}
+        break;
+      }
       case 'pawWrap': pose = 'watch paw-wrap'; break;
       case 'kiss': pose = 'watch kiss'; break;
       case 'goFavorite': {
@@ -1545,6 +1567,7 @@ function tickCats(t) {
         if (c.air) break;
         let here = nodeOf(c);
         if (!c.goal || here === c.goal) {
+          if (c.sceneryGoal && here===c.sceneryGoal) { c.goal=null;c.edge=null;setMode(c,'goScenery',t,30000);break; }
           if (c.foodTarget && here === GROUND) { c.tx=c.foodTarget; c.foodTarget=null; c.favorite='eat'; c.goal=null; c.zoom=0; setMode(c,'goFavorite',t,30000); break; }
           if (c.cozy && here === c.cozy.platform) { c.tx = c.cozy.xc; c.goal = null; c.zoom = 0; setMode(c, 'goFavorite', t, 45000); break; }
           if (c.zoom > 1) {

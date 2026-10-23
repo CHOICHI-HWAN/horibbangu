@@ -74,3 +74,15 @@
 .cat.pang .eyes {transform-origin:46px 22px;}
 .cat.pang.airplane-ears .ear,.cat.pang.airplane-ears .ear-inner {transform:rotate(-12deg) scaleY(.9);transform-origin:46px 18px;}
 .cat.pang.ear-right .ear,.cat.pang.ear-right .ear-inner {transform:rotate(12deg) scaleY(.9);}
+
+.cat .scenery-back {display:none;}
+.cat.scenery .all {display:none;}
+.cat.scenery .scenery-back {display:inline;}
+.cat .rear-ruff,.cat:not(.tabby) .rear-stripes {display:none;}
+.cat.fluffy .rear-ruff {display:inline;}
+.cat.scenery .rear-tail {transform-origin:22px 35px;animation:scenery-tail 5.5s ease-in-out infinite;}
+.cat.scenery .rear-head {transform-origin:32px 25px;animation:scenery-ears 9s ease-in-out infinite;}
+.cat.pang .scenery-back>ellipse {rx:11;ry:10;cy:32;}
+.cat.pang .rear-ears {transform:scaleY(1.25);transform-origin:32px 15px;}
+@keyframes scenery-tail {0%,100%{transform:rotate(-5deg);}50%{transform:rotate(9deg);}}
+@keyframes scenery-ears {0%,40%,60%,100%{transform:rotate(0);}47%{transform:rotate(-4deg);}54%{transform:rotate(3deg);}}

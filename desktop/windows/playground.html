@@ -367,6 +367,18 @@ button,.login-link,.weather-control select {background:#fff9e8de;border-color:#a
 .cat.pang .eyes {transform-origin:46px 22px;}
 .cat.pang.airplane-ears .ear,.cat.pang.airplane-ears .ear-inner {transform:rotate(-12deg) scaleY(.9);transform-origin:46px 18px;}
 .cat.pang.ear-right .ear,.cat.pang.ear-right .ear-inner {transform:rotate(12deg) scaleY(.9);}
+
+.cat .scenery-back {display:none;}
+.cat.scenery .all {display:none;}
+.cat.scenery .scenery-back {display:inline;}
+.cat .rear-ruff,.cat:not(.tabby) .rear-stripes {display:none;}
+.cat.fluffy .rear-ruff {display:inline;}
+.cat.scenery .rear-tail {transform-origin:22px 35px;animation:scenery-tail 5.5s ease-in-out infinite;}
+.cat.scenery .rear-head {transform-origin:32px 25px;animation:scenery-ears 9s ease-in-out infinite;}
+.cat.pang .scenery-back>ellipse {rx:11;ry:10;cy:32;}
+.cat.pang .rear-ears {transform:scaleY(1.25);transform-origin:32px 15px;}
+@keyframes scenery-tail {0%,100%{transform:rotate(-5deg);}50%{transform:rotate(9deg);}}
+@keyframes scenery-ears {0%,40%,60%,100%{transform:rotate(0);}47%{transform:rotate(-4deg);}54%{transform:rotate(3deg);}}
 </style></head><body class="room-page"><main id="roomScene" class="room" tabindex="0" aria-expanded="false" aria-controls="roomControls" aria-label="할슈타트 호수를 바라보는 발코니 고양이 방">
 <div class="floor"></div><div class="sunbeam"></div>
 <div class="window-frame balcony-opening"><div class="window-view">
@@ -399,7 +411,7 @@ button,.login-link,.weather-control select {background:#fff9e8de;border-color:#a
 <figure class="cat-wall-clock" aria-label="고양이 벽시계"><svg viewBox="0 0 120 180" role="img" aria-label="기기 시간에 맞춰 움직이는 고양이 시계"><g id="clockTail"><path d="M60 128Q38 149 61 164Q78 174 89 158" fill="none" stroke="#a08465" stroke-width="9" stroke-linecap="round"/><path d="M65 166q6 0 10-3" stroke="#f3e6cf" stroke-width="5" stroke-linecap="round"/></g><path d="M22 54 18 9Q20 2 28 9L45 30H75L94 8Q102 2 102 12L98 58V105Q96 135 60 137Q23 135 22 106Z" fill="#cab18c" stroke="#a78d6a" stroke-width="2"/><path d="M25 15 29 37 39 32ZM94 16 82 33 95 39Z" fill="#ddb6a6"/><circle cx="60" cy="78" r="37" fill="#fffaf0" stroke="#af9875" stroke-width="1.5"/><g fill="#958268" font-size="10" text-anchor="middle"><text x="60" y="51">12</text><text x="89" y="82">3</text><text x="60" y="109">6</text><text x="31" y="82">9</text></g><g class="clock-eyes" fill="#81745f"><ellipse cx="47" cy="66" rx="2.3" ry="3"/><ellipse cx="73" cy="66" rx="2.3" ry="3"/></g><path id="clockHour" d="M60 81V58" stroke="#6c7869" stroke-width="4" stroke-linecap="round"/><path id="clockMinute" d="M60 83V49" stroke="#8f7858" stroke-width="2.5" stroke-linecap="round"/><circle cx="60" cy="78" r="4" fill="#c1a576"/><path d="M29 120q5 4 10 0m42 0q5 4 10 0" fill="none" stroke="#f7e8cf" stroke-width="2.5" stroke-linecap="round"/>
 <g id="clockMoon" role="img" aria-label="오늘의 달 모양"><title id="clockMoonTitle">오늘의 문페이즈</title><circle cx="60" cy="122" r="11.5" fill="#4d5a61" stroke="#ebd5a0" stroke-width="1"/><circle cx="60" cy="122" r="9" fill="#718087" opacity=".4"/><path id="clockMoonLight" fill="#fff0bd"/><path d="M42 119h3m-1.5-1.5v3m31-1h3m-1.5-1.5v3" fill="none" stroke="#f6e4b5" stroke-width=".8"/></g></svg><figcaption id="catClockText"></figcaption></figure>
 </main>
-<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><button id="closeControls">풍경만 보기</button></nav></header>
+<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="viewBtn">풍경 감상</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><button id="closeControls">풍경만 보기</button></nav></header>
 
 <div id="cats" aria-label="고양이 놀이터"><div id="props"></div></div>
 <div class="scene-label"><div id="status" role="status"><strong>호수가 보이는 작은 방</strong>고양이를 끌어 옮기거나, 눈을 맞춰 보세요.</div><div id="roomClock"></div></div>
@@ -437,6 +449,16 @@ function roomCatSVG(svg,pet){
     .replace('M33 8 34 16 39 12ZM57 8 53 13 58 17Z',
     'M31 3Q31 10 34 15L39 13ZM62 3 54 14 59 16Q62 10 62 3Z')
     .replaceAll('cx="26" cy="28" rx="19.5" ry="13"','cx="26" cy="30" rx="16.5" ry="10"');
+}
+function chooseRoomScenery(c,t){
+  if(reduceMotion||c.air||c.mode==='bubble'||c.mode==='guestExit')return false;
+  if(cats.filter(o=>o!==c&&o.sceneryGoal).length>=3)return false;
+  const spots=highSpots().filter(p=>p.h>innerHeight*.20&&p.h<innerHeight*.84&&p.xc>innerWidth*.08&&p.xc<innerWidth*.92&&distTo(p).has(nodeOf(c))&&!cats.some(o=>o!==c&&o.sceneryGoal===p));
+  if(!spots.length)return false;
+  const here=nodeOf(c),spot=spots.includes(here)?here:spots[Math.floor(Math.random()*spots.length)];
+  leave(c,t);c.zoom=0;c.sceneryGoal=spot;
+  if(here===spot)setMode(c,'goScenery',t,30000);else travelTo(c,spot,t);
+  return true;
 }
 function roomGuestPets(){ return visitingFriends.filter(p=>activeRoomGuests.includes(p.id)); }
 function inviteRoomFriends(t=performance.now()){
@@ -633,6 +655,7 @@ function initRoom(){
     else if(e.key==='Tab')setRoomControls(true);
     else if((e.key==='Enter'||e.key===' ')&&e.target===$('roomScene')){e.preventDefault();setRoomControls(!document.body.classList.contains('controls-visible'));}
   });
+  $('viewBtn').onclick=()=>{let n=0;for(const c of cats){if(n<3&&chooseRoomScenery(c,performance.now()))n++;}$('status').textContent=reduceMotion?'움직임을 켜면 아이들이 호수를 보러 가요.':'호수가 잘 보이는 자리로 천천히 가요.';};
   $('friendsBtn').onclick=()=>{inviteRoomFriends();$('status').textContent='소양이, 소미, 팡이가 놀러 왔어요.';};
   $('closeControls').onclick=()=>setRoomControls(false);
   $('weather').onchange=e=>setRoomWeather(e.target.value);
@@ -722,6 +745,18 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
     <path d="m37 27-6-1m6 3-5 1m24-3 6-1m-6 3 5 1" fill="none" stroke="#84756a" stroke-width=".55" opacity=".65"/>
   </g>
   <g class="tail-scarf" fill="none" stroke-linecap="round"><path d="M14 30C4 42 28 45 47 39Q55 35 46 35" stroke="#54483e" stroke-opacity=".25" stroke-width="8"/><path d="M14 30C4 42 28 45 47 39Q55 35 46 35" stroke="var(--tail)" stroke-width="6.5"/><path d="M27 41l-1-4m9 4-1-4" stroke="var(--stripe)" stroke-opacity=".35" stroke-width="2"/></g>
+</g>
+<g class="scenery-back" stroke-linecap="round" stroke-linejoin="round">
+ <g class="rear-tail"><path d="M22 35Q4 32 8 40Q12 48 30 40" fill="none" stroke="#65564b" stroke-opacity=".28" stroke-width="6.6"/><path d="M22 35Q4 32 8 40Q12 48 30 40" fill="none" stroke="var(--tail)" stroke-width="5.5"/></g>
+ <ellipse cx="32" cy="31" rx="14.5" ry="11.5" fill="var(--coat-paint,var(--body))" stroke="#665a4e" stroke-opacity=".3" stroke-width=".65"/>
+ <path d="M24 41q-3-3-4 0m21 0q3-3 4 0" fill="none" stroke="var(--leg)" stroke-width="4"/>
+ <path class="rear-ruff" d="M22 18 17 23 20 26 18 29 23 29 25 33 29 31 33 34 37 30 42 31 43 26 47 24 42 18Z" fill="var(--muzzle)"/>
+ <g class="rear-head">
+  <path class="rear-ears" d="M21 15 19 3Q19 0 22 2L29 10M36 10 43 2Q46 0 45 4L43 16" fill="var(--ear)" stroke="#665a4e" stroke-opacity=".4" stroke-width=".7"/>
+  <ellipse cx="32" cy="17" rx="13" ry="11" fill="var(--face-paint,var(--head))" stroke="#665a4e" stroke-opacity=".3" stroke-width=".65"/>
+  <path d="M20 11Q32 2 44 11L44 18Q38 17 33 13Q26 19 20 18Z" fill="var(--cap)"/>
+  <g class="rear-stripes" fill="none" stroke="var(--stripe)" stroke-width="1.5" opacity=".55"><path d="m26 9 2 5m4-6v6m6-5-2 5M21 22l4-1m18 1-4-1"/></g>
+ </g>
 </g>
 <g class="favorite-prop chin-prop"><rect x="38" y="40" width="27" height="5" rx="2.5" fill="#dbc8b4"/><path d="M41 43H62" stroke="#c2aa90" stroke-width=".6"/></g>
 <g class="favorite-prop box-prop" stroke="#ac855a" stroke-width=".7"><path d="M1 31 30 34 61 30V43H1Z" fill="#dfbb8e"/><path d="M30 34V43"/><path d="m23 37 5-1m-5 3 5-1" stroke="#ac855a"/></g>
@@ -951,7 +986,7 @@ function layoutProps() {
   }
   layoutCozySpots();
   if (typeof roomCozySpots === 'function') roomCozySpots();
-  cats.forEach(c => { c.goal = null; c.edge = null; c.flight = null; c.cozy = null; c.zoom = 0; if (['travel', 'goFavorite', 'jump', 'angel'].includes(c.mode)) setMode(c, 'sit', performance.now(), 1200); });
+  cats.forEach(c => { c.goal = null; c.edge = null; c.flight = null; c.cozy = null; c.sceneryGoal = null; c.zoom = 0; if (['travel', 'goFavorite', 'goScenery', 'scenery', 'jump', 'angel'].includes(c.mode)) setMode(c, 'sit', performance.now(), 1200); });
 }
 // 실제 발판 충돌과 화면 경계를 미리 확인해 출발한 칸으로 돌아오는 점프를 제외한다.
 function jumpPlan(P, Q) {
@@ -1116,10 +1151,11 @@ function chooseFavorite(c, t) {
   c.goal = null; c.edge = null; c.zoom = 0; setMode(c, 'goFavorite', t, 45000); return true;
 }
 function pickIdle(c, t) {
-  c.goal = null; c.edge = null; c.zoom = 0; c.cozy = null;
+  c.goal = null; c.edge = null; c.zoom = 0; c.cozy = null; c.sceneryGoal = null;
   if (c.restUntil > t) { sleepNow(c, t); return; }
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (isHigh(c) && c.stand.kind !== 'ramp') return pickPerch(c, t);
+  if (typeof chooseRoomScenery === 'function' && Math.random() < .24 && chooseRoomScenery(c,t)) return;
   if (Math.random() < .55 && chooseFavorite(c, t)) return;
   const r = Math.random();
   const cushions = platforms.filter(p => p.kind === 'cushion');
@@ -1141,6 +1177,7 @@ function pickIdle(c, t) {
 }
 // 높은 곳(타워·다리)에서의 행동
 function pickPerch(c, t) {
+  if (typeof chooseRoomScenery === 'function' && Math.random() < .28 && chooseRoomScenery(c,t)) return;
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (Math.random() < .45 && chooseFavorite(c, t)) return;
   const r = Math.random(), spots = highSpots();
@@ -1176,7 +1213,7 @@ function pounce(c, t, h) {
   c.vy = Math.sqrt(2 * G * Math.max(25, Math.min(110, h) + 15));
   c.vx = c.dir * 130; c.y += .5; c.air = true; c.stand = null; setMode(c, 'pounce', t, 3000);
 }
-function leave(c, t) { c.cozy = null; if (c.mode === 'angel') { c.angel = null; c.air = true; c.vy = 0; c.vx = 0; } if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
+function leave(c, t) { c.cozy = null; c.sceneryGoal = null; if (c.mode === 'angel') { c.angel = null; c.air = true; c.vy = 0; c.vx = 0; } if (c.partner) { c.partner.partner = null; setMode(c.partner, 'sit', t, 1500); c.partner = null; } }
 function onLand(c, t) {
   if (c.mode === 'pounce') {
     const hit = t - mouse.t < 2500 && Math.abs(mouse.x - (c.x + CAT_W / 2)) < 45;
@@ -1300,7 +1337,7 @@ function tickCats(t) {
     // 시간이 다 되면 다음 행동
     if (t > c.until && !still) {
       if (c.mode === 'angel') finishAngelFlight(c, t);
-      else if (c.mode === 'stretch' || c.mode === 'kiss' || c.mode === 'watch') pickIdle(c, t);
+      else if (c.mode === 'stretch' || c.mode === 'kiss' || c.mode === 'watch' || c.mode === 'scenery') pickIdle(c, t);
       else if (c.mode === 'sleep' || c.mode === 'chin') { setMode(c, 'stretch', t, 3000); }
       else if (c.mode === 'alert') {
         if (mouseOn && hunters.includes(c) && c.y < 20 && Math.random() < .35) startHunt(c, t);
@@ -1330,6 +1367,14 @@ function tickCats(t) {
       }
       case 'stretch': pose = 'stretch'; break;
       case 'watch': pose = 'watch'; break;
+      case 'scenery': pose = 'scenery'; break;
+      case 'goScenery': {
+        if (!c.sceneryGoal) { setMode(c,'sit',t,1000); break; }
+        const dx=c.sceneryGoal.xc-cx;
+        if(Math.abs(dx)<3) { c.goal=null;c.edge=null;setMode(c,'scenery',t,rnd(18000,32000));pose='scenery'; }
+        else {c.dir=dx<0?-1:1;c.x+=c.dir*Math.min(Math.abs(dx),28*dt);pose='walking';}
+        break;
+      }
       case 'pawWrap': pose = 'watch paw-wrap'; break;
       case 'kiss': pose = 'watch kiss'; break;
       case 'goFavorite': {
@@ -1386,6 +1431,7 @@ function tickCats(t) {
         if (c.air) break;
         let here = nodeOf(c);
         if (!c.goal || here === c.goal) {
+          if (c.sceneryGoal && here===c.sceneryGoal) { c.goal=null;c.edge=null;setMode(c,'goScenery',t,30000);break; }
           if (c.foodTarget && here === GROUND) { c.tx=c.foodTarget; c.foodTarget=null; c.favorite='eat'; c.goal=null; c.zoom=0; setMode(c,'goFavorite',t,30000); break; }
           if (c.cozy && here === c.cozy.platform) { c.tx = c.cozy.xc; c.goal = null; c.zoom = 0; setMode(c, 'goFavorite', t, 45000); break; }
           if (c.zoom > 1) {

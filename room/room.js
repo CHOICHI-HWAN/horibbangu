@@ -26,6 +26,16 @@ function roomCatSVG(svg,pet){
     'M31 3Q31 10 34 15L39 13ZM62 3 54 14 59 16Q62 10 62 3Z')
     .replaceAll('cx="26" cy="28" rx="19.5" ry="13"','cx="26" cy="30" rx="16.5" ry="10"');
 }
+function chooseRoomScenery(c,t){
+  if(reduceMotion||c.air||c.mode==='bubble'||c.mode==='guestExit')return false;
+  if(cats.filter(o=>o!==c&&o.sceneryGoal).length>=3)return false;
+  const spots=highSpots().filter(p=>p.h>innerHeight*.20&&p.h<innerHeight*.84&&p.xc>innerWidth*.08&&p.xc<innerWidth*.92&&distTo(p).has(nodeOf(c))&&!cats.some(o=>o!==c&&o.sceneryGoal===p));
+  if(!spots.length)return false;
+  const here=nodeOf(c),spot=spots.includes(here)?here:spots[Math.floor(Math.random()*spots.length)];
+  leave(c,t);c.zoom=0;c.sceneryGoal=spot;
+  if(here===spot)setMode(c,'goScenery',t,30000);else travelTo(c,spot,t);
+  return true;
+}
 function roomGuestPets(){ return visitingFriends.filter(p=>activeRoomGuests.includes(p.id)); }
 function inviteRoomFriends(t=performance.now()){
   if(activeRoomGuests.length) return;
@@ -221,6 +231,7 @@ function initRoom(){
     else if(e.key==='Tab')setRoomControls(true);
     else if((e.key==='Enter'||e.key===' ')&&e.target===$('roomScene')){e.preventDefault();setRoomControls(!document.body.classList.contains('controls-visible'));}
   });
+  $('viewBtn').onclick=()=>{let n=0;for(const c of cats){if(n<3&&chooseRoomScenery(c,performance.now()))n++;}$('status').textContent=reduceMotion?'움직임을 켜면 아이들이 호수를 보러 가요.':'호수가 잘 보이는 자리로 천천히 가요.';};
   $('friendsBtn').onclick=()=>{inviteRoomFriends();$('status').textContent='소양이, 소미, 팡이가 놀러 왔어요.';};
   $('closeControls').onclick=()=>setRoomControls(false);
   $('weather').onchange=e=>setRoomWeather(e.target.value);
