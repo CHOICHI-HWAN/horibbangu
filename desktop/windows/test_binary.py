@@ -4,7 +4,7 @@ import hashlib,json,struct,zipfile,os,sys,tempfile
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'scripts'))
 from compiler import compile_file
 root=Path(__file__).resolve().parents[2]
-source=root/'desktop/windows';folder=root/'downloads/호리빵구'
+source=root/'desktop/windows';folder=root/'build/windows-unpacked'
 exe=folder/'호리빵구.exe';data=exe.read_bytes()
 u16=lambda p:struct.unpack_from('<H',data,p)[0]
 u32=lambda p:struct.unpack_from('<I',data,p)[0]

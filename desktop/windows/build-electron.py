@@ -24,10 +24,8 @@ with tempfile.TemporaryDirectory(prefix='horibbangu-desktop-') as temp:
     for name in ['playground.html','playground.js','tray.png','package.json']:
         shutil.copyfile(source/name,app/name)
     for name in ['main.cjs','preload.cjs']:compile_file(source/name,app/name,'node')
-    shutil.copyfile(root/'downloads/사용방법.txt',stage/'사용방법.txt')
-    target=root/'downloads/호리빵구'
+    shutil.copyfile(source/'사용방법.txt',stage/'사용방법.txt')
+    target=root/'build/windows-unpacked'
     if target.exists():shutil.rmtree(target)
     shutil.copytree(stage,target)
-# Remove only the old generated single-file browser launcher, to avoid confusion.
-(root/'downloads/호리빵구.exe').unlink(missing_ok=True)
 print('Packaged borderless transparent desktop app with verified Electron '+lock['version'])

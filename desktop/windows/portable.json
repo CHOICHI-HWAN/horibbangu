@@ -1,0 +1,22 @@
+{
+  "appId": "app.horibbangu.desktop",
+  "productName": "호리빵구",
+  "executableName": "호리빵구",
+  "electronVersion": "45.0.0",
+  "directories": {
+    "buildResources": ".",
+    "output": "../../build/windows-portable"
+  },
+  "toolsets": {"nsis": "1.2.1"},
+  "win": {
+    "target": [{"target": "portable", "arch": ["x64"]}],
+    "icon": "app.ico",
+    "signAndEditExecutable": false
+  },
+  "portable": {
+    "artifactName": "호리빵구.exe",
+    "requestExecutionLevel": "user",
+    "unpackDirName": true
+  },
+  "publish": null
+}

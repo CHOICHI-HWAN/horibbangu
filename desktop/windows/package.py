@@ -1,16 +1,29 @@
-"""Publish a complete portable desktop folder as a ZIP; no external installer."""
+"""Build a single portable EXE and an optional ZIP containing only that EXE."""
 from pathlib import Path
-import hashlib,shutil,zipfile
-folder=Path(__file__).resolve().parents[2]/'downloads'
-app=folder/'호리빵구'
-assert (app/'호리빵구.exe').is_file() and (app/'resources/app/playground.html').is_file()
+import hashlib,json,os,shutil,subprocess,sys,zipfile
+root=Path(__file__).resolve().parents[2]
+source=root/'desktop/windows'
+node=os.environ.get('NODE_BIN') or shutil.which('node') or str(Path.home()/'.local/node/bin/node')
+# NSIS 3.12 + pinned electron-builder. Keep the unpacked runtime in build/ only.
+subprocess.run([node,str(root/'node_modules/electron-builder/cli.js'),
+    '--projectDir',str(source),'--prepackaged',str(root/'build/windows-unpacked'),
+    '--config',str(source/'portable.json'),'--win','portable','--x64','--publish','never'],check=True,cwd=root)
+subprocess.run([sys.executable,str(source/'test_portable.py')],check=True,cwd=root)
+folder=root/'downloads';folder.mkdir(exist_ok=True)
+exe=folder/'호리빵구.exe';shutil.copyfile(root/'build/windows-portable/호리빵구.exe',exe)
+shutil.copyfile(source/'사용방법.txt',folder/'사용방법.txt')
 archive=folder/'호리빵구-Windows.zip'
-with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as bundle:
-    for file in sorted(app.rglob('*')):
-        if file.is_file():bundle.write(file,'호리빵구/'+file.relative_to(app).as_posix())
-checksum=hashlib.sha256(archive.read_bytes()).hexdigest()
-(folder/'SHA256SUMS.txt').write_text(checksum+'  '+archive.name+'\n')
-public=folder.parent/'releases';public.mkdir(exist_ok=True)
-public_zip=public/'Horibbangu-Windows.zip';shutil.copyfile(archive,public_zip)
-(public/'SHA256SUMS.txt').write_text(checksum+'  '+public_zip.name+'\n')
-print(f'Packaged portable Windows ZIP: {archive.stat().st_size:,} bytes; SHA-256: {checksum}')
+with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_STORED) as bundle:
+    bundle.write(exe,exe.name)
+public=root/'releases';public.mkdir(exist_ok=True)
+checksums=[]
+for local,name in [(exe,'Horibbangu-Windows.exe'),(archive,'Horibbangu-Windows.zip')]:
+    shutil.copyfile(local,public/name)
+    digest=hashlib.sha256(local.read_bytes()).hexdigest()
+    checksums.append(digest+'  '+name+'\n')
+    print(f'Published {name}: {local.stat().st_size:,} bytes; SHA-256: {digest}')
+(public/'SHA256SUMS.txt').write_text(''.join(checksums))
+(folder/'SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in [exe,archive]))
+# Remove only the obsolete generated distribution folder after the new file passes.
+legacy=folder/'호리빵구'
+if (legacy/'resources/app/package.json').exists() and json.loads((legacy/'resources/app/package.json').read_text()).get('name')=='horibbangu-desktop':shutil.rmtree(legacy)

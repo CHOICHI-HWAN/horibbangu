@@ -61,9 +61,11 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 `PLAYWRIGHT_MODULE`로 모듈 경로, `BROWSER_EXECUTABLE`로 설치된 Chromium 계열 브라우저 경로를 지정할 수도 있습니다.
 검사는 별도 브라우저 세션에서 실행하며 Firebase 연결을 차단하고 실제 체중기록을 저장하지 않습니다.
 
-## Windows 바탕화면 친구들 (3.0)
+## Windows 바탕화면 친구들 (3.1.1)
 
-[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.zip)에서 ZIP을 받고 **폴더 전체를 압축 해제한 뒤 `호리빵구/호리빵구.exe`**를 실행합니다. EXE만 따로 옮기면 동작하지 않습니다. 바탕화면 바로가기는 만들 수 있습니다.
+[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows.exe)에서 **`호리빵구.exe` 하나**만 받아 실행합니다. 설치·관리자 권한·별도 DLL 폴더가 필요 없습니다. 바탕화면에 EXE 자체를 두어도 됩니다. 기존 ZIP 링크도 유지하며 이제 ZIP 안에는 EXE 하나만 들어 있습니다.
+
+단일 EXE는 [electron-builder의 portable 타깃](https://www.electron.build/v26/docs/targets/)으로 묶습니다. 실행 중에는 런타임을 실행별 Windows 임시 폴더에 자동으로 풀고 종료 시 정리합니다. 첫 실행 시 압축 해제 시간이 걸리며 강제 종료·전원 종료 시 임시 파일이 남을 수 있습니다. 설정은 임시 폴더와 별도로 유지됩니다.
 
 Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그림·시계·달력만 투명한 바탕화면 위에 표시합니다. 제목 표시줄과 테두리가 없고 빈 공간은 클릭이 아래 프로그램으로 통과합니다. 고양이 클릭·공기방울 드래그와 기존 행동은 유지하며, 호수가 없는 데스크톱 모드에서는 풍경 감상 행동을 사용하지 않습니다. 웹앱은 기존 호수 배경을 유지합니다.
 
@@ -71,9 +73,9 @@ Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그
 
 실행 환경은 [Electron 투명 창](https://www.electronjs.org/docs/latest/tutorial/custom-window-styles)과 [클릭 통과 API](https://www.electronjs.org/docs/latest/tutorial/custom-window-interactions)를 사용합니다. `main.cjs`가 네이티브 창과 트레이를 담당하고 `preload.cjs`가 제한된 IPC만 제공합니다. 렌더러는 sandbox/contextIsolation을 사용하며 Node·외부 네트워크·외부 탐색을 허용하지 않습니다.
 
-최초 빌드 전 Node.js에서 `npm ci`로 고정된 esbuild를 설치합니다. 재빌드는 Node.js·Python 3 환경에서 `desktop/windows/build.sh`를 실행합니다. `runtime-lock.json`에 고정한 공식 Windows x64 런타임 ZIP을 SHA-256으로 확인한 뒤 앱 파일과 함께 패키징합니다. `HORIBBANGU_ELECTRON_CACHE`로 런타임 캐시 위치를 지정할 수 있습니다. 기본값은 `/tmp/horibbangu-build/electron`입니다. ZIP과 실행 폴더는 Git에서 제외되고 공개 ZIP·체크섬만 `releases/`를 통해 Firebase에 배포됩니다.
+최초 빌드 전 Node.js에서 `npm ci`로 고정된 esbuild·electron-builder를 설치합니다. 재빌드는 Node.js·Python 3 환경에서 `desktop/windows/build.sh`를 실행합니다. `runtime-lock.json`에 고정한 공식 Windows x64 런타임 ZIP을 SHA-256으로 확인한 뒤 앱 파일과 함께 패키징합니다. `HORIBBANGU_ELECTRON_CACHE`로 런타임 캐시 위치를 지정할 수 있습니다. 기본값은 `/tmp/horibbangu-build/electron`입니다. 공식 런타임은 `build/windows-unpacked/`에서만 조립하고, 고정 버전 electron-builder 26.15.3와 NSIS toolset 1.2.1(NSIS 3.12)로 단일 EXE를 만듭니다. builder 26.15.3에서는 `unpackDirName: true`가 실행마다 고유한 `$PLUGINSDIR`를 사용하므로 중복 실행이 기존 실행의 파일을 지우지 않습니다. 이 동작은 버전 업그레이드 시 다시 확인해야 합니다. 생성물은 Git에서 제외하고 EXE·EXE 하나만 든 ZIP·체크섬을 `releases/`에서 Firebase로 배포합니다.
 
-`test_binary.py`는 공식 런타임 일치·PE 형식·필수 파일·앱 파일 일치를 확인합니다. `tests/desktop.cjs`는 실제 Electron 창에서 투명 렌더링·IPC·드래그·메뉴를 검증합니다 (`ELECTRON_EXECUTABLE`, `PLAYWRIGHT_MODULE` 지정). Mac에서 앱 구조를 검증했으며 Windows 실기기의 투명 합성과 클릭 통과는 아직 미확인입니다. 실행파일은 코드 서명이 되어 있지 않습니다.
+`test_binary.py`는 공식 런타임 일치·PE 형식·필수 파일·앱 파일 일치를 확인합니다. `test_portable.py`는 최종 단일 EXE에서 내부 압축을 실제로 풀어 모든 파일이 원본과 일치하는지, 관리자 권한을 요구하지 않는지 검사합니다. `tests/desktop.cjs`는 실제 Electron 창에서 투명 렌더링·IPC·드래그·메뉴를 검증합니다 (`ELECTRON_EXECUTABLE`, `PLAYWRIGHT_MODULE` 지정, 패키징된 코드는 `HORI_DESKTOP_APP=절대경로/build/windows-unpacked/resources/app`). Mac에서 앱 구조를 검증했으며 Windows 실기기의 투명 합성과 클릭 통과는 아직 미확인입니다. 실행파일은 코드 서명이 되어 있지 않습니다.
 
 ## 고양이 방 (2.2)
 
@@ -89,7 +91,7 @@ Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그
 
 크기는 최근 양수 체중의 세제곱근에 사진 기준 체형을 곱해 0.82~1.42배로 제한합니다. 동글이와 로이는 사진 기준 체형을 유지합니다. 공개 화면에는 빌드 시 기본 기록의 크기 비율만 들어갑니다. 기록 페이지에서 동기화한 기기는 최신 크기 비율을 방에 전달합니다. 다른 기기의 최신 서버 크기를 반영하려면 그 기기에서 기록 페이지를 한 번 동기화해야 합니다.
 
-`desktop/windows/build.sh`는 같은 고양이 엔진에서 기록 링크와 방 배경을 제거한 투명 데스크톱 앱을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에 보관하며, Firebase용 ZIP과 체크섬을 `releases/`에 복사합니다. 공개 ZIP은 Firebase Hosting과 GitHub Releases에 배포합니다. Windows 실기기 실행은 아직 미확인입니다.
+`desktop/windows/build.sh`는 같은 고양이 엔진에서 기록 링크와 방 배경을 제거한 투명 데스크톱 앱을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에 보관하며, Firebase용 단일 EXE·ZIP·체크섬을 `releases/`에 복사합니다. 공개 EXE와 ZIP은 Firebase Hosting과 GitHub Releases에 배포합니다. Windows 실기기 실행은 아직 미확인입니다.
 
 검사: `tests/room.cjs`(공개 화면·터치/키보드 메뉴·시간·날씨·행동·모바일 입력), `tests/room-routes.cjs`(전체 타워/발판 이동), `tests/playground.cjs`(기록 페이지 엔진), `tests/offline-playground.cjs`(오프라인), `tests/sizes.cjs`(체중과 크기 전달), `node tests/sync.cjs`(저장 중 재수정). 브라우저 검사는 `PLAYWRIGHT_MODULE`, 필요하면 `BROWSER_EXECUTABLE` 환경 변수를 지정합니다.
 
@@ -99,7 +101,7 @@ Windows 실행본은 호수·하늘·벽·바닥 없이 고양이와 가구·그
 
 ## JavaScript 컴파일과 성능 검사 (3.1)
 
-`records.html`과 `room/`는 읽기 쉬운 원본입니다. `npm run build` 또는 Firebase Hosting의 predeploy에서 `scripts/build-hosting.py`가 인라인 JavaScript를 고정 버전 esbuild로 컴파일·압축한 뒤 `site/`에 배포할 여섯 파일만 만듭니다. `site/`와 `build/`는 생성물이며 Git에 넣지 않습니다. 소스맵·빌드 도구·원본 사진·개발 파일은 Hosting에 포함되지 않습니다.
+`records.html`과 `room/`는 읽기 쉬운 원본입니다. `npm run build` 또는 Firebase Hosting의 predeploy에서 `scripts/build-hosting.py`가 인라인 JavaScript를 고정 버전 esbuild로 컴파일·압축한 뒤 `site/`에 배포할 일곱 파일만 만듭니다. `site/`와 `build/`는 생성물이며 Git에 넣지 않습니다. 소스맵·빌드 도구·원본 사진·개발 파일은 Hosting에 포함되지 않습니다.
 
 데스크톱의 renderer는 `playground.js`로 컴파일하고 엄격한 로컬 CSP로 불러옵니다. main/preload도 패키징할 때 컴파일합니다. Electron은 V8 코드 캐시 정책을 사용합니다. esbuild는 JavaScript 변환·압축 도구이며 네이티브 코드로 바꾸는 것은 아닙니다. 실제 실행 비용은 위치·크기 DOM 쓰기 생략, 발판 조회 캐시, 물결의 좁은 이미지 영역 그리기와 Canvas 재사용, 날씨 30fps 및 맑은 날 중복 그리기 제거로 줄였습니다.
 

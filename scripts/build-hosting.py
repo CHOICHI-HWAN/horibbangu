@@ -16,8 +16,8 @@ for name in ['index.html','records.html']:
 shutil.copyfile(root/'config.js',site/'config.js')
 (site/'room').mkdir(exist_ok=True);shutil.copyfile(root/'room/cats-extra.css',site/'room/cats-extra.css')
 (site/'releases').mkdir(exist_ok=True)
-for name in ['Horibbangu-Windows.zip','SHA256SUMS.txt']:
-    assert (root/'releases'/name).is_file(),'Build the desktop ZIP first'
+for name in ['Horibbangu-Windows.exe','Horibbangu-Windows.zip','SHA256SUMS.txt']:
+    assert (root/'releases'/name).is_file(),'Build the portable desktop EXE first'
     shutil.copyfile(root/'releases'/name,site/'releases'/name)
 (root/'build').mkdir(exist_ok=True);(root/'build/compile-report.json').write_text(json.dumps(report,indent=2)+'\n')
 print('Compiled Hosting JavaScript:',json.dumps(report))
