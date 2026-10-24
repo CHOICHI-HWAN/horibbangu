@@ -79,7 +79,7 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 [Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows-v3.3.2.zip)에서 `호리빵구-v3.3.2.exe` 하나를 꺼내 실행합니다. ZIP은 약 0.76 MB이며 Windows 10/11 x64와 공유 Microsoft Edge WebView2 런타임을 사용합니다. 고양이와 풍경은 EXE에 내장되어 인터넷·로그인·체중 기록 없이 감상할 수 있습니다.
 
-**감상 전용 배경입니다.** 고양이·가구·풍경 위를 포함한 모든 클릭·더블클릭·우클릭·드래그·휠 입력을 아래 바탕화면이나 프로그램으로 통과시킵니다. 마우스 훅, WebView2 입력 전달과 포커스 이동 코드를 제거했습니다. 이전 버전에서 저장한 항상 위 설정도 무시하고 항상 뒤의 비활성 창으로 시작합니다. Windows판에서는 고양이 쓰다듬기·공기방울 드래그와 화면 버튼 조작을 제공하지 않습니다. 웹판의 고양이 조작은 그대로 유지합니다.
+**감상 전용 배경입니다.** 고양이·가구·풍경 위를 포함한 모든 클릭·더블클릭·우클릭·드래그·휠 입력을 아래 바탕화면이나 프로그램으로 통과시킵니다. 고양이 화면으로 마우스·포커스를 전달하던 코드와 마우스 훅을 제거했습니다. WebView2 초기화 후 바탕화면에 연결하며, 고양이 창과 이 앱에 속한 WebView2 내부 입력 창도 비활성화합니다. 이전 버전에서 저장한 항상 위 설정도 무시합니다. Explorer의 아이콘 아래 배경 계층에 비활성 자식 창으로 연결하고, 트레이·단축키는 별도 숨겨진 메시지 창에서 처리합니다. Windows판에서는 고양이 쓰다듬기·공기방울 드래그와 화면 버튼 조작을 제공하지 않습니다. 웹판의 고양이 조작은 그대로 유지합니다.
 
 시계 옆 고양이 트레이 아이콘을 클릭하거나 우클릭해 배경 켜기/끄기·숨기기·모니터·투명도·휴식·풍경 감상·움직임·날씨를 조절합니다. 기본판에서는 친구 초대와 날개 친구들도 선택할 수 있습니다. `Ctrl+Alt+H`는 화면 설정, `Ctrl+Alt+Q`는 종료입니다. 모니터와 투명도(0~80%)는 저장되고, 모니터 분리 시 주 모니터로 대체합니다.
 
@@ -96,7 +96,7 @@ ZIP과 내부 EXE 이름 모두 `v3.3.2`처럼 버전을 포함합니다. 다음
 
 실행파일은 `downloads/호리빵구-박박사-v3.3.2.exe`, `downloads/호리빵구-김박사-v3.3.2.exe`에 보관합니다. 각 개별판은 창 클래스·단일 실행 잠금·트레이 이름·설정·WebView2 프로필을 분리하여 기본판 및 서로와 함께 실행할 수 있습니다. 설정 폴더는 `%LOCALAPPDATA%\HoribbanguDesktop-Park`, `%LOCALAPPDATA%\HoribbanguDesktop-Kim`입니다.
 
-재빌드는 `python3 desktop/windows/build-editions.py`이며, `--edition park` 또는 `--edition kim`으로 렌더러·네이티브 빌드·패키징 단계를 각각 실행할 수도 있습니다. `tests/desktop-editions.cjs`는 기본판 방문 고양이와 SVG·색상·크기를 대조하고, 정확한 고양이 목록·장시간 방문 방지·오프라인 동작·배경·감상 전용 화면·웹 다운로드 링크를 검사합니다. Windows CI는 기본판·박박사판·김박사판을 각각 빌드하고 실제 창과 마우스 동작을 검사합니다. 3.3.1의 Windows 실행 검증 기록은 [여기](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/40026140563)에 남아 있습니다.
+재빌드는 `python3 desktop/windows/build-editions.py`이며, `--edition park` 또는 `--edition kim`으로 렌더러·네이티브 빌드·패키징 단계를 각각 실행할 수도 있습니다. `tests/desktop-editions.cjs`는 기본판 방문 고양이와 SVG·색상·크기를 대조하고, 정확한 고양이 목록·장시간 방문 방지·오프라인 동작·배경·감상 전용 화면·웹 다운로드 링크를 검사합니다. Windows CI는 기본판·박박사판·김박사판을 각각 빌드하고 실제 창과 마우스 동작을 검사합니다. 3.3.2의 세 버전 실행 검증은 [Windows CI](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/40080294326)에서 통과했습니다. 실제 Explorer 아이콘 선택과 바로가기 실행, 클릭 통과, 투명 영역·투명도, 물결 갱신, 트레이 명령과 재실행을 검사했습니다. 검증한 EXE와 배포 ZIP의 내부 EXE가 같은지도 확인합니다.
 
 ## 고양이 방 (2.2)
 
@@ -114,7 +114,7 @@ ZIP과 내부 EXE 이름 모두 `v3.3.2`처럼 버전을 포함합니다. 다음
 
 `desktop/windows/build.sh`는 같은 고양이 엔진에서 기록 링크를 제거하고 배경을 전환할 수 있는 투명 데스크톱 앱을 생성합니다. 생성된 실행 파일과 ZIP은 로컬 `downloads/` 폴더에 보관하며, Firebase용 ZIP·체크섬을 `releases/`에 복사합니다. Firebase Hosting은 ZIP을, GitHub Releases는 EXE와 ZIP을 제공합니다. Windows 검증 범위는 위 데스크톱 절을 참고하세요.
 
-검사: `tests/room.cjs`(공개 화면·터치/키보드 메뉴·시간·날씨·행동·모바일 입력), `tests/room-routes.cjs`(전체 타워/발판 이동), `tests/playground.cjs`(기록 페이지 엔진), `tests/offline-playground.cjs`(오프라인), `tests/sizes.cjs`(체중과 크기 전달), `node tests/sync.cjs`(저장 중 재수정). 브라우저 검사는 `PLAYWRIGHT_MODULE`, 필요하면 `BROWSER_EXECUTABLE` 환경 변수를 지정합니다.
+검사: `tests/weather.cjs`(휴대폰·4K·울트라와이드·고해상도에서 비/눈/우박의 전체 영역 표시·움직임·리사이즈), `tests/room.cjs`(공개 화면·터치/키보드 메뉴·시간·날씨·행동·모바일 입력), `tests/room-routes.cjs`(전체 타워/발판 이동), `tests/playground.cjs`(기록 페이지 엔진), `tests/offline-playground.cjs`(오프라인), `tests/sizes.cjs`(체중과 크기 전달), `node tests/sync.cjs`(저장 중 재수정). 브라우저 검사는 `PLAYWRIGHT_MODULE`, 필요하면 `BROWSER_EXECUTABLE` 환경 변수를 지정합니다.
 
 풍경 감상은 도달 가능한 가장 높은 캣워커부터 고릅니다. 넓은 상단 다리에는 최대 세 마리가 88px 간격으로 나란히 앉고, 작은 화면은 위쪽 빈 자리부터 나누어 사용합니다. `tests/scenery.cjs`로 높은 자리 선택·나란히 앉기·실제 이동을 검사합니다.
 
