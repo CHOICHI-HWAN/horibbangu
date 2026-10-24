@@ -52,7 +52,13 @@ def verify_explorer_input(u,pump,hwnd,under,evaluate,edition,out):
   if not after or not after['selected']:
    u.WindowFromPoint.argtypes=[W.POINT];u.WindowFromPoint.restype=W.HWND
    hit=u.WindowFromPoint(W.POINT(x,y));cls=C.create_unicode_buffer(128);u.GetClassNameW(hit,cls,128)
-   print('Icon hit diagnostic:',{'point':[x,y],'window':int(hit or 0),'class':cls.value},flush=True)
+   chain=[];u.GetParent.argtypes=[W.HWND];u.GetParent.restype=W.HWND
+   for _ in range(8):
+    if not hit:break
+    cls=C.create_unicode_buffer(128);u.GetClassNameW(hit,cls,128)
+    chain.append({'window':int(hit),'class':cls.value,'style':hex(u.GetWindowLongPtrW(hit,-16)),'ex':hex(u.GetWindowLongPtrW(hit,-20))})
+    hit=u.GetParent(hit)
+   print('Icon hit diagnostic:',{'point':[x,y],'chain':chain},flush=True)
   assert after and after['selected'],('Real desktop icon selection failed',after)
   # Leave the double-click interval after the selection click.
   pump(.6);expose();click();click()

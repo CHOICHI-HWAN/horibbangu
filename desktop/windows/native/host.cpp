@@ -193,7 +193,8 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
  CALLBACK_BASE(ICoreWebView2NavigationCompletedEventHandler)
  HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2*,ICoreWebView2NavigationCompletedEventArgs* args) override{
   BOOL success=FALSE;args->get_IsSuccess(&success);if(!success){error(L"고양이 화면을 불러오지 못했습니다.");return S_OK;}
-  ready=true;
+  if(!wallpaperParent&&!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");return S_OK;}
+  bounds();ready=true;
   EnableWindow(windowHandle,FALSE); // Disabled children pass all mouse input to Explorer.
   ShowWindow(windowHandle,SW_SHOWNOACTIVATE);SetTimer(windowHandle,1,1000,nullptr);return S_OK;
  }
@@ -308,7 +309,6 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  windowHandle=CreateWindowExW(WS_EX_TRANSPARENT|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP,cls.lpszClassName,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
  SetPropW(controlWindow,L"HoribbanguPassive",(HANDLE)1);
  SetPropW(controlWindow,L"HoribbanguVisual",windowHandle);
- if(!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");DestroyWindow(controlWindow);CoUninitialize();CloseHandle(mutex);return 1;}
  MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
  taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");bounds();saveSettings();tray();RegisterHotKey(controlWindow,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(controlWindow,2,MOD_CONTROL|MOD_ALT,'Q');
  auto callback=new EnvironmentHandler;hr=create(nullptr,profileFolder,nullptr,callback);callback->Release();if(FAILED(hr))error(L"WebView2 환경을 만들지 못했습니다.",hr);

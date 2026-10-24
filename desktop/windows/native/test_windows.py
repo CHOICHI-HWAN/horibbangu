@@ -62,12 +62,13 @@ try:
   except OSError:pass
  else:raise AssertionError('WebView2 readiness timeout')
  control=u.FindWindowW(edition['window_class'],None);assert control
- hwnd=u.GetPropW(control,'HoribbanguVisual');assert hwnd and u.GetParent(hwnd)
+ hwnd=u.GetPropW(control,'HoribbanguVisual');assert hwnd
  deadline=time.time()+30
  while not u.IsWindowVisible(hwnd) and time.time()<deadline:
   assert app.poll() is None,'Host exited before its first visible frame'
   pump(.1)
  assert u.IsWindowVisible(hwnd),'Navigation did not reach the visible-ready state'
+ assert u.GetParent(hwnd),'Visible visual was not attached to Explorer'
  def passive_flags():
   flags=u.GetWindowLongPtrW(hwnd,-20)
   assert not u.IsWindowEnabled(hwnd),'Passive wallpaper unexpectedly accepts input'
