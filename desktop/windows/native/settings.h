@@ -40,7 +40,7 @@ static void bounds(){
  int selected=refreshDisplays();RECT work={};
  if(displayCount)work=displays[selected].work;else SystemParametersInfoW(SPI_GETWORKAREA,0,&work,0);
  LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_EXSTYLE);
- SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,style|WS_EX_NOACTIVATE|WS_EX_TRANSPARENT|WS_EX_LAYERED);
+ SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,(style&~WS_EX_LAYERED)|WS_EX_NOACTIVATE|WS_EX_TRANSPARENT|WS_EX_NOREDIRECTIONBITMAP);
  POINT position={work.left,work.top};if(wallpaperParent)ScreenToClient(wallpaperParent,&position);
  SetWindowPos(windowHandle,wallpaperParent?wallpaperAfter:HWND_BOTTOM,position.x,position.y,work.right-work.left,work.bottom-work.top,SWP_NOACTIVATE);
  if(controller){RECT area;GetClientRect(windowHandle,&area);controller->put_Bounds(area);controller->NotifyParentWindowPositionChanged();}

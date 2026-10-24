@@ -304,11 +304,11 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=controlProcedure;cls.hInstance=instance;cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=windowClass;cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(1));RegisterClassExW(&cls);
  controlWindow=CreateWindowExW(WS_EX_TOOLWINDOW,windowClass,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
  cls.lpfnWndProc=procedure;cls.lpszClassName=APP_WINDOW_CLASS L"View";RegisterClassExW(&cls);
- windowHandle=CreateWindowExW(WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW,cls.lpszClassName,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
+ windowHandle=CreateWindowExW(WS_EX_TRANSPARENT|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP,cls.lpszClassName,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
  SetPropW(controlWindow,L"HoribbanguPassive",(HANDLE)1);
  SetPropW(controlWindow,L"HoribbanguVisual",windowHandle);
  if(!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");DestroyWindow(controlWindow);CoUninitialize();CloseHandle(mutex);return 1;}
- SetLayeredWindowAttributes(windowHandle,0,255,LWA_ALPHA);MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
+ MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
  taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");bounds();saveSettings();tray();RegisterHotKey(controlWindow,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(controlWindow,2,MOD_CONTROL|MOD_ALT,'Q');
  auto callback=new EnvironmentHandler;hr=create(nullptr,profileFolder,nullptr,callback);callback->Release();if(FAILED(hr))error(L"WebView2 환경을 만들지 못했습니다.",hr);
  MSG message;while(GetMessageW(&message,nullptr,0,0)>0){if(settingsWindow&&IsDialogMessageW(settingsWindow,&message))continue;TranslateMessage(&message);DispatchMessageW(&message);}

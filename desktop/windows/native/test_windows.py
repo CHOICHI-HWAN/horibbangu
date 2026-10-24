@@ -63,7 +63,7 @@ try:
  hwnd=u.GetPropW(control,'HoribbanguVisual');assert hwnd and u.GetParent(hwnd)
  def passive_flags():
   flags=u.GetWindowLongPtrW(hwnd,-20)
-  assert flags&0x80000 and flags&0x20 and flags&0x08000000 and not(flags&8),hex(flags)
+  assert flags&0x200000 and flags&0x20 and flags&0x08000000 and not(flags&8),hex(flags)
  passive_flags()
  assert 'Layer=2' in ini.read_text(),'Old always-on-top preference was not migrated'
  assert not(u.GetWindowLongPtrW(hwnd,-16)&0x00C00000)
@@ -108,6 +108,11 @@ try:
   u.SetWindowLongPtrW(hwnd,-20,saved)
  assert visible,('Wallpaper is hidden behind Explorer',pixel)
  evaluate("document.getElementById('ci-visible').remove()")
+ # Transparent mode must reveal the existing wallpaper rather than a black surface.
+ u.ShowWindow(hwnd,0);pump(.2);empty=ImageGrab.grab().getpixel((width-90,110))[:3]
+ u.ShowWindow(hwnd,4);pump(.3);transparent=ImageGrab.grab().getpixel((width-90,110))[:3]
+ assert max(abs(a-b) for a,b in zip(empty,transparent))<8,('Transparent wallpaper changed',empty,transparent)
+ ImageGrab.grab().save(OUT/'transparent-desktop.png')
  # Live monitor and opacity controls still work, but no input/layer switch exists.
  u.PostMessageW(hwnd,0x0111,110,0);pump(.3)
  settings=u.FindWindowW(edition['settings_class'],None);assert settings
@@ -169,7 +174,7 @@ try:
  settings=u.FindWindowW(edition['settings_class'],None);assert settings
  assert u.SendMessageW(u.GetDlgItem(settings,202),0x0400,0,0)==37
  stop_rpc();u.PostMessageW(hwnd,0x0312,2,0);app.wait(timeout=15);assert app.returncode==0
- (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'checks':['real passive Win32/WebView2 launch','visible Explorer wallpaper composition','old topmost setting migration','monitor selection and opacity','permanent layered transparent no-activate window','no legacy input re-arming','Win32 icon control selection/double-click/right-click/drag','real Explorer icon selection and shortcut launch','tray commands for weather/rest/scenery','offline background and lake','persistent settings and relocated EXE','hotkey settings and exit']},indent=2))
+ (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'checks':['real passive Win32/WebView2 launch','visible Explorer wallpaper composition','old topmost setting migration','monitor selection and opacity','permanent passive no-activate wallpaper window','no legacy input re-arming','Win32 icon control selection/double-click/right-click/drag','real Explorer icon selection and shortcut launch','tray commands for weather/rest/scenery','offline background and lake','persistent settings and relocated EXE','hotkey settings and exit']},indent=2))
  print('Passive Windows desktop verification passed.',flush=True)
 finally:
  if rpc:stop_rpc()
