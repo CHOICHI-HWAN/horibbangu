@@ -78,7 +78,7 @@ try:
   u.GetClassNameW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
   def minimize(h,l):
    text=C.create_unicode_buffer(128);u.GetClassNameW(h,text,128)
-   if h!=control and u.IsWindowVisible(h) and text.value not in ['Progman','WorkerW','Shell_TrayWnd','Shell_SecondaryTrayWnd']:u.ShowWindow(h,6)
+   if h!=control and not text.value.startswith('Chrome_') and u.IsWindowVisible(h) and text.value not in ['Progman','WorkerW','Shell_TrayWnd','Shell_SecondaryTrayWnd']:u.ShowWindow(h,6)
    return True
   callback=callback_type(minimize);u.EnumWindows(callback,0);pump(.3)
  desktop()
@@ -99,6 +99,13 @@ try:
   u.SetWindowPos(hwnd,0,0,0,0,0,0x413);pump(.1)
   print('Diagnostic child on top pixel:',ImageGrab.grab().getpixel((width-90,110))[:3],flush=True)
   ImageGrab.grab().save(OUT/'diagnostic-child-top.png')
+  saved=u.GetWindowLongPtrW(hwnd,-20)
+  u.SetWindowLongPtrW.argtypes=[W.HWND,C.c_int,C.c_ssize_t];u.SetWindowLongPtrW.restype=C.c_ssize_t
+  for label,flags in [('no-layered',(saved&~0x80000)|0x200000),('no-layered-no-redirection',saved&~(0x80000|0x200000)),('layered-no-redirection',saved|0x80000|0x200000)]:
+   u.SetWindowLongPtrW(hwnd,-20,flags);u.SetWindowPos(hwnd,0,0,0,0,0,0x433);pump(.3)
+   print('Diagnostic',label,ImageGrab.grab().getpixel((width-90,110))[:3],flush=True)
+   ImageGrab.grab().save(OUT/('diagnostic-'+label+'.png'))
+  u.SetWindowLongPtrW(hwnd,-20,saved)
  assert visible,('Wallpaper is hidden behind Explorer',pixel)
  evaluate("document.getElementById('ci-visible').remove()")
  # Live monitor and opacity controls still work, but no input/layer switch exists.

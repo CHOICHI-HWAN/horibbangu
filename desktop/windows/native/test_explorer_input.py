@@ -39,7 +39,7 @@ def verify_explorer_input(u,pump,hwnd,under,evaluate,edition,out):
   u.GetClassNameW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
   def minimize(h,l):
    text=C.create_unicode_buffer(128);u.GetClassNameW(h,text,128)
-   if h!=hwnd and u.IsWindowVisible(h) and text.value not in ['Progman','WorkerW','Shell_TrayWnd','Shell_SecondaryTrayWnd']:u.ShowWindow(h,6)
+   if h!=hwnd and not text.value.startswith('Chrome_') and u.IsWindowVisible(h) and text.value not in ['Progman','WorkerW','Shell_TrayWnd','Shell_SecondaryTrayWnd']:u.ShowWindow(h,6)
    return True
   callback=callback_type(minimize);u.EnumWindows(callback,0);pump(.2)
   # Put an actual cat and stale/full-screen hit request over the icon. Every
