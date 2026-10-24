@@ -18,6 +18,7 @@
 #include "edition.h"
 
 static HWND windowHandle,controlWindow,wallpaperParent,wallpaperAfter;
+static UINT32 browserProcess=0;
 static ICoreWebView2Environment* environment;
 static ICoreWebView2Controller* controller;
 static ICoreWebView2CompositionController* composition;
@@ -54,6 +55,19 @@ static bool attachWallpaper(){
  SetWindowLongPtrW(windowHandle,GWL_STYLE,(style&~WS_POPUP)|WS_CHILD);
  SetLastError(0);SetParent(windowHandle,wallpaperParent);
  return GetParent(windowHandle)==wallpaperParent;
+}
+
+// A composition WebView can own native popup input windows outside its host.
+// Disable only this edition's browser process; keep rendering and tray UI alive.
+static BOOL CALLBACK disableBrowserInput(HWND h,LPARAM){
+ DWORD pid=0;GetWindowThreadProcessId(h,&pid);
+ if(pid==browserProcess&&IsWindowEnabled(h))EnableWindow(h,FALSE);
+ return TRUE;
+}
+static void muteBrowserInput(){
+ if(!browserProcess)return;
+ EnumWindows(disableBrowserInput,0);
+ EnumChildWindows(wallpaperParent?wallpaperParent:windowHandle,disableBrowserInput,0);
 }
 
 #include "settings.h"
@@ -127,6 +141,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_MOUSEMOVE:case WM_LBUTTONDOWN:case WM_LBUTTONUP:case WM_LBUTTONDBLCLK:
  case WM_RBUTTONDOWN:case WM_RBUTTONUP:case WM_MBUTTONDOWN:case WM_MBUTTONUP:case WM_MOUSEWHEEL:case WM_MOUSEHWHEEL:return 0; // The visual never receives or forwards user input.
  case WM_TIMER:
+  muteBrowserInput();
   if(IsWindowVisible(h))SetWindowPos(h,wallpaperParent?wallpaperAfter:HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
   return 0;
  case WM_HOTKEY:if(w==1)showControls();else DestroyWindow(h);return 0;
@@ -195,7 +210,7 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
   BOOL success=FALSE;args->get_IsSuccess(&success);if(!success){error(L"고양이 화면을 불러오지 못했습니다.");return S_OK;}
   if(!wallpaperParent&&!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");return S_OK;}
   bounds();ready=true;
-  EnableWindow(windowHandle,FALSE); // Disabled children pass all mouse input to Explorer.
+  muteBrowserInput();EnableWindow(windowHandle,FALSE); // Disabled children pass all mouse input to Explorer.
   ShowWindow(windowHandle,SW_SHOWNOACTIVATE);SetTimer(windowHandle,1,1000,nullptr);return S_OK;
  }
 };
@@ -214,7 +229,7 @@ struct ScriptReadyHandler:ICoreWebView2AddScriptToExecuteOnDocumentCreatedComple
  CALLBACK_BASE(ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler)
  HRESULT STDMETHODCALLTYPE Invoke(HRESULT result,LPCWSTR) override{
   if(FAILED(result)){error(L"앱 연결을 준비하지 못했습니다.",result);return S_OK;}
-  bounds();controller->put_IsVisible(TRUE);webview->Navigate(pageUrl);return S_OK;
+  muteBrowserInput();bounds();controller->put_IsVisible(TRUE);webview->Navigate(pageUrl);return S_OK;
  }
 };
 struct CompositionHandler:ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler{
@@ -223,7 +238,7 @@ struct CompositionHandler:ICoreWebView2CreateCoreWebView2CompositionControllerCo
   if(FAILED(result)||!created){error(L"투명 고양이 창을 만들지 못했습니다.",result);return S_OK;}
   composition=created;composition->AddRef();HRESULT hr=composition->QueryInterface(MY_ICoreWebView2Controller,(void**)&controller);
   if(FAILED(hr)){error(L"WebView2 컨트롤러를 만들지 못했습니다.",hr);return S_OK;}
-  controller->get_CoreWebView2(&webview);ICoreWebView2Controller2* color=nullptr;
+  controller->get_CoreWebView2(&webview);webview->get_BrowserProcessId(&browserProcess);ICoreWebView2Controller2* color=nullptr;
   if(SUCCEEDED(controller->QueryInterface(MY_ICoreWebView2Controller2,(void**)&color))){color->put_DefaultBackgroundColor({0,0,0,0});color->Release();}
   hr=DCompositionCreateDevice(nullptr,MY_IDCompositionDevice,(void**)&device);
   if(SUCCEEDED(hr))hr=device->CreateTargetForHwnd(windowHandle,TRUE,&target);
