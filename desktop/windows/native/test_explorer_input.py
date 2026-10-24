@@ -56,7 +56,8 @@ def verify_explorer_input(u,pump,hwnd,under,evaluate,edition,out):
    for _ in range(8):
     if not hit:break
     cls=C.create_unicode_buffer(128);u.GetClassNameW(hit,cls,128)
-    chain.append({'window':int(hit),'class':cls.value,'style':hex(u.GetWindowLongPtrW(hit,-16)),'ex':hex(u.GetWindowLongPtrW(hit,-20))})
+    pid=W.DWORD();u.GetWindowThreadProcessId(hit,C.byref(pid))
+    chain.append({'window':int(hit),'class':cls.value,'pid':pid.value,'style':hex(u.GetWindowLongPtrW(hit,-16)),'ex':hex(u.GetWindowLongPtrW(hit,-20))})
     hit=u.GetParent(hit)
    print('Icon hit diagnostic:',{'point':[x,y],'chain':chain},flush=True)
   assert after and after['selected'],('Real desktop icon selection failed',after)

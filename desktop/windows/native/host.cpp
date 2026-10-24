@@ -61,7 +61,11 @@ static bool attachWallpaper(){
 // Disable only this edition's browser process; keep rendering and tray UI alive.
 static BOOL CALLBACK disableBrowserInput(HWND h,LPARAM){
  DWORD pid=0;GetWindowThreadProcessId(h,&pid);
- if(pid==browserProcess&&IsWindowEnabled(h))EnableWindow(h,FALSE);
+ bool owned=pid==browserProcess;
+ if(pid==GetCurrentProcessId()){
+  wchar_t name[96]={};GetClassNameW(h,name,96);owned=!wcsncmp(name,L"Chrome_",7);
+ }
+ if(owned&&IsWindowEnabled(h))EnableWindow(h,FALSE);
  return TRUE;
 }
 static void muteBrowserInput(){
