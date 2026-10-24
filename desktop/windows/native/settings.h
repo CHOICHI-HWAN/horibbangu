@@ -41,7 +41,8 @@ static void bounds(){
  if(displayCount)work=displays[selected].work;else SystemParametersInfoW(SPI_GETWORKAREA,0,&work,0);
  LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_EXSTYLE);
  SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,style|WS_EX_NOACTIVATE|WS_EX_TRANSPARENT|WS_EX_LAYERED);
- SetWindowPos(windowHandle,HWND_BOTTOM,work.left,work.top,work.right-work.left,work.bottom-work.top,SWP_NOACTIVATE);
+ POINT position={work.left,work.top};if(wallpaperParent)ScreenToClient(wallpaperParent,&position);
+ SetWindowPos(windowHandle,wallpaperParent?wallpaperAfter:HWND_BOTTOM,position.x,position.y,work.right-work.left,work.bottom-work.top,SWP_NOACTIVATE);
  if(controller){RECT area;GetClientRect(windowHandle,&area);controller->put_Bounds(area);controller->NotifyParentWindowPositionChanged();}
 }
 static void labelOpacity(){
@@ -73,7 +74,7 @@ static void openSettings(){
  if(settingsWindow){ShowWindow(settingsWindow,SW_SHOW);SetForegroundWindow(settingsWindow);return;}
  WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=settingsProcedure;cls.hInstance=GetModuleHandleW(nullptr);cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=settingsClass;cls.hbrBackground=(HBRUSH)(COLOR_BTNFACE+1);RegisterClassExW(&cls);
  int selected=refreshDisplays();RECT work=displayCount?displays[selected].work:RECT{0,0,800,600};
- settingsWindow=CreateWindowExW(WS_EX_TOOLWINDOW,settingsClass,APP_TITLE L" · 화면 설정",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU,work.left+80,work.top+80,440,300,windowHandle,nullptr,cls.hInstance,nullptr);
+ settingsWindow=CreateWindowExW(WS_EX_TOOLWINDOW,settingsClass,APP_TITLE L" · 화면 설정",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU,work.left+80,work.top+80,440,300,controlWindow,nullptr,cls.hInstance,nullptr);
  if(!settingsWindow)return;
  int dpi=(int)GetDpiForWindow(settingsWindow);if(!dpi)dpi=96;
  auto scale=[dpi](int n){return MulDiv(n,dpi,96);};

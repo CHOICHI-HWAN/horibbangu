@@ -17,7 +17,7 @@
 #include "webview-guids.h"
 #include "edition.h"
 
-static HWND windowHandle;
+static HWND windowHandle,controlWindow,wallpaperParent,wallpaperAfter;
 static ICoreWebView2Environment* environment;
 static ICoreWebView2Controller* controller;
 static ICoreWebView2CompositionController* composition;
@@ -33,6 +33,30 @@ static const wchar_t* pageUrl=L"https://horibbangu.local/playground.html";
 static UINT taskbarCreated;
 static const UINT trayMessage=WM_APP+1,secondInstance=WM_APP+2;
 static const wchar_t* windowClass=APP_WINDOW_CLASS;
+
+// The shell keeps icons above this visual and normal applications above the shell.
+// Windows 11's raised desktop uses siblings under Progman; older shells use WorkerW.
+static BOOL CALLBACK findWallpaper(HWND top,LPARAM){
+ HWND icons=FindWindowExW(top,nullptr,L"SHELLDLL_DefView",nullptr);
+ if(!icons)return TRUE;
+ HWND child=FindWindowExW(top,nullptr,L"WorkerW",nullptr);
+ if(child){wallpaperParent=top;wallpaperAfter=icons;}
+ else{wallpaperParent=FindWindowExW(nullptr,top,L"WorkerW",nullptr);wallpaperAfter=HWND_TOP;}
+ return wallpaperParent?FALSE:TRUE;
+}
+static bool attachWallpaper(){
+ HWND progman=FindWindowW(L"Progman",nullptr);if(!progman)return false;
+ DWORD_PTR result=0;
+ SendMessageTimeoutW(progman,0x052c,0xd,0,SMTO_ABORTIFHUNG,1000,&result);
+ SendMessageTimeoutW(progman,0x052c,0xd,1,SMTO_ABORTIFHUNG,1000,&result);
+ SendMessageTimeoutW(progman,0x052c,0,0,SMTO_ABORTIFHUNG,1000,&result);
+ wallpaperParent=nullptr;wallpaperAfter=HWND_TOP;EnumWindows(findWallpaper,0);
+ if(!wallpaperParent)return false;
+ LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_STYLE);
+ SetWindowLongPtrW(windowHandle,GWL_STYLE,(style&~WS_POPUP)|WS_CHILD);
+ SetLastError(0);SetParent(windowHandle,wallpaperParent);
+ return GetParent(windowHandle)==wallpaperParent;
+}
 
 #include "settings.h"
 
@@ -52,7 +76,7 @@ static void menu();
 static void trayAction(UINT choice);
 static void showControls(){openSettings();}
 static void tray(bool remove=false){
- NOTIFYICONDATAW data={};data.cbSize=sizeof(data);data.hWnd=windowHandle;data.uID=1;
+ NOTIFYICONDATAW data={};data.cbSize=sizeof(data);data.hWnd=controlWindow;data.uID=1;
  data.uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP;data.uCallbackMessage=trayMessage;
  data.hIcon=(HICON)LoadImageW(GetModuleHandleW(nullptr),MAKEINTRESOURCEW(1),IMAGE_ICON,32,32,LR_SHARED);
  lstrcpynW(data.szTip,APP_TITLE L" · 클릭: 메뉴 / 오른쪽 클릭: 배경·종료",128);
@@ -76,8 +100,8 @@ static void menu(){
  for(int i=0;i<5;i++)AppendMenuW(weather,MF_STRING,120+i,weatherNames[i]);
  AppendMenuW(m,MF_POPUP,(UINT_PTR)weather,L"창밖 날씨");
  AppendMenuW(m,MF_SEPARATOR,0,nullptr);AppendMenuW(m,MF_STRING,199,L"종료 (Ctrl+Alt+Q)");
- POINT p;GetCursorPos(&p);SetForegroundWindow(windowHandle);
- UINT choice=TrackPopupMenu(m,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,p.x,p.y,0,windowHandle,nullptr);DestroyMenu(m);
+ POINT p;GetCursorPos(&p);SetForegroundWindow(controlWindow);
+ UINT choice=TrackPopupMenu(m,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,p.x,p.y,0,controlWindow,nullptr);DestroyMenu(m);
  trayAction(choice);PostMessageW(windowHandle,WM_NULL,0,0);
 }
 static void trayAction(UINT choice){
@@ -97,7 +121,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_COMMAND:trayAction(LOWORD(w));return 0;
  case WM_MOUSEACTIVATE:return MA_NOACTIVATE;
  case WM_NCHITTEST:return HTTRANSPARENT;
- case WM_WINDOWPOSCHANGING:{auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
+ case WM_WINDOWPOSCHANGING:{auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=wallpaperParent?wallpaperAfter:HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
  case WM_ERASEBKGND:return 1;
  case WM_PAINT:{PAINTSTRUCT ps;BeginPaint(h,&ps);EndPaint(h,&ps);return 0;}
  case WM_DISPLAYCHANGE:case WM_SETTINGCHANGE:bounds();if(settingsWindow)fillMonitors();return 0;
@@ -105,7 +129,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_MOUSEMOVE:case WM_LBUTTONDOWN:case WM_LBUTTONUP:case WM_LBUTTONDBLCLK:
  case WM_RBUTTONDOWN:case WM_RBUTTONUP:case WM_MBUTTONDOWN:case WM_MBUTTONUP:case WM_MOUSEWHEEL:case WM_MOUSEHWHEEL:return 0; // The visual never receives or forwards user input.
  case WM_TIMER:
-  if(IsWindowVisible(h))SetWindowPos(h,HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+  if(IsWindowVisible(h))SetWindowPos(h,wallpaperParent?wallpaperAfter:HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
   return 0;
  case WM_HOTKEY:if(w==1)showControls();else DestroyWindow(h);return 0;
  case WM_APP+1:
@@ -113,10 +137,18 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
   if(LOWORD(l)==WM_CONTEXTMENU||LOWORD(l)==WM_RBUTTONUP)menu();return 0;
  case WM_CLOSE:DestroyWindow(h);return 0;
  case WM_DESTROY:
-  ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);tray(true);UnregisterHotKey(h,1);UnregisterHotKey(h,2);
+  ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);tray(true);UnregisterHotKey(controlWindow,1);UnregisterHotKey(controlWindow,2);
   if(controller)controller->Close();PostQuitMessage(0);return 0;
  }return DefWindowProcW(h,message,w,l);
 }
+// A separate top-level message window owns the tray/hotkeys while the visual is
+// a child of Explorer. It never covers the desktop or accepts desktop clicks.
+static LRESULT CALLBACK controlProcedure(HWND h,UINT m,WPARAM w,LPARAM l){
+ if((taskbarCreated&&m==taskbarCreated)||m==trayMessage||m==secondInstance||m==WM_HOTKEY||m==WM_COMMAND)
+  return procedure(windowHandle,m,w,l);
+ return DefWindowProcW(h,m,w,l);
+}
+
 #define CALLBACK_BASE(I) \
  ULONG refs=1; \
  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID id,void** result) override {if(!result)return E_POINTER;*result=nullptr;if(IsEqualIID(id,IID_IUnknown)||IsEqualIID(id,MY_##I)){*result=static_cast<I*>(this);AddRef();return S_OK;}return E_NOINTERFACE;} \
@@ -271,13 +303,18 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
   if(loader)FreeLibrary(loader);CoUninitialize();CloseHandle(mutex);return 2;
  }
  INITCOMMONCONTROLSEX controls={sizeof(controls),ICC_BAR_CLASSES};InitCommonControlsEx(&controls);
- WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=procedure;cls.hInstance=instance;cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=windowClass;cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(1));RegisterClassExW(&cls);
- windowHandle=CreateWindowExW(WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP,windowClass,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
- SetPropW(windowHandle,L"HoribbanguPassive",(HANDLE)1);
+ WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=controlProcedure;cls.hInstance=instance;cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=windowClass;cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(1));RegisterClassExW(&cls);
+ controlWindow=CreateWindowExW(WS_EX_TOOLWINDOW,windowClass,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
+ cls.lpfnWndProc=procedure;cls.lpszClassName=APP_WINDOW_CLASS L"View";RegisterClassExW(&cls);
+ windowHandle=CreateWindowExW(WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP,cls.lpszClassName,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
+ SetPropW(controlWindow,L"HoribbanguPassive",(HANDLE)1);
+ SetPropW(controlWindow,L"HoribbanguVisual",windowHandle);
+ if(!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");DestroyWindow(controlWindow);CoUninitialize();CloseHandle(mutex);return 1;}
  SetLayeredWindowAttributes(windowHandle,0,255,LWA_ALPHA);MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
- taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");bounds();saveSettings();tray();RegisterHotKey(windowHandle,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(windowHandle,2,MOD_CONTROL|MOD_ALT,'Q');
+ taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");bounds();saveSettings();tray();RegisterHotKey(controlWindow,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(controlWindow,2,MOD_CONTROL|MOD_ALT,'Q');
  auto callback=new EnvironmentHandler;hr=create(nullptr,profileFolder,nullptr,callback);callback->Release();if(FAILED(hr))error(L"WebView2 환경을 만들지 못했습니다.",hr);
  MSG message;while(GetMessageW(&message,nullptr,0,0)>0){if(settingsWindow&&IsDialogMessageW(settingsWindow,&message))continue;TranslateMessage(&message);DispatchMessageW(&message);}
+ if(controlWindow)DestroyWindow(controlWindow);
  if(webview)webview->Release();if(controller)controller->Release();if(composition)composition->Release();if(environment)environment->Release();
  if(opacityEffect)opacityEffect->Release();if(visual)visual->Release();if(target)target->Release();if(device)device->Release();FreeLibrary(loader);CoUninitialize();CloseHandle(mutex);return 0;
 }

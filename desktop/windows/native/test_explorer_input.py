@@ -46,7 +46,7 @@ def verify_explorer_input(u,pump,hwnd,under,evaluate,edition,out):
   # physical gesture must still reach Explorer rather than this visual.
   evaluate(f"(()=>{{window.explorerDowns=0;addEventListener('pointerdown',()=>explorerDowns++);const s=document.createElement('style');s.id='ci-icon-overlap';s.textContent='.ci-icon-cat{{position:fixed!important;left:{x-30}px!important;top:{y-20}px!important;bottom:auto!important;transform:none!important;}}';document.head.append(s);cats[0].el.classList.add('ci-icon-cat');desktopHost.setInteractive(true,[0,0,innerWidth,innerHeight]);}})()")
   def expose():
-   u.SetWindowPos(hwnd,0,0,0,0,0,0x413);u.SetCursorPos(x,y);pump(.03)
+   u.SetCursorPos(x,y);pump(.03)
   expose();click();pump(.2)
   after=inspect();assert after and after['selected'],('Real desktop icon selection failed',after)
   # Leave the double-click interval after the selection click.
@@ -56,6 +56,7 @@ def verify_explorer_input(u,pump,hwnd,under,evaluate,edition,out):
    pump(.1)
   assert marker.exists(),'Double-click did not launch the real desktop shortcut'
   expose();u.mouse_event(8,0,0,0,0);pump(.04);u.mouse_event(16,0,0,0,0);pump(.2)
+  u.keybd_event(0x1b,0,0,0);u.keybd_event(0x1b,0,2,0);pump(.2)
   u.keybd_event(0x1b,0,0,0);u.keybd_event(0x1b,0,2,0);pump(.1)
   expose();u.mouse_event(2,0,0,0,0);pump(.05)
   u.mouse_event(0x8001,round((x+120)*65535/(u.GetSystemMetrics(0)-1)),round((y+90)*65535/(u.GetSystemMetrics(1)-1)),0,0);pump(.1)

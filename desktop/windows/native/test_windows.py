@@ -13,6 +13,8 @@ OUT=edition['verification'];OUT.mkdir(parents=True,exist_ok=True)
 u=C.WinDLL('user32',use_last_error=True)
 u.CreateWindowExW.argtypes=[W.DWORD,W.LPCWSTR,W.LPCWSTR,W.DWORD,C.c_int,C.c_int,C.c_int,C.c_int,W.HWND,W.HMENU,W.HINSTANCE,W.LPVOID];u.CreateWindowExW.restype=W.HWND
 u.FindWindowW.argtypes=[W.LPCWSTR,W.LPCWSTR];u.FindWindowW.restype=W.HWND
+u.GetPropW.argtypes=[W.HWND,W.LPCWSTR];u.GetPropW.restype=W.HANDLE
+u.GetParent.argtypes=[W.HWND];u.GetParent.restype=W.HWND
 u.GetWindowLongPtrW.argtypes=[W.HWND,C.c_int];u.GetWindowLongPtrW.restype=C.c_ssize_t
 u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
 u.PostMessageW.argtypes=[W.HWND,W.UINT,W.WPARAM,W.LPARAM]
@@ -57,16 +59,38 @@ try:
    if any(t.get('url','').startswith('https://horibbangu.local/') for t in targets):break
   except OSError:pass
  else:raise AssertionError('WebView2 readiness timeout')
- hwnd=u.FindWindowW(edition['window_class'],None);assert hwnd
+ control=u.FindWindowW(edition['window_class'],None);assert control
+ hwnd=u.GetPropW(control,'HoribbanguVisual');assert hwnd and u.GetParent(hwnd)
  def passive_flags():
   flags=u.GetWindowLongPtrW(hwnd,-20)
   assert flags&0x80000 and flags&0x20 and flags&0x08000000 and not(flags&8),hex(flags)
  passive_flags()
  assert 'Layer=2' in ini.read_text(),'Old always-on-top preference was not migrated'
  assert not(u.GetWindowLongPtrW(hwnd,-16)&0x00C00000)
+ assert u.GetWindowLongPtrW(hwnd,-16)&0x40000000,'Visual is not attached as a wallpaper child'
  subprocess.run(['node','desktop/windows/native/test_page.cjs'],check=True)
  assert evaluate('desktopHost.passive') is True
  evaluate("window.passiveDowns=0;addEventListener('pointerdown',()=>passiveDowns++);")
+ # Expose the real desktop, leaving its icon and wallpaper windows intact.
+ def desktop():
+  u.ShowWindow(under,0)
+  callback_type=C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
+  u.GetClassNameW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
+  def minimize(h,l):
+   text=C.create_unicode_buffer(128);u.GetClassNameW(h,text,128)
+   if h!=control and u.IsWindowVisible(h) and text.value not in ['Progman','WorkerW','Shell_TrayWnd','Shell_SecondaryTrayWnd']:u.ShowWindow(h,6)
+   return True
+  callback=callback_type(minimize);u.EnumWindows(callback,0);pump(.3)
+ desktop()
+ # Verify actual composition on the real desktop, not only a CDP screenshot.
+ evaluate("(()=>{const e=document.createElement('div');e.id='ci-visible';e.style='position:fixed;right:80px;top:100px;width:24px;height:24px;background:rgb(255,0,255);z-index:9999';document.body.append(e);})()")
+ visible=False
+ for _ in range(50):
+  pump(.1)
+  pixel=ImageGrab.grab().getpixel((width-90,110))[:3]
+  if pixel==(255,0,255):visible=True;break
+ assert visible,('Wallpaper is hidden behind Explorer',pixel)
+ evaluate("document.getElementById('ci-visible').remove()")
  # Live monitor and opacity controls still work, but no input/layer switch exists.
  u.PostMessageW(hwnd,0x0111,110,0);pump(.3)
  settings=u.FindWindowW(edition['settings_class'],None);assert settings
@@ -78,15 +102,17 @@ try:
  u.SendMessageW(settings,0x0111,205,0);passive_flags()
  evaluate('setDesktopBackground(true)');pump(.1)
  def expose():
-  u.SetWindowPos(hwnd,0,0,0,0,0,0x413);pump(.04)
- expose();base=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
+  pump(.2)
+ u.ShowWindow(hwnd,0);pump(.1);wallpaper=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
+ u.ShowWindow(hwnd,4);expose();base=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
  u.SendMessageW(slider,0x0405,1,50);u.SendMessageW(settings,0x0114,0,slider);expose()
  faded=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
- assert sum(faded)>sum(base)+30,('Opacity failed',base,faded)
+ assert sum(abs(a-b) for a,b in zip(faded,wallpaper))+15<sum(abs(a-b) for a,b in zip(base,wallpaper)),('Opacity failed',wallpaper,base,faded)
  ImageGrab.grab().save(OUT/'opacity-50.png')
  u.SendMessageW(slider,0x0405,1,0);u.SendMessageW(settings,0x0114,0,slider)
  u.SendMessageW(settings,0x0010,0,0);pump(.2)
  # Real OS icon controls, stale renderer hit rectangles and queued mouse messages.
+ u.ShowWindow(under,5);pump(.1)
  from test_background_input import verify_background_input
  verify_background_input(u,pump,hwnd,under,evaluate,OUT,width,height,edition['settings_class'])
  assert evaluate('passiveDowns')==0
@@ -105,6 +131,9 @@ try:
   evaluate('desktopHost.setInteractive(true,[0,0,innerWidth,innerHeight])')
   for message in [0x201,0x202,0x200]:u.PostMessageW(hwnd,0x8003,message,(200<<16)|200)
   pump(.1);assert evaluate('passiveDowns')==0;passive_flags()
+ for _ in range(50):
+  if evaluate('desktopBackground && lastLakeFrame>0'):break
+  pump(.1)
  assert evaluate('desktopBackground && lastLakeFrame>0')
  ImageGrab.grab().save(OUT/'passive-desktop.png')
  assets=Path(os.environ['LOCALAPPDATA'])/edition['data']/'Native'/edition['version']
@@ -118,12 +147,12 @@ try:
  moved=OUT/'relocated';moved.mkdir(exist_ok=True);shutil.copyfile(ROOT/'candidate.exe',moved/'cats.exe')
  app=subprocess.Popen([str(moved/'cats.exe')]);pump(5)
  assert app.poll() is None and evaluate('desktopBackground && desktopHost.passive')
- hwnd=u.FindWindowW(edition['window_class'],None);passive_flags()
+ control=u.FindWindowW(edition['window_class'],None);hwnd=u.GetPropW(control,'HoribbanguVisual');assert u.GetParent(hwnd);passive_flags()
  u.PostMessageW(hwnd,0x0312,1,0);pump(.2)
  settings=u.FindWindowW(edition['settings_class'],None);assert settings
  assert u.SendMessageW(u.GetDlgItem(settings,202),0x0400,0,0)==37
  stop_rpc();u.PostMessageW(hwnd,0x0312,2,0);app.wait(timeout=15);assert app.returncode==0
- (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'checks':['real passive Win32/WebView2 launch','old topmost setting migration','monitor selection and opacity','permanent layered transparent no-activate window','no legacy input re-arming','Win32 icon control selection/double-click/right-click/drag','real Explorer icon selection and shortcut launch','tray commands for weather/rest/scenery','offline background and lake','persistent settings and relocated EXE','hotkey settings and exit']},indent=2))
+ (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'checks':['real passive Win32/WebView2 launch','visible Explorer wallpaper composition','old topmost setting migration','monitor selection and opacity','permanent layered transparent no-activate window','no legacy input re-arming','Win32 icon control selection/double-click/right-click/drag','real Explorer icon selection and shortcut launch','tray commands for weather/rest/scenery','offline background and lake','persistent settings and relocated EXE','hotkey settings and exit']},indent=2))
  print('Passive Windows desktop verification passed.',flush=True)
 finally:
  if rpc:stop_rpc()
