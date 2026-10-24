@@ -194,6 +194,7 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
  HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2*,ICoreWebView2NavigationCompletedEventArgs* args) override{
   BOOL success=FALSE;args->get_IsSuccess(&success);if(!success){error(L"고양이 화면을 불러오지 못했습니다.");return S_OK;}
   ready=true;
+  EnableWindow(windowHandle,FALSE); // Disabled children pass all mouse input to Explorer.
   ShowWindow(windowHandle,SW_SHOWNOACTIVATE);SetTimer(windowHandle,1,1000,nullptr);return S_OK;
  }
 };

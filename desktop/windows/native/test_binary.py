@@ -50,4 +50,4 @@ print(f'Verified native x64 GUI PE, embedded offline assets/notices, asInvoker/D
 
 host=(ROOT/'desktop/windows/native/host.cpp').read_text()
 assert 'SetWindowsHookEx' not in host and 'SendMouseInput' not in host and 'SetCapture' not in host
-assert 'passive:true' in host and 'WS_EX_NOACTIVATE' in host
+assert 'passive:true' in host and 'WS_EX_NOACTIVATE' in host and 'EnableWindow(windowHandle,FALSE)' in host

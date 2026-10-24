@@ -63,6 +63,7 @@ try:
  hwnd=u.GetPropW(control,'HoribbanguVisual');assert hwnd and u.GetParent(hwnd)
  def passive_flags():
   flags=u.GetWindowLongPtrW(hwnd,-20)
+  assert not u.IsWindowEnabled(hwnd),'Passive wallpaper unexpectedly accepts input'
   assert flags&0x200000 and flags&0x20 and flags&0x08000000 and not(flags&8),hex(flags)
  passive_flags()
  assert 'Layer=2' in ini.read_text(),'Old always-on-top preference was not migrated'
