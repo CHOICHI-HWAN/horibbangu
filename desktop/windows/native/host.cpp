@@ -65,7 +65,11 @@ static BOOL CALLBACK disableBrowserInput(HWND h,LPARAM){
  if(pid==GetCurrentProcessId()){
   wchar_t name[96]={};GetClassNameW(h,name,96);owned=!wcsncmp(name,L"Chrome_",7);
  }
- if(owned&&IsWindowEnabled(h))EnableWindow(h,FALSE);
+ if(owned){
+  LONG_PTR flags=GetWindowLongPtrW(h,GWL_EXSTYLE);
+  if(!(flags&WS_EX_TRANSPARENT))SetWindowLongPtrW(h,GWL_EXSTYLE,flags|WS_EX_TRANSPARENT|WS_EX_NOACTIVATE);
+  if(IsWindowEnabled(h))EnableWindow(h,FALSE);
+ }
  return TRUE;
 }
 static void muteBrowserInput(){
