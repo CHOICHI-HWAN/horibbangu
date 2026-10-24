@@ -229,19 +229,30 @@ function drawWeather(t){
   if(document.hidden||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground)||t-lastWeatherFrame<33)return;lastWeatherFrame=t;
   drawLake(t);
   const canvas=$('weatherCanvas');if(!canvas)return;
-  const dimensions=sceneDimensions||(sceneDimensions={width:canvas.clientWidth,height:canvas.clientHeight});
-  const w=dimensions.width,h=dimensions.height,resized=canvas.width!==w||canvas.height!==h;
-  if(resized){canvas.width=w;canvas.height=h;}
+  // Measure the precipitation layer itself: image sizing is independent of this overlay.
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  if(!w||!h)return;
+  // Keep high-DPI droplets crisp without allocating an unbounded multi-monitor canvas.
+  const scale=Math.min(devicePixelRatio||1,2,Math.sqrt(8388608/(w*h)));
+  const width=Math.max(1,Math.round(w*scale)),height=Math.max(1,Math.round(h*scale));
+  const resized=canvas.width!==width||canvas.height!==height;
+  if(resized){canvas.width=width;canvas.height=height;}
   if(!weatherPaint)weatherPaint={context:canvas.getContext('2d'),weather:null,paused:false};
   if(!resized&&weatherPaint.weather===roomWeather&&(roomWeather==='clear'||(reduceMotion&&weatherPaint.paused)))return;
-  const ctx=weatherPaint.context;ctx.clearRect(0,0,w,h);weatherPaint.weather=roomWeather;weatherPaint.paused=reduceMotion;
+  const ctx=weatherPaint.context;
+  ctx.setTransform(width/w,0,0,height/h,0,0);
+  ctx.clearRect(0,0,w,h);weatherPaint.weather=roomWeather;weatherPaint.paused=reduceMotion;
   if(reduceMotion)t=0;
   if(roomWeather!=='clear'){
     const snow=roomWeather==='snow',hail=roomWeather==='hail',speed=snow?18:hail?160:230;
-    ctx.strokeStyle='rgba(224,241,247,.65)';ctx.fillStyle=snow?'#fffcf1dc':'#eef8f9d9';ctx.lineWidth=1;
-    for(let i=0;i<(snow?45:65);i++){
-      const x=((i*137.2+Math.sin(t/2000+i)*(snow?14:2))%Math.max(1,w)),yy=(i*71+t/1000*speed)%Math.max(1,h);
-      if(snow||hail){ctx.beginPath();ctx.arc(x,yy,snow?1.8:2.6,0,Math.PI*2);ctx.fill();}
+    const count=Math.min(2400,Math.max(24,Math.ceil(w*h/(snow?8000:5500))));
+    ctx.strokeStyle='rgba(224,241,247,.78)';ctx.fillStyle=snow?'#fffcf1e8':'#eef8f9eb';ctx.lineWidth=1.25;
+    // Independent normalized seeds cover the whole scene, even on ultrawide screens.
+    for(let i=0;i<count;i++){
+      const seedX=((i+.5)*.754877666)%1,seedY=((i+.5)*.569840291)%1;
+      const x=(seedX*w+Math.sin(t/2000+i)*(snow?14:2)+w)%w;
+      const yy=(seedY*h+t/1000*speed)%h;
+      if(snow||hail){ctx.beginPath();ctx.arc(x,yy,(snow?1.5:2.1)+(i%4)*.3,0,Math.PI*2);ctx.fill();}
       else{ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x-4,yy+13);ctx.stroke();}
     }
   }

@@ -1,7 +1,10 @@
 // Hit testing keeps the desktop usable through every empty transparent pixel.
 const host=window.desktopHost;
+const passiveDesktop=host?.passive===true;
+if(passiveDesktop)document.body.classList.add("passive-desktop");
 let holding=false,lastInteractive=null,lastHitRect='',lastPointer={x:-1,y:-1};
 function updateDesktopHit(x=lastPointer.x,y=lastPointer.y){
+ if(passiveDesktop)return;
  lastPointer={x,y};
  const target=document.elementFromPoint(x,y);
  const hit=target?.closest('.cat,button,a,select');
@@ -11,14 +14,20 @@ function updateDesktopHit(x=lastPointer.x,y=lastPointer.y){
  const signature=rect?.join(',')||'';
  if(interactive!==lastInteractive||signature!==lastHitRect){lastInteractive=interactive;lastHitRect=signature;host?.setInteractive(interactive,rect);}
 }
+if(!passiveDesktop){
 addEventListener('mousemove',event=>updateDesktopHit(event.clientX,event.clientY));
 addEventListener('pointerdown',event=>{if(event.button===0&&event.target.closest('.cat'))holding=true;updateDesktopHit(event.clientX,event.clientY);},true);
 for(const type of ['pointerup','pointercancel','lostpointercapture'])addEventListener(type,event=>{holding=false;updateDesktopHit(event.clientX,event.clientY);},true);
 addEventListener('blur',()=>{holding=false;host?.setInteractive(false);lastInteractive=false;});
 // Cats can move away from the pointer without another native mouse message.
 setInterval(()=>updateDesktopHit(),120);
+}
 host?.onCommand(command=>{
- if(command==='controls')setRoomControls(!document.body.classList.contains('controls-visible'));
+ if(command==='controls'&&!passiveDesktop)setRoomControls(!document.body.classList.contains('controls-visible'));
+ if(command==='rest')$('restBtn').click();
+ if(command==='view')$('viewBtn').click();
+ if(command==='wings')$('wingsBtn').click();
+ if(command.startsWith('weather-'))setRoomWeather(command.slice(8));
  if(command==='friends')inviteRoomFriends();
  if(command==='motion')$('motionBtn').click();
  if(command==='background-on'||command==='background-off')setDesktopBackground(command==='background-on',false);

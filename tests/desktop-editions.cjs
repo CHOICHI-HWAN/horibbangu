@@ -14,6 +14,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   const originals=await original.evaluate(()=>Object.fromEntries(cats.filter(c=>c.guest).map(c=>[c.name,{svg:c.el.querySelector('svg').outerHTML,body:c.el.style.getPropertyValue('--body'),head:c.el.style.getPropertyValue('--head'),eye:c.el.style.getPropertyValue('--eye'),scale:c.scale}])));
   for(const [edition,names] of [['park',['소양','소미']],['kim',['팡이']]]){
    const page=await context.newPage();const errors=[],requests=[];
+   await page.addInitScript(()=>{window.desktopHost={passive:true,setInteractive:()=>{},setBackground:()=>{},onCommand:()=>{},quit:()=>{}};});
    page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});
    await page.goto(pathToFileURL(path.join(root,'build/editions',edition,'playground.html')).href);
    assert.deepEqual(await page.evaluate(()=>cats.map(c=>c.name)),names);
@@ -31,9 +32,11 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
    await page.evaluate(()=>{const c=cats[0];c.x=200;c.y=0;c.stand=GROUND;c.air=false;c.mode='sit';c.until=1e12;renderCatPosition(c);});
    const box=await page.locator('.cat').first().boundingBox();
    await page.mouse.move(box.x+32,box.y+20);await page.mouse.down();await page.mouse.move(box.x+120,box.y-60,{steps:8});
-   assert(await page.evaluate(()=>cats[0].mode==='bubble'));await page.mouse.up();assert(await page.evaluate(()=>cats[0].mode!=='bubble'));
+   assert(await page.evaluate(()=>cats[0].mode!=='bubble'));await page.mouse.up();
+   assert.equal(await page.locator('.cat').first().evaluate(el=>getComputedStyle(el).pointerEvents),'none');
+   assert(await page.locator('.header-actions').isHidden());
    assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);
-   console.log(edition+': exact resident-only roster, unchanged guest artwork, no visitor arrivals/departures, offline background and bubble drag verified.');
+   console.log(edition+': exact resident-only roster, unchanged guest artwork, no visitor arrivals/departures, offline background and passive non-interactive renderer verified.');
    await page.close();
   }
   const web=await context.newPage();await web.goto(pathToFileURL(path.join(root,'index.html')).href);

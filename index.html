@@ -461,7 +461,7 @@ svg.wheel.spin .ring {animation-duration:.75s;}
  <div id="calendarDays" class="calendar-days" aria-hidden="true"></div>
 </aside>
 </main>
-<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="viewBtn">풍경 감상</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><a id="windowsDownload" class="download-link" href="/releases/Horibbangu-Windows-v3.3.1.zip" download="Horibbangu-Windows-v3.3.1.zip" title="Windows 10/11 64비트 경량판 · Microsoft Edge WebView2 필요 · EXE 하나">Windows 경량판 v3.3.1 ↓</a><a id="windowsStandalone" class="download-link" href="/releases/Horibbangu-Windows-Standalone-v3.2.1.zip" download="Horibbangu-Windows-Standalone-v3.2.1.zip" title="WebView2 설치 없이 실행하는 기존 3.2.1 · 약 101 MB">호환판 v3.2.1 ↓</a><a id="windowsPark" class="download-link" href="/releases/Horibbangu-Park-Windows-v3.3.1.zip" download="Horibbangu-Park-Windows-v3.3.1.zip" title="소양·소미만 함께하는 Windows 경량판 · WebView2 필요">박박사판 v3.3.1 ↓</a><a id="windowsKim" class="download-link" href="/releases/Horibbangu-Kim-Windows-v3.3.1.zip" download="Horibbangu-Kim-Windows-v3.3.1.zip" title="팡이만 함께하는 Windows 경량판 · WebView2 필요">김박사판 v3.3.1 ↓</a><button id="closeControls">풍경만 보기</button></nav></header>
+<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="viewBtn">풍경 감상</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><a id="windowsDownload" class="download-link" href="/releases/Horibbangu-Windows-v3.3.2.zip" download="Horibbangu-Windows-v3.3.2.zip" title="Windows 10/11 64비트 경량판 · Microsoft Edge WebView2 필요 · EXE 하나">Windows 배경판 v3.3.2 ↓</a><a id="windowsPark" class="download-link" href="/releases/Horibbangu-Park-Windows-v3.3.2.zip" download="Horibbangu-Park-Windows-v3.3.2.zip" title="소양·소미만 함께하는 Windows 경량판 · WebView2 필요">박박사판 v3.3.2 ↓</a><a id="windowsKim" class="download-link" href="/releases/Horibbangu-Kim-Windows-v3.3.2.zip" download="Horibbangu-Kim-Windows-v3.3.2.zip" title="팡이만 함께하는 Windows 경량판 · WebView2 필요">김박사판 v3.3.2 ↓</a><button id="closeControls">풍경만 보기</button></nav></header>
 <a class="login-link" id="recordsLink" href="records.html">로그인 · 체중 기록 ↗</a>
 <div id="cats" aria-label="고양이 놀이터"><div id="props"></div></div>
 <div class="scene-label"><div id="status" role="status"><strong>호수가 보이는 작은 방</strong>고양이를 끌어 옮기거나, 눈을 맞춰 보세요.</div><div id="roomClock"></div></div>
@@ -703,19 +703,30 @@ function drawWeather(t){
   if(document.hidden||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground)||t-lastWeatherFrame<33)return;lastWeatherFrame=t;
   drawLake(t);
   const canvas=$('weatherCanvas');if(!canvas)return;
-  const dimensions=sceneDimensions||(sceneDimensions={width:canvas.clientWidth,height:canvas.clientHeight});
-  const w=dimensions.width,h=dimensions.height,resized=canvas.width!==w||canvas.height!==h;
-  if(resized){canvas.width=w;canvas.height=h;}
+  // Measure the precipitation layer itself: image sizing is independent of this overlay.
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  if(!w||!h)return;
+  // Keep high-DPI droplets crisp without allocating an unbounded multi-monitor canvas.
+  const scale=Math.min(devicePixelRatio||1,2,Math.sqrt(8388608/(w*h)));
+  const width=Math.max(1,Math.round(w*scale)),height=Math.max(1,Math.round(h*scale));
+  const resized=canvas.width!==width||canvas.height!==height;
+  if(resized){canvas.width=width;canvas.height=height;}
   if(!weatherPaint)weatherPaint={context:canvas.getContext('2d'),weather:null,paused:false};
   if(!resized&&weatherPaint.weather===roomWeather&&(roomWeather==='clear'||(reduceMotion&&weatherPaint.paused)))return;
-  const ctx=weatherPaint.context;ctx.clearRect(0,0,w,h);weatherPaint.weather=roomWeather;weatherPaint.paused=reduceMotion;
+  const ctx=weatherPaint.context;
+  ctx.setTransform(width/w,0,0,height/h,0,0);
+  ctx.clearRect(0,0,w,h);weatherPaint.weather=roomWeather;weatherPaint.paused=reduceMotion;
   if(reduceMotion)t=0;
   if(roomWeather!=='clear'){
     const snow=roomWeather==='snow',hail=roomWeather==='hail',speed=snow?18:hail?160:230;
-    ctx.strokeStyle='rgba(224,241,247,.65)';ctx.fillStyle=snow?'#fffcf1dc':'#eef8f9d9';ctx.lineWidth=1;
-    for(let i=0;i<(snow?45:65);i++){
-      const x=((i*137.2+Math.sin(t/2000+i)*(snow?14:2))%Math.max(1,w)),yy=(i*71+t/1000*speed)%Math.max(1,h);
-      if(snow||hail){ctx.beginPath();ctx.arc(x,yy,snow?1.8:2.6,0,Math.PI*2);ctx.fill();}
+    const count=Math.min(2400,Math.max(24,Math.ceil(w*h/(snow?8000:5500))));
+    ctx.strokeStyle='rgba(224,241,247,.78)';ctx.fillStyle=snow?'#fffcf1e8':'#eef8f9eb';ctx.lineWidth=1.25;
+    // Independent normalized seeds cover the whole scene, even on ultrawide screens.
+    for(let i=0;i<count;i++){
+      const seedX=((i+.5)*.754877666)%1,seedY=((i+.5)*.569840291)%1;
+      const x=(seedX*w+Math.sin(t/2000+i)*(snow?14:2)+w)%w;
+      const yy=(seedY*h+t/1000*speed)%h;
+      if(snow||hail){ctx.beginPath();ctx.arc(x,yy,(snow?1.5:2.1)+(i%4)*.3,0,Math.PI*2);ctx.fill();}
       else{ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x-4,yy+13);ctx.stroke();}
     }
   }

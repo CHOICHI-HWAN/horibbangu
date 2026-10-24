@@ -428,6 +428,10 @@ body.desktop-overlay:not(.desktop-background),.desktop-overlay:not(.desktop-back
 .desktop-overlay:not(.desktop-background) .kicker {display:none;}
 .cat-wall-clock,.wall-calendar,.art-wall {pointer-events:none;}
 
+/* Native Windows edition is a passive visual; only its native tray is interactive. */
+body.passive-desktop * {pointer-events:none!important;}
+body.passive-desktop .room-header,body.passive-desktop .scene-label,body.passive-desktop .weather-control {display:none!important;}
+
 </style></head><body class="room-page desktop-overlay"><main id="roomScene" class="room" tabindex="0" aria-expanded="false" aria-controls="roomControls" aria-label="할슈타트 호수를 바라보는 발코니 고양이 방">
 <div class="floor"></div><div class="sunbeam"></div>
 <div class="window-frame balcony-opening"><div class="window-view">

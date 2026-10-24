@@ -26,8 +26,11 @@ const output='build/native-verification'+(edition==='default'?'':'-'+edition);
  const response=await page.evaluate(async()=>{try{return(await fetch('https://example.com/')).status;}catch{return 0;}});
  assert([0,403].includes(response));
  // Native commands are received via the exact same bridge used by tray actions.
- await page.evaluate(()=>chrome.webview.dispatchEvent(new MessageEvent('message',{data:'controls'})));
- assert(await page.locator('#desktopQuit').isVisible());
+ assert.equal(await page.evaluate(()=>desktopHost.passive),true);
+ await page.evaluate(()=>{desktopHost.setInteractive(true,[0,0,innerWidth,innerHeight]);setRoomControls(true);});
+ assert(await page.locator('#desktopQuit').isHidden());
+ assert(await page.locator('.weather-control').isHidden());
+ await page.evaluate(()=>setRoomControls(false));
  await page.evaluate(()=>{setRoomControls(false);setDesktopBackground(true);});
  await page.waitForFunction(()=>lastLakeFrame>0);
  const frame=await page.evaluate(()=>lastLakeFrame);await page.waitForFunction(f=>lastLakeFrame>f+100,frame);

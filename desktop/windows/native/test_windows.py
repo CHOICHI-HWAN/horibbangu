@@ -2,7 +2,7 @@
 from pathlib import Path
 import sys
 import ctypes as C,ctypes.wintypes as W,faulthandler,json,os,subprocess,time,urllib.request
-faulthandler.dump_traceback_later(120,exit=True)
+faulthandler.dump_traceback_later(180,exit=True)
 from PIL import ImageGrab
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'desktop/windows'))
@@ -43,156 +43,93 @@ def evaluate(expression):
  line=rpc.stdout.readline();assert line,'CDP evaluator exited'
  response=json.loads(line);assert response['ok'],response
  return response['result']
-app=subprocess.Popen([str(ROOT/'candidate.exe')]);print('Native host PID:',app.pid,flush=True)
+# Deliberately seed an older foreground preference: it must never restore input.
+ini=Path(os.environ['LOCALAPPDATA'])/edition['data']/'settings.ini'
+ini.parent.mkdir(parents=True,exist_ok=True);ini.write_text('[Desktop]\nLayer=1\nTransparency=0\n')
+app=subprocess.Popen([str(ROOT/'candidate.exe')]);print('Passive host PID:',app.pid,flush=True)
 try:
  deadline=time.time()+60
- print('Starting WebView2 readiness probe',flush=True)
- for _ in range(300):
-  if time.time()>deadline:raise AssertionError('WebView2 did not become ready within 60 seconds')
+ while time.time()<deadline:
   pump(.2)
-  if app.poll() is not None:raise AssertionError(f'Native host exited: {app.returncode}')
+  assert app.poll() is None,'Native host exited before readiness'
   try:
    targets=json.load(urllib.request.urlopen('http://127.0.0.1:9223/json',timeout=1))
    if any(t.get('url','').startswith('https://horibbangu.local/') for t in targets):break
   except OSError:pass
- else:raise AssertionError('WebView2 never became ready')
+ else:raise AssertionError('WebView2 readiness timeout')
  hwnd=u.FindWindowW(edition['window_class'],None);assert hwnd
- # Keep app above white underlay without changing production's non-topmost default.
- u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(1)
- style=u.GetWindowLongPtrW(hwnd,-16);extended=u.GetWindowLongPtrW(hwnd,-20)
- assert not(style&0x00C00000),'Title bar unexpectedly present'
- assert extended&0x80000 and extended&0x80,'Layered/tool window missing'
+ def passive_flags():
+  flags=u.GetWindowLongPtrW(hwnd,-20)
+  assert flags&0x80000 and flags&0x20 and flags&0x08000000 and not(flags&8),hex(flags)
+ passive_flags()
+ assert 'Layer=2' in ini.read_text(),'Old always-on-top preference was not migrated'
+ assert not(u.GetWindowLongPtrW(hwnd,-16)&0x00C00000)
  subprocess.run(['node','desktop/windows/native/test_page.cjs'],check=True)
- # Use the actual native settings controls: monitor enumeration, live opacity and stacking.
- evaluate('setDesktopBackground(true)');pump(.4)
- u.PostMessageW(hwnd,0x0111,110,0);pump(.4)
+ assert evaluate('desktopHost.passive') is True
+ evaluate("window.passiveDowns=0;addEventListener('pointerdown',()=>passiveDowns++);")
+ # Live monitor and opacity controls still work, but no input/layer switch exists.
+ u.PostMessageW(hwnd,0x0111,110,0);pump(.3)
  settings=u.FindWindowW(edition['settings_class'],None);assert settings
- ImageGrab.grab().save(OUT/'settings.png')
+ assert not u.GetDlgItem(settings,204) and not u.GetDlgItem(settings,205) and not u.GetDlgItem(settings,206)
  combo=u.GetDlgItem(settings,201);slider=u.GetDlgItem(settings,202)
- assert u.SendMessageW(combo,0x0146,0,0)>=1  # CB_GETCOUNT
- u.SendMessageW(combo,0x014E,0,0)  # CB_SETCURSEL
- u.SendMessageW(settings,0x0111,201|(1<<16),combo)
- base=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
- u.SendMessageW(slider,0x0405,1,50)  # TBM_SETPOS
- u.SendMessageW(settings,0x0114,0,slider);pump(.4)
+ assert u.SendMessageW(combo,0x0146,0,0)>=1
+ u.SendMessageW(combo,0x014e,0,0);u.SendMessageW(settings,0x0111,201|(1<<16),combo)
+ # A legacy message requesting foreground mode cannot re-enable it.
+ u.SendMessageW(settings,0x0111,205,0);passive_flags()
+ evaluate('setDesktopBackground(true)');pump(.1)
+ def expose():
+  u.SetWindowPos(hwnd,0,0,0,0,0,0x413);pump(.04)
+ expose();base=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
+ u.SendMessageW(slider,0x0405,1,50);u.SendMessageW(settings,0x0114,0,slider);expose()
  faded=ImageGrab.grab().getpixel((width*3//4,height//2))[:3]
+ assert sum(faded)>sum(base)+30,('Opacity failed',base,faded)
  ImageGrab.grab().save(OUT/'opacity-50.png')
- assert sum(faded)>sum(base)+30,('Opacity did not blend with desktop',base,faded)
- ini=Path(os.environ['LOCALAPPDATA'])/edition['data']/'settings.ini'
- assert 'Transparency=50' in ini.read_text() and 'Monitor=' in ini.read_text()
- u.SendMessageW(settings,0x0111,205,0);pump(.2)
- assert u.GetWindowLongPtrW(hwnd,-20)&0x8  # WS_EX_TOPMOST
- u.SendMessageW(settings,0x0111,206,0);pump(.2)
- style=u.GetWindowLongPtrW(hwnd,-20)
- assert not(style&0x8) and style&0x08000000  # behind: non-topmost and no activation
- u.SendMessageW(settings,0x0111,204,0);pump(.2)
- assert not(u.GetWindowLongPtrW(hwnd,-20)&(0x8|0x08000000))
  u.SendMessageW(slider,0x0405,1,0);u.SendMessageW(settings,0x0114,0,slider)
- u.PostMessageW(settings,0x0010,0,0);pump(.3)
- evaluate('setDesktopBackground(false)');pump(.3)
- print('Native monitor selection, opacity and top/behind/normal settings verified.',flush=True)
- # Closing a settings window restores the foreground white test application.
- # Explicitly expose the cats before testing their actual clicks.
- u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.5)
-
- pump(.6)
- # Blank middle pixel must show actual white underlay, not black compositor fill.
- screen=ImageGrab.grab();screen.save(OUT/'transparent-desktop.png')
- assert sum(min(p[:3])<200 for p in screen.getdata())>5000,'Cats and furniture were occluded before the input test'
- sample=screen.getpixel((width//2,height//2))[:3]
- assert min(sample)>240,('Transparency failed',sample)
- assert u.GetWindowLongPtrW(hwnd,-20)&0x20,'Empty pixels must pass clicks through'
- box=evaluate("(()=>{const r=cats[0].el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()")
- evaluate("window.nativeEvents=[];for(const type of ['pointerdown','pointermove','pointerup','pointercancel','lostpointercapture','gotpointercapture'])addEventListener(type,e=>window.nativeEvents.push({type,buttons:e.buttons,x:e.clientX,y:e.clientY,cat:e.target.closest?.('.cat')?.dataset?.name}),true);")
- # The Windows native mouse pump must enable hit testing over a visible cat.
- x=int(box['x']+box['width']/2);y=int(box['y']+box['height']/2)
- u.SetCursorPos(x,y);pump(.5)
- pointer=evaluate("JSON.stringify({pointer:lastPointer,cat:{x:cats[0].x,y:cats[0].y,mode:cats[0].mode},target:document.elementFromPoint(lastPointer.x,lastPointer.y)?.className,interactive:lastInteractive})")
- (OUT/'pointer.json').write_text(pointer,encoding='utf-8')
- assert json.loads(pointer)['interactive'],'Cat did not become interactive'
- u.mouse_event(0x0002,0,0,0,0);pump(.1)
- for step in range(1,9):
-  # SetCursorPos alone doesn't produce WH_MOUSE_LL movement packets.
-  u.mouse_event(0x8001,round((x+step*12)*65535/(width-1)),round((y-step*9)*65535/(height-1)),0,0);pump(.06)
- (OUT/'drag-events.json').write_text(json.dumps(evaluate('({events:window.nativeEvents,mode:cats[0].mode,holding})')),encoding='utf-8')
- assert evaluate("cats[0].mode==='bubble'"),'Native drag never entered bubble mode'
- u.mouse_event(0x0004,0,0,0,0);pump(.2)
- assert evaluate("cats[0].mode!=='bubble'")
- # A real foreground application must retain its click even over a cat's DOM rect.
- evaluate("window.nativeDowns=0;addEventListener('pointerdown',()=>window.nativeDowns++);")
- u.SetWindowPos(under,0,0,0,0,0,0x43);u.SetForegroundWindow(under);pump(.3)
- box=evaluate("(()=>{const r=cats[0].el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()")
- u.SetCursorPos(int(box['x']+box['width']/2),int(box['y']+box['height']/2));pump(.3)
- u.mouse_event(0x0002,0,0,0,0);pump(.1);u.mouse_event(0x0004,0,0,0,0);pump(.1)
- assert evaluate('window.nativeDowns')==0,'A covered cat intercepted foreground input'
- # Background mode must also pass real desktop-icon gestures through. Check
- # after a stale hit rectangle and a shell-style Z-order change, not just styles.
+ u.SendMessageW(settings,0x0010,0,0);pump(.2)
+ # Real OS icon controls, stale renderer hit rectangles and queued mouse messages.
  from test_background_input import verify_background_input
- print('Starting background icon regression.',flush=True)
- verify_background_input(u,pump,hwnd,under,evaluate,OUT,width,height,edition["settings_class"])
- # Closing settings may asynchronously foreground its previous owner. Retire
- # the icon test application before testing an exposed interactive cat again.
- u.ShowWindow(under,0);u.SetForegroundWindow(hwnd)
- u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.3)
- evaluate("(()=>{const c=cats[0];c.x=200;c.y=0;c.stand=GROUND;c.air=false;c.goal=null;c.edge=null;c.mode='sit';c.until=1e12;renderCatPosition(c);})()")
- box=evaluate("(()=>{const r=cats[0].el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()")
- x=int(box['x']+box['width']/2);y=int(box['y']+box['height']/2)
- u.SetCursorPos(x,y);pump(.3)
- u.mouse_event(0x0002,0,0,0,0);pump(.05)
- u.mouse_event(0x8001,round((x+25)*65535/(width-1)),round((y-25)*65535/(height-1)),0,0);pump(.1)
- assert evaluate("cats[0].mode==='bubble'"),'Interactive cat drag did not return after background mode'
- print('Restored interactive drag verified; switching during a held gesture.',flush=True)
- # Switching to background during a held drag must release the bubble.
- u.PostMessageW(hwnd,0x0111,110,0);pump(.1)
- settings=u.FindWindowW(edition['settings_class'],None);assert settings
- u.SendMessageW(settings,0x0111,206,0);pump(.1)
- u.mouse_event(0x0004,0,0,0,0);pump(.1)
- assert evaluate("cats[0].mode!=='bubble'"),'Entering background mode left a cat captured'
- u.SendMessageW(settings,0x0111,204,0);u.SendMessageW(settings,0x0010,0,0);pump(.1)
- u.SetWindowPos(hwnd,0,0,0,0,0,0x13);pump(.1)
- # Exercise the actual Win32 hotkey route used by Ctrl+Alt+H.
- u.PostMessageW(hwnd,0x0312,1,0);pump(.3)
- assert evaluate("document.body.classList.contains('controls-visible')")
- evaluate('setDesktopBackground(true)');pump(.5)
- ImageGrab.grab().save(OUT/'painted-desktop.png')
+ verify_background_input(u,pump,hwnd,under,evaluate,OUT,width,height,edition['settings_class'])
+ assert evaluate('passiveDowns')==0
+ from test_explorer_input import verify_explorer_input
+ verify_explorer_input(u,pump,hwnd,under,evaluate,edition,OUT)
+ # Exercise exactly the command handler called by the native tray menu.
+ for id,choice in [(121,'clear'),(122,'rain'),(123,'snow'),(124,'hail'),(120,'auto')]:
+  u.PostMessageW(hwnd,0x0111,id,0);pump(.15)
+  assert evaluate('weatherChoice')==choice
+ u.PostMessageW(hwnd,0x0111,111,0);pump(.15)
+ assert evaluate("document.getElementById('status').textContent.includes('좋아하는')")
+ u.PostMessageW(hwnd,0x0111,112,0);pump(.15)
+ for background in [False,True]:
+  evaluate('setDesktopBackground('+str(background).lower()+')');pump(.1)
+  # No legacy path can arm input, including messages queued by an older host.
+  evaluate('desktopHost.setInteractive(true,[0,0,innerWidth,innerHeight])')
+  for message in [0x201,0x202,0x200]:u.PostMessageW(hwnd,0x8003,message,(200<<16)|200)
+  pump(.1);assert evaluate('passiveDowns')==0;passive_flags()
  assert evaluate('desktopBackground && lastLakeFrame>0')
- # Read the current binary's embedded guide and notices after real extraction.
- assets=Path(os.environ['LOCALAPPDATA'])/edition['data']/'Native/3.3.1'
+ ImageGrab.grab().save(OUT/'passive-desktop.png')
+ assets=Path(os.environ['LOCALAPPDATA'])/edition['data']/'Native'/edition['version']
  assert (assets/'LICENSE').exists() and (assets/'WebView2-LICENSE.txt').exists()
- # Persist non-default native settings as well as the renderer's background choice.
- u.PostMessageW(hwnd,0x0111,110,0);pump(.2)
- settings=u.FindWindowW(edition['settings_class'],None);slider=u.GetDlgItem(settings,202)
- u.SendMessageW(slider,0x0405,1,37);u.SendMessageW(settings,0x0114,0,slider)
- u.SendMessageW(settings,0x0111,206,0)
- u.PostMessageW(settings,0x0010,0,0);pump(.2)
- # Exit and relaunch from a different location: same profile and native settings.
+ u.PostMessageW(hwnd,0x0312,1,0);pump(.2)
+ settings=u.FindWindowW(edition['settings_class'],None);assert settings
+ u.SendMessageW(u.GetDlgItem(settings,202),0x0405,1,37);u.SendMessageW(settings,0x0114,0,u.GetDlgItem(settings,202))
+ u.SendMessageW(settings,0x0010,0,0);pump(.1)
  stop_rpc();u.PostMessageW(hwnd,0x0010,0,0);app.wait(timeout=15)
  import shutil
  moved=OUT/'relocated';moved.mkdir(exist_ok=True);shutil.copyfile(ROOT/'candidate.exe',moved/'cats.exe')
  app=subprocess.Popen([str(moved/'cats.exe')]);pump(5)
- assert app.poll() is None and evaluate('desktopBackground')
- hwnd=u.FindWindowW(edition['window_class'],None)
- assert u.GetWindowLongPtrW(hwnd,-20)&0x08000000
- u.PostMessageW(hwnd,0x0111,110,0);pump(.3)
- settings=u.FindWindowW(edition['settings_class'],None)
- assert u.SendMessageW(u.GetDlgItem(settings,202),0x0400,0,0)==37  # TBM_GETPOS
+ assert app.poll() is None and evaluate('desktopBackground && desktopHost.passive')
+ hwnd=u.FindWindowW(edition['window_class'],None);passive_flags()
+ u.PostMessageW(hwnd,0x0312,1,0);pump(.2)
+ settings=u.FindWindowW(edition['settings_class'],None);assert settings
+ assert u.SendMessageW(u.GetDlgItem(settings,202),0x0400,0,0)==37
  stop_rpc();u.PostMessageW(hwnd,0x0312,2,0);app.wait(timeout=15);assert app.returncode==0
- (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'transparentPixel':sample,'checks':['real Win32/WebView2 launch','monitor selection and opacity','top/behind modes','offline renderer','background and lake','persistent settings','transparent compositor','physical mouse click-through and drag','background icon selection/double-click/right-click/drag','interactive mode restoration and held-drag release','hotkey menu and exit','relocated EXE']},indent=2))
- print('Windows native runtime verification passed.')
+ (OUT/'result.json').write_text(json.dumps({'ok':True,'exeBytes':(ROOT/'candidate.exe').stat().st_size,'checks':['real passive Win32/WebView2 launch','old topmost setting migration','monitor selection and opacity','permanent layered transparent no-activate window','no legacy input re-arming','Win32 icon control selection/double-click/right-click/drag','real Explorer icon selection and shortcut launch','tray commands for weather/rest/scenery','offline background and lake','persistent settings and relocated EXE','hotkey settings and exit']},indent=2))
+ print('Passive Windows desktop verification passed.',flush=True)
 finally:
  if rpc:stop_rpc()
  ImageGrab.grab().save(OUT/'final-desktop.png')
  import shutil
- log=Path(os.environ['LOCALAPPDATA'])/edition['data']/'Native/3.3.1/native-diagnostics.txt'
+ log=Path(os.environ['LOCALAPPDATA'])/edition['data']/'Native'/edition['version']/'native-diagnostics.txt'
  if log.exists():shutil.copyfile(log,OUT/'native-diagnostics.txt')
- titles=[]
- callbackType=C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
- u.GetWindowTextW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
- def title(h,l):
-  text=C.create_unicode_buffer(1024);u.GetWindowTextW(h,text,1024)
-  if text.value:titles.append(text.value)
-  return True
- callback=callbackType(title);u.EnumWindows(callback,0)
- (OUT/'window-titles.json').write_text(json.dumps(titles,ensure_ascii=False),encoding='utf-8')
  if app.poll() is None:app.terminate();app.wait(timeout=10)
  u.DestroyWindow(under)

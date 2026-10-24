@@ -3,7 +3,7 @@
 
 struct DisplayChoice {RECT work,screen;wchar_t device[32];bool primary;};
 static DisplayChoice displays[32];
-static int displayCount=0,layer=0,transparency=0;
+static int displayCount=0,layer=2,transparency=0;
 static wchar_t selectedDisplay[32],settingsFile[2048];
 static HWND settingsWindow,monitorCombo,opacitySlider,opacityLabel;
 static HFONT settingsFont;
@@ -32,7 +32,7 @@ static void saveSettings(){
 }
 static void loadSettings(){
  GetPrivateProfileStringW(L"Desktop",L"Monitor",L"",selectedDisplay,32,settingsFile);
- layer=GetPrivateProfileIntW(L"Desktop",L"Layer",0,settingsFile);if(layer<0||layer>2)layer=0;
+ layer=2; // Older foreground/interactive preferences must not restore input.
  transparency=GetPrivateProfileIntW(L"Desktop",L"Transparency",0,settingsFile);if(transparency<0||transparency>80)transparency=0;
 }
 static void applyOpacity(){if(opacityEffect){opacityEffect->SetOpacity((100-transparency)/100.0f);if(device)device->Commit();}}
@@ -40,11 +40,10 @@ static void bounds(){
  int selected=refreshDisplays();RECT work={};
  if(displayCount)work=displays[selected].work;else SystemParametersInfoW(SPI_GETWORKAREA,0,&work,0);
  LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_EXSTYLE);
- SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,layer==2?style|WS_EX_NOACTIVATE:style&~WS_EX_NOACTIVATE);
- SetWindowPos(windowHandle,layer==1?HWND_TOPMOST:layer==2?HWND_BOTTOM:HWND_NOTOPMOST,work.left,work.top,work.right-work.left,work.bottom-work.top,SWP_NOACTIVATE);
+ SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,style|WS_EX_NOACTIVATE|WS_EX_TRANSPARENT|WS_EX_LAYERED);
+ SetWindowPos(windowHandle,HWND_BOTTOM,work.left,work.top,work.right-work.left,work.bottom-work.top,SWP_NOACTIVATE);
  if(controller){RECT area;GetClientRect(windowHandle,&area);controller->put_Bounds(area);controller->NotifyParentWindowPositionChanged();}
 }
-static void setLayer(int value){layer=value;updateMouseHook();bounds();if(settingsWindow)CheckRadioButton(settingsWindow,204,206,204+layer);saveSettings();}
 static void labelOpacity(){
  wchar_t text[96];swprintf(text,96,L"투명도: %d%%  (0%% = 선명하게)",transparency);SetWindowTextW(opacityLabel,text);
 }
@@ -63,7 +62,6 @@ static LRESULT CALLBACK settingsProcedure(HWND h,UINT message,WPARAM w,LPARAM l)
  if(message==WM_COMMAND){
   int id=LOWORD(w);
   if(id==201&&HIWORD(w)==CBN_SELCHANGE){int i=(int)SendMessageW(monitorCombo,CB_GETCURSEL,0,0);if(i>=0&&i<displayCount){lstrcpynW(selectedDisplay,displays[i].device,32);bounds();saveSettings();}return 0;}
-  if(id>=204&&id<=206){setLayer(id-204);return 0;}
   if(id==IDCANCEL){DestroyWindow(h);return 0;}
  }
  if(message==WM_DISPLAYCHANGE){bounds();fillMonitors();return 0;}
@@ -91,10 +89,7 @@ static void openSettings(){
  opacityLabel=control(L"STATIC",L"",0,20,83,380,22,0);labelOpacity();
  opacitySlider=control(TRACKBAR_CLASSW,L"",TBS_HORZ|TBS_NOTICKS|WS_TABSTOP,16,108,388,32,202);
  SendMessageW(opacitySlider,TBM_SETRANGE,TRUE,MAKELPARAM(0,80));SendMessageW(opacitySlider,TBM_SETPOS,TRUE,transparency);
- control(L"BUTTON",L"보통",BS_AUTORADIOBUTTON|WS_GROUP|WS_TABSTOP,20,153,88,25,204);
- control(L"BUTTON",L"항상 위에",BS_AUTORADIOBUTTON,112,153,112,25,205);
- control(L"BUTTON",L"항상 뒤에 (배경처럼)",BS_AUTORADIOBUTTON,232,153,180,25,206);
- CheckRadioButton(settingsWindow,204,206,204+layer);
+ control(L"STATIC",L"감상 전용 배경 · 모든 클릭은 바탕화면으로 통과합니다.",0,20,153,390,30,0);
  control(L"STATIC",L"설정은 자동으로 저장됩니다.",0,20,194,260,22,0);
  control(L"BUTTON",L"닫기",BS_DEFPUSHBUTTON|WS_TABSTOP,320,211,80,28,IDCANCEL);
  ShowWindow(settingsWindow,SW_SHOW);SetForegroundWindow(settingsWindow);

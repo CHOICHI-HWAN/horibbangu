@@ -16,6 +16,7 @@ jobs:
     env:
       PYTHONUTF8: '1'
       HORIBBANGU_EDITION: ${{ matrix.edition }}
+      HORIBBANGU_NATIVE_TEST_BUILD: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

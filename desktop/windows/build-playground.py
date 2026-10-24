@@ -48,7 +48,7 @@ html=html.replace("script-src 'unsafe-inline'", "script-src 'self'")
 (output/'playground.html').write_text(html,newline='\n')
 if edition['cats']:
     guide=(root/'desktop/windows/사용방법.txt').read_text()
-    guide=guide.replace('호리빵구 · 바탕화면 친구들 3.3.1',edition['title']+' 3.3.1')
+    guide=guide.replace('호리빵구 · 바탕화면 친구들 '+edition['version'],edition['title']+' '+edition['version'])
     guide=guide.replace('「호리빵구.exe」','「'+edition['download_exe']+'」')
     guide=re.sub(r'런타임 설치를 원하지 않으면 별도 .*?약 101 MB입니다\.\n','',guide,flags=re.S)
     guide=guide.replace('HoribbanguDesktop',edition['data'])
