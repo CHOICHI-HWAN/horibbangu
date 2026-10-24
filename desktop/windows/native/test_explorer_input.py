@@ -32,7 +32,7 @@ def verify_explorer_input(u,pump,hwnd,under,evaluate,edition,out):
    pump(.2)
   assert icon,'Real Explorer did not expose the test desktop shortcut'
   print('Real Explorer shortcut:',icon,flush=True)
-  x,y=icon['x']+16,icon['y']+16
+  x,y=icon['x']+24,icon['y']+32
   u.ShowWindow(under,0)
   # Expose the desktop. Only disposable CI windows are minimized.
   callback_type=C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
@@ -48,7 +48,12 @@ def verify_explorer_input(u,pump,hwnd,under,evaluate,edition,out):
   def expose():
    u.SetCursorPos(x,y);pump(.03)
   expose();click();pump(.2)
-  after=inspect();assert after and after['selected'],('Real desktop icon selection failed',after)
+  after=inspect()
+  if not after or not after['selected']:
+   u.WindowFromPoint.argtypes=[W.POINT];u.WindowFromPoint.restype=W.HWND
+   hit=u.WindowFromPoint(W.POINT(x,y));cls=C.create_unicode_buffer(128);u.GetClassNameW(hit,cls,128)
+   print('Icon hit diagnostic:',{'point':[x,y],'window':int(hit or 0),'class':cls.value},flush=True)
+  assert after and after['selected'],('Real desktop icon selection failed',after)
   # Leave the double-click interval after the selection click.
   pump(.6);expose();click();click()
   for _ in range(50):

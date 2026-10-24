@@ -27,7 +27,7 @@ int wmain(int argc,wchar_t** argv){
  bool found=false;
  if(SUCCEEDED(hr)){
   IFolderView2* second=nullptr;
-  if(SUCCEEDED(view->QueryInterface(IID_IFolderView2,(void**)&second))){DWORD flags=0;if(SUCCEEDED(second->GetCurrentFolderFlags(&flags))&&(flags&FWF_NOICONS))second->SetCurrentFolderFlags(FWF_NOICONS,0);second->Release();}
+  if(SUCCEEDED(view->QueryInterface(IID_IFolderView2,(void**)&second))){DWORD flags=0;if(SUCCEEDED(second->GetCurrentFolderFlags(&flags))&&(flags&FWF_NOICONS))second->SetCurrentFolderFlags(FWF_NOICONS,0);}
   HWND viewWindow=nullptr;view->GetWindow(&viewWindow);
   int count=0,selected=0,marked=-1;POINT spacing={75,80};folder->GetSpacing(&spacing);
   folder->ItemCount(SVGIO_ALLVIEW,&count);folder->ItemCount(SVGIO_SELECTION,&selected);folder->GetSelectionMarkedItem(&marked);
@@ -36,11 +36,13 @@ int wmain(int argc,wchar_t** argv){
    if(FAILED(folder->Item(i,&pidl)))continue;
    if(SUCCEEDED(shellFolder->GetDisplayNameOf(pidl,SHGDN_INFOLDER,&text)))StrRetToBufW(&text,pidl,name,1024);
    if(argc>1&&wcsstr(name,argv[1])&&SUCCEEDED(folder->GetItemPosition(pidl,&p))){
+    DWORD state=0;bool isSelected=second&&SUCCEEDED(second->GetSelectionState(pidl,&state))&&(state&SVSI_SELECT);
     ClientToScreen(viewWindow,&p);
-    printf("{\"x\":%ld,\"y\":%ld,\"spacingX\":%ld,\"spacingY\":%ld,\"selected\":%s}\n",p.x,p.y,spacing.x,spacing.y,selected==1&&marked==i?"true":"false");found=true;
+    printf("{\"x\":%ld,\"y\":%ld,\"spacingX\":%ld,\"spacingY\":%ld,\"selected\":%s}\n",p.x,p.y,spacing.x,spacing.y,isSelected?"true":"false");found=true;
    }
    CoTaskMemFree(pidl);
   }
+  if(second)second->Release();
  }
  if(shellFolder)shellFolder->Release();if(folder)folder->Release();if(view)view->Release();if(browser)browser->Release();if(services)services->Release();if(dispatch)dispatch->Release();if(windows)windows->Release();CoUninitialize();
  if(!found)fprintf(stderr,"Desktop fixture not found, HRESULT 0x%08lx\n",(unsigned long)hr);
