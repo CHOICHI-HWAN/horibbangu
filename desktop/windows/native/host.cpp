@@ -47,9 +47,7 @@ static BOOL CALLBACK findWallpaper(HWND top,LPARAM){
 static bool attachWallpaper(){
  HWND progman=FindWindowW(L"Progman",nullptr);if(!progman)return false;
  DWORD_PTR result=0;
- SendMessageTimeoutW(progman,0x052c,0xd,0,SMTO_ABORTIFHUNG,1000,&result);
  SendMessageTimeoutW(progman,0x052c,0xd,1,SMTO_ABORTIFHUNG,1000,&result);
- SendMessageTimeoutW(progman,0x052c,0,0,SMTO_ABORTIFHUNG,1000,&result);
  wallpaperParent=nullptr;wallpaperAfter=HWND_TOP;EnumWindows(findWallpaper,0);
  if(!wallpaperParent)return false;
  LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_STYLE);

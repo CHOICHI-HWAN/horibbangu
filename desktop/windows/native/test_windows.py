@@ -89,6 +89,16 @@ try:
   pump(.1)
   pixel=ImageGrab.grab().getpixel((width-90,110))[:3]
   if pixel==(255,0,255):visible=True;break
+ if not visible:
+  u.GetWindow.argtypes=[W.HWND,W.UINT];u.GetWindow.restype=W.HWND
+  def describe(h):
+   r=W.RECT();u.GetWindowRect(h,C.byref(r));name=C.create_unicode_buffer(128);u.GetClassNameW(h,name,128)
+   return dict(hwnd=int(h or 0),cls=name.value,rect=[r.left,r.top,r.right,r.bottom],style=hex(u.GetWindowLongPtrW(h,-16)),ex=hex(u.GetWindowLongPtrW(h,-20)),visible=bool(u.IsWindowVisible(h)))
+  parent=u.GetParent(hwnd)
+  print('Wallpaper diagnostic',json.dumps({'visual':describe(hwnd),'parent':describe(parent),'previous':describe(u.GetWindow(hwnd,3)),'next':describe(u.GetWindow(hwnd,2)),'dom':evaluate("({hidden:document.hidden,dpr:devicePixelRatio,width:innerWidth,height:innerHeight,rect:document.getElementById('ci-visible').getBoundingClientRect().toJSON()})")}),flush=True)
+  u.SetWindowPos(hwnd,0,0,0,0,0,0x413);pump(.1)
+  print('Diagnostic child on top pixel:',ImageGrab.grab().getpixel((width-90,110))[:3],flush=True)
+  ImageGrab.grab().save(OUT/'diagnostic-child-top.png')
  assert visible,('Wallpaper is hidden behind Explorer',pixel)
  evaluate("document.getElementById('ci-visible').remove()")
  # Live monitor and opacity controls still work, but no input/layer switch exists.
