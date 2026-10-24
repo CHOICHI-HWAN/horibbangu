@@ -109,8 +109,8 @@ try:
  assert visible,('Wallpaper is hidden behind Explorer',pixel)
  evaluate("document.getElementById('ci-visible').remove()")
  # Transparent mode must reveal the existing wallpaper rather than a black surface.
- u.ShowWindow(hwnd,0);pump(.2);empty=ImageGrab.grab().getpixel((width-90,110))[:3]
- u.ShowWindow(hwnd,4);pump(.3);transparent=ImageGrab.grab().getpixel((width-90,110))[:3]
+ u.ShowWindow(hwnd,0);pump(.2);empty=ImageGrab.grab().getpixel((width//2,20))[:3]
+ u.ShowWindow(hwnd,4);pump(.3);transparent=ImageGrab.grab().getpixel((width//2,20))[:3]
  assert max(abs(a-b) for a,b in zip(empty,transparent))<8,('Transparent wallpaper changed',empty,transparent)
  ImageGrab.grab().save(OUT/'transparent-desktop.png')
  # Live monitor and opacity controls still work, but no input/layer switch exists.
