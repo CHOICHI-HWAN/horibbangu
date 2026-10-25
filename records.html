@@ -875,6 +875,11 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
     <path class="flat-nose" d="M44.8 23.3Q46.5 22.5 48.3 23.3Q48.5 24.3 46.6 24.8Q44.6 24.4 44.8 23.3Z" fill="#dda5a7"/>
     <path class="nose" d="M45.2 25Q47 24.2 48.8 25L47 27Z"/>
     <path class="mouth" d="M47 27v1m0 0q-1.4 1.5-2.7.1m2.7-.1q1.4 1.5 2.7.1" fill="none" stroke="#775e55" stroke-width=".65"/>
+    <g class="yawn-mouth">
+      <ellipse cx="47" cy="30.7" rx="3.4" ry="4.4" fill="#765451" stroke="#88615c" stroke-width=".65"/>
+      <path d="M44.7 32.7Q47 30.8 49.3 32.7Q49 34.4 47 34.5Q45 34.4 44.7 32.7Z" fill="#e6a6aa"/>
+      <path d="m44.8 27.4.8 1.6.5-1.7m1.8 0 .5 1.7.8-1.6" fill="#fff8e9"/>
+    </g>
     <path d="m37 27-6-1m6 3-5 1m24-3 6-1m-6 3 5 1" fill="none" stroke="#84756a" stroke-width=".55" opacity=".65"/>
   </g>
   <g class="tail-scarf" fill="none" stroke-linecap="round"><path d="M14 30C4 42 28 45 47 39Q55 35 46 35" stroke="#54483e" stroke-opacity=".25" stroke-width="8"/><path d="M14 30C4 42 28 45 47 39Q55 35 46 35" stroke="var(--tail)" stroke-width="6.5"/><path d="M27 41l-1-4m9 4-1-4" stroke="var(--stripe)" stroke-opacity=".35" stroke-width="2"/></g>
@@ -1198,6 +1203,20 @@ const grounded = c => !c.air && !c.stand;
 
 function sleepNow(c, t) { c.noteAt = 0; if (c.name === '호야') { setMode(c, 'chin', t, rnd(7000, 13000)); return; } setMode(c, 'sleep', t, rnd(6000, 14000)); }
 function groomNow(c, t) { setMode(c, 'groom', t, rnd(3000, 5500)); }
+function yawnNow(c, t, stretch = true) {
+  c.stretchAfterYawn = stretch;
+  c.gestureAfter = t + rnd(45000, 90000);
+  setMode(c, 'yawn', t, 3200);
+}
+function idleGesture(c, t) {
+  if (c.air || t < (c.gestureAfter || 0)) return false;
+  const r = Math.random();
+  if (r >= .22) return false;
+  c.gestureAfter = t + rnd(45000, 90000);
+  if (r < .13) yawnNow(c, t, Math.random() < .6);
+  else setMode(c, 'stretch', t, 3600);
+  return true;
+}
 function travelTo(c, goal, t) {
   if (!goal || goal === nodeOf(c)) { setMode(c, 'sit', t, 1200); return; }
   c.goal = goal; c.edge = null; setMode(c, 'travel', t, 180000);
@@ -1299,6 +1318,7 @@ function chooseFavorite(c, t) {
 function pickIdle(c, t) {
   c.goal = null; c.edge = null; c.zoom = 0; c.cozy = null; c.sceneryGoal = null; c.sceneryX = null;
   if (c.restUntil > t) { sleepNow(c, t); return; }
+  if (idleGesture(c, t)) return;
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (isHigh(c) && c.stand.kind !== 'ramp') return pickPerch(c, t);
   if (typeof chooseRoomScenery === 'function' && Math.random() < .24 && chooseRoomScenery(c,t)) return;
@@ -1308,7 +1328,7 @@ function pickIdle(c, t) {
   const wheelFree = wheel && !cats.some(o => o.stand?.kind === 'wheel' || o.mode === 'goWheel' || o.mode === 'run');
   const spots = highSpots();
   if (r < .15) sleepNow(c, t);
-  else if (r < .22) setMode(c, 'stretch', t, 3200);
+  else if (r < .22) setMode(c, 'watch', t, rnd(4000, 7000));
   else if (r < .27) { c.dir = Math.random() < .5 ? -1 : 1; c.speed = rnd(22, 50); setMode(c, 'walk', t, rnd(2000, 5000)); }
   else if (r < .30) setMode(c, Math.random()<.45?'pawWrap':'watch', t, rnd(6000, 11000));
   else if (r < .33) { c.willPurr = Math.random() < .6; setMode(c, 'loaf', t, rnd(2500, 5000)); }
@@ -1323,6 +1343,7 @@ function pickIdle(c, t) {
 }
 // 높은 곳(타워·다리)에서의 행동
 function pickPerch(c, t) {
+  if (idleGesture(c, t)) return;
   if (typeof chooseRoomScenery === 'function' && Math.random() < .28 && chooseRoomScenery(c,t)) return;
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (Math.random() < .45 && chooseFavorite(c, t)) return;
@@ -1492,8 +1513,15 @@ function tickCats(t) {
     // 시간이 다 되면 다음 행동
     if (t > c.until && !still) {
       if (c.mode === 'angel') finishAngelFlight(c, t);
+      else if (c.mode === 'yawn') {
+        if (c.stretchAfterYawn) { c.stretchAfterYawn = false; setMode(c, 'stretch', t, 3600); }
+        else setMode(c, 'sit', t, rnd(2000, 4000));
+      }
       else if (c.mode === 'stretch' || c.mode === 'kiss' || c.mode === 'watch' || c.mode === 'scenery') pickIdle(c, t);
-      else if (c.mode === 'sleep' || c.mode === 'chin') { setMode(c, 'stretch', t, 3000); }
+      else if (['sleep','chin','house-low','house-top','hammock','sofa','bed'].includes(c.mode)) {
+        if (c.restUntil > t) sleepNow(c, t);
+        else yawnNow(c, t);
+      }
       else if (c.mode === 'alert') {
         if (mouseOn && hunters.includes(c) && c.y < 20 && Math.random() < .35) startHunt(c, t);
         else if (Math.random() < .3 && highSpots().length) startZoom(c, t);
@@ -1521,6 +1549,7 @@ function tickCats(t) {
         c.dir = a.tx >= a.x ? 1 : -1; pose = 'angel'; break;
       }
       case 'stretch': pose = 'stretch'; break;
+      case 'yawn': pose = 'yawn'; break;
       case 'watch': pose = 'watch'; break;
       case 'scenery': pose = 'scenery'; break;
       case 'goScenery': {
