@@ -17,13 +17,17 @@ static void cancelTopInput(){
  if(inputWindow&&GetCapture()==inputWindow)ReleaseCapture();
  sendTopMouse(WM_MOUSELEAVE,0,{0,0});
 }
+static void raiseTopSettings(){
+ if(settingsWindow&&IsWindowVisible(settingsWindow))SetWindowPos(settingsWindow,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+}
 static void syncInputBounds(){
  if(!inputWindow)return;
- if(!topLayer()||!ready||!IsWindowVisible(windowHandle)||!hasHits||GetTickCount64()-hitTime>2000){
-  cancelTopInput();ShowWindow(inputWindow,SW_HIDE);return;
+ if(!topLayer()||!ready||desktopMenuOpen||!IsWindowVisible(windowHandle)||!hasHits||GetTickCount64()-hitTime>2000){
+  cancelTopInput();ShowWindow(inputWindow,SW_HIDE);raiseTopSettings();return;
  }
  RECT r;GetWindowRect(windowHandle,&r);
  SetWindowPos(inputWindow,HWND_TOPMOST,r.left,r.top,r.right-r.left,r.bottom-r.top,SWP_NOACTIVATE|SWP_SHOWWINDOW);
+ raiseTopSettings();
 }
 static void acceptHitRegions(const wchar_t* text){
  if(!topLayer()||!ready||!inputWindow||wcslen(text)>10000)return;
@@ -82,10 +86,11 @@ static void setDesktopLayer(int next){
  if(!ready){layer=next;saveSettings();return;}
  bool shown=IsWindowVisible(windowHandle);ShowWindow(windowHandle,SW_HIDE);
  if(next==1){
-  SetParent(windowHandle,nullptr);
-  if(GetParent(windowHandle)){if(shown)ShowWindow(windowHandle,SW_SHOWNOACTIVATE);return;}
+  SetLastError(0);HWND previous=SetParent(windowHandle,nullptr);DWORD failed=GetLastError();
+  if(!previous&&failed){if(shown)ShowWindow(windowHandle,SW_SHOWNOACTIVATE);syncInputBounds();return;}
   LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_STYLE);
   SetWindowLongPtrW(windowHandle,GWL_STYLE,(style&~WS_CHILD)|WS_POPUP);
+  SetWindowLongPtrW(windowHandle,GWLP_HWNDPARENT,0); // A popup must not retain Explorer as its owner.
   wallpaperParent=nullptr;wallpaperAfter=nullptr;layer=1;
  }else{
   layer=2;SetWindowPos(windowHandle,HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
@@ -97,4 +102,5 @@ static void setDesktopLayer(int next){
  EnableWindow(windowHandle,FALSE);bounds();if(shown)ShowWindow(windowHandle,SW_SHOWNOACTIVATE);
  command(layer==1?L"layer-top":L"layer-background");saveSettings();
  if(settingsWindow&&layerCheck)SendMessageW(layerCheck,BM_SETCHECK,layer==1?BST_CHECKED:BST_UNCHECKED,0);
+ raiseTopSettings();
 }

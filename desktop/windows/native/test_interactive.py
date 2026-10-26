@@ -57,7 +57,7 @@ try:
  check=u.GetDlgItem(settings,203);assert check
  u.SendMessageW(check,0xF5,0,0);pump(.7)
  assert u.SendMessageW(check,0xF0,0,0)==1
- assert not u.GetParent(h) and u.GetWindowLongPtrW(h,-20)&8
+ assert not u.GetParent(h) and u.GetWindowLongPtrW(h,-20)&8,(u.GetParent(h),hex(u.GetWindowLongPtrW(h,-20)))
  slider=u.GetDlgItem(settings,202);u.SendMessageW(slider,0x0405,1,0);u.SendMessageW(settings,0x0114,0,slider)
  u.PostMessageW(settings,0x10,0,0);pump(.2)
  assert evaluate('!desktopHost.passive && !document.body.classList.contains("passive-desktop")')

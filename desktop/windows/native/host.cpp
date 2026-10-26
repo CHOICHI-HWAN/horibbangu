@@ -50,6 +50,7 @@ static bool isDesktop(){return launchMode==LaunchMode::Desktop;}
 static void syncInputBounds();
 static void setDesktopLayer(int next);
 static void command(const wchar_t* text);
+static bool desktopMenuOpen=false;
 
 // The shell keeps icons above this visual and normal applications above the shell.
 // Windows 11's raised desktop uses siblings under Progman; older shells use WorkerW.
@@ -154,8 +155,9 @@ static void menu(){
  AppendMenuW(m,MF_POPUP,(UINT_PTR)weather,L"창밖 날씨");
  AppendMenuW(m,MF_SEPARATOR,0,nullptr);AppendMenuW(m,MF_STRING,199,L"종료 (Ctrl+Alt+Q)");
  POINT p;GetCursorPos(&p);SetForegroundWindow(controlWindow);
+ desktopMenuOpen=true;cancelTopInput();if(inputWindow)ShowWindow(inputWindow,SW_HIDE);
  UINT choice=TrackPopupMenu(m,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,p.x,p.y,0,controlWindow,nullptr);DestroyMenu(m);
- trayAction(choice);PostMessageW(windowHandle,WM_NULL,0,0);
+ desktopMenuOpen=false;trayAction(choice);syncInputBounds();PostMessageW(windowHandle,WM_NULL,0,0);
 }
 static void trayAction(UINT choice){
  if(choice==114)setDesktopLayer(1);if(choice==115)setDesktopLayer(2);
@@ -197,7 +199,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_TIMER:
   if(w==2){KillTimer(h,2);startupRetryPending=false;if(environment){environment->Release();environment=nullptr;}beginEnvironment();return 0;}
   muteBrowserInput();
-  if(IsWindowVisible(h))SetWindowPos(h,isSaver()||topLayer()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+  if(IsWindowVisible(h)&&!desktopMenuOpen&&!(settingsWindow&&IsWindowVisible(settingsWindow)))SetWindowPos(h,isSaver()||topLayer()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
   syncInputBounds();
   return 0;
  case WM_HOTKEY:if(w==1)showControls();else DestroyWindow(h);return 0;
