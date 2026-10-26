@@ -30,14 +30,14 @@ def pump(seconds):
   time.sleep(.02)
 def launch(*args):
  p=subprocess.Popen([str(ROOT/'candidate.exe'),*args]);apps.append(p);return p
-def visible(p,cls):
+def visible(p,cls,title=None):
  end=time.time()+60
  while time.time()<end:
   assert p.poll() is None,'Screensaver exited before its first visible frame'
   if cls==edition['window_class']+'View':
    control=u.FindWindowW(edition['window_class'],None)
    h=u.GetPropW(control,'HoribbanguVisual') if control else None
-  else:h=u.FindWindowW(cls,None)
+  else:h=u.FindWindowW(cls,title)
   if h and u.IsWindowVisible(h):return h
   pump(.1)
  raise AssertionError('Screensaver readiness timeout')
@@ -88,7 +88,7 @@ try:
  scr=OUT/'test-saver.scr';shutil.copyfile(ROOT/'candidate.exe',scr)
  config=subprocess.Popen([str(scr)]);apps.append(config)
  title=edition['title']+' · 화면보호기'
- dialog=visible(config,'#32770')
+ dialog=visible(config,'#32770',title)
  text=C.create_unicode_buffer(256);u.GetWindowTextW.argtypes=[W.HWND,W.LPWSTR,C.c_int];u.GetWindowTextW(dialog,text,256)
  assert text.value==title,text.value
  u.PostMessageW(dialog,0x10,0,0);config.wait(timeout=10);assert config.returncode==0
