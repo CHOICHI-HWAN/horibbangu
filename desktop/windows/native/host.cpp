@@ -47,6 +47,9 @@ static DWORD saverInputTime;
 static bool isSaver(){return launchMode==LaunchMode::Saver;}
 static bool isPreview(){return launchMode==LaunchMode::Preview;}
 static bool isDesktop(){return launchMode==LaunchMode::Desktop;}
+static void syncInputBounds();
+static void setDesktopLayer(int next);
+static void command(const wchar_t* text);
 
 // The shell keeps icons above this visual and normal applications above the shell.
 // Windows 11's raised desktop uses siblings under Progman; older shells use WorkerW.
@@ -92,6 +95,7 @@ static void muteBrowserInput(){
 }
 
 #include "settings.h"
+#include "interactive.h"
 
 static bool diagnostics=false;
 static void trace(const wchar_t* text,bool startup=false){
@@ -133,6 +137,10 @@ static void menu(){
  AppendMenuW(m,MF_STRING|(background?MF_CHECKED:0),101,L"호수 배경 보이기");
  AppendMenuW(m,MF_STRING|(!IsWindowVisible(windowHandle)?MF_CHECKED:0),102,L"잠깐 숨기기");
  AppendMenuW(m,MF_STRING,110,L"화면·투명도 설정…");
+ AppendMenuW(m,MF_STRING,114,L"항상 위에 · 고양이 클릭/드래그");
+ AppendMenuW(m,MF_STRING,115,L"바탕화면 배경 · 클릭 통과");
+ CheckMenuRadioItem(m,114,115,layer==1?114:115,MF_BYCOMMAND);
+ if(layer==1)AppendMenuW(m,MF_STRING,103,L"고양이 메뉴 열기 / 접기");
  AppendMenuW(m,MF_SEPARATOR,0,nullptr);
 #if APP_HAS_GUESTS
  AppendMenuW(m,MF_STRING,104,L"친구 초대");
@@ -150,8 +158,10 @@ static void menu(){
  trayAction(choice);PostMessageW(windowHandle,WM_NULL,0,0);
 }
 static void trayAction(UINT choice){
+ if(choice==114)setDesktopLayer(1);if(choice==115)setDesktopLayer(2);
+ if(choice==103&&layer==1)command(L"controls");
  if(choice==101){background=!background;command(background?L"background-on":L"background-off");}
- if(choice==102)ShowWindow(windowHandle,IsWindowVisible(windowHandle)?SW_HIDE:SW_SHOWNOACTIVATE);
+ if(choice==102){cancelTopInput();ShowWindow(windowHandle,IsWindowVisible(windowHandle)?SW_HIDE:SW_SHOWNOACTIVATE);syncInputBounds();}
  if(choice==110)openSettings();
  if(choice==111)command(L"rest");if(choice==112)command(L"view");if(choice==113)command(L"wings");
  const wchar_t* weatherCommands[]={L"weather-auto",L"weather-clear",L"weather-rain",L"weather-snow",L"weather-hail"};
@@ -177,7 +187,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_COMMAND:trayAction(LOWORD(w));return 0;
  case WM_MOUSEACTIVATE:return MA_NOACTIVATE;
  case WM_NCHITTEST:return HTTRANSPARENT;
- case WM_WINDOWPOSCHANGING:{auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=isSaver()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
+ case WM_WINDOWPOSCHANGING:{auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=isSaver()||topLayer()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
  case WM_ERASEBKGND:if(!isDesktop()){RECT r;GetClientRect(h,&r);FillRect((HDC)w,&r,(HBRUSH)GetStockObject(BLACK_BRUSH));}return 1;
  case WM_PAINT:{PAINTSTRUCT ps;BeginPaint(h,&ps);EndPaint(h,&ps);return 0;}
  case WM_DISPLAYCHANGE:case WM_SETTINGCHANGE:bounds();if(settingsWindow)fillMonitors();return 0;
@@ -187,7 +197,8 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_TIMER:
   if(w==2){KillTimer(h,2);startupRetryPending=false;if(environment){environment->Release();environment=nullptr;}beginEnvironment();return 0;}
   muteBrowserInput();
-  if(IsWindowVisible(h))SetWindowPos(h,isSaver()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+  if(IsWindowVisible(h))SetWindowPos(h,isSaver()||topLayer()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+  syncInputBounds();
   return 0;
  case WM_HOTKEY:if(w==1)showControls();else DestroyWindow(h);return 0;
  case WM_APP+1:
@@ -196,6 +207,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_CLOSE:DestroyWindow(h);return 0;
  case WM_DESTROY:
   ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);KillTimer(h,2);KillTimer(h,3);tray(true);if(isDesktop()){UnregisterHotKey(controlWindow,1);UnregisterHotKey(controlWindow,2);}
+  cancelTopInput();if(inputWindow)DestroyWindow(inputWindow);inputWindow=nullptr;
   if(controller)controller->Close();PostQuitMessage(0);return 0;
  }return DefWindowProcW(h,message,w,l);
 }
@@ -219,6 +231,7 @@ struct MessageHandler:ICoreWebView2WebMessageReceivedEventHandler{
   LPWSTR source=nullptr,message=nullptr;args->get_Source(&source);trace(source?source:L"message source null");
   if(!source||wcscmp(source,pageUrl)){CoTaskMemFree(source);return S_OK;}CoTaskMemFree(source);
   if(SUCCEEDED(args->TryGetWebMessageAsString(&message))&&message){trace(message);
+   if(!wcsncmp(message,L"regions:",8))acceptHitRegions(message+8);
    if(!wcscmp(message,L"background:1"))background=true;if(!wcscmp(message,L"background:0"))background=false;
    if(!wcscmp(message,L"quit"))PostMessageW(windowHandle,WM_CLOSE,0,0);
   }CoTaskMemFree(message);return S_OK;
@@ -253,7 +266,7 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
  CALLBACK_BASE(ICoreWebView2NavigationCompletedEventHandler)
  HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2*,ICoreWebView2NavigationCompletedEventArgs* args) override{
   BOOL success=FALSE;args->get_IsSuccess(&success);if(!success){error(L"고양이 화면을 불러오지 못했습니다.");return S_OK;}
-  if(isDesktop()&&!wallpaperParent&&!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");return S_OK;}
+  if(isDesktop()&&layer==2&&!wallpaperParent&&!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");return S_OK;}
   if(isPreview()){
    if(!IsWindow(previewParent)){DestroyWindow(windowHandle);return S_OK;}
    LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_STYLE);
@@ -263,18 +276,21 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
   bounds();ready=true;
   muteBrowserInput();if(!isSaver())EnableWindow(windowHandle,FALSE); // Desktop/preview never consume mouse input.
   if(!isDesktop())command(L"background-on");
+  else command(layer==1?L"layer-top":L"layer-background");
   ShowWindow(windowHandle,SW_SHOWNOACTIVATE);SetTimer(windowHandle,1,1000,nullptr);return S_OK;
  }
 };
 static const wchar_t* bridge=LR"JS((()=>{
- const allowed=['friends','motion','rest','view','wings','background-on','background-off','weather-auto','weather-clear','weather-rain','weather-snow','weather-hail'];
+ const allowed=['controls','layer-top','layer-background','friends','motion','rest','view','wings','background-on','background-off','weather-auto','weather-clear','weather-rain','weather-snow','weather-hail'];
  const send=s=>chrome.webview.postMessage(s);
+ let passive=true;
  window.desktopHost=Object.freeze({
-  passive:true,
+  get passive(){return passive;},
   setInteractive:()=>{}, // No route can re-enable window input.
+  setHitRegions:rects=>{if(Array.isArray(rects)&&rects.length<=64&&rects.every(r=>Array.isArray(r)&&r.length===4&&r.every(v=>Number.isInteger(v)&&Math.abs(v)<=100000)))send('regions:'+rects.map(r=>r.join(',')).join(';'));},
   setBackground:v=>{if(typeof v==='boolean')send('background:'+(v?'1':'0'));},
   quit:()=>send('quit'),
-  onCommand:cb=>{if(typeof cb==='function')chrome.webview.addEventListener('message',e=>{if(allowed.includes(e.data))cb(e.data);});}
+  onCommand:cb=>{if(typeof cb==='function')chrome.webview.addEventListener('message',e=>{if(allowed.includes(e.data)){if(e.data==='layer-top')passive=false;if(e.data==='layer-background')passive=true;cb(e.data);}});}
  });
 })();)JS";
 struct ScriptReadyHandler:ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler{
@@ -414,6 +430,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  windowHandle=CreateWindowExW(exStyle,cls.lpszClassName,APP_TITLE,WS_POPUP|WS_CLIPCHILDREN,0,0,1,1,nullptr,nullptr,instance,nullptr);
  SetPropW(controlWindow,L"HoribbanguPassive",(HANDLE)1);
  SetPropW(controlWindow,L"HoribbanguVisual",windowHandle);
+ if(isDesktop())createInputWindow(instance);
  MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
  bounds();
  if(isDesktop()){taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");saveSettings();tray();RegisterHotKey(controlWindow,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(controlWindow,2,MOD_CONTROL|MOD_ALT,'Q');}

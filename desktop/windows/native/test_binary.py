@@ -49,5 +49,7 @@ assert len(data)<2_000_000,'Native package size regression'
 print(f'Verified native x64 GUI PE, embedded offline assets/notices, asInvoker/DPI manifest: {len(data):,} bytes.')
 
 host=(ROOT/'desktop/windows/native/host.cpp').read_text()
-assert 'SetWindowsHookEx' not in host and 'SendMouseInput' not in host and 'SetCapture' not in host
-assert 'passive:true' in host and 'WS_EX_NOACTIVATE' in host and 'EnableWindow(windowHandle,FALSE)' in host
+input_host=(ROOT/'desktop/windows/native/interactive.h').read_text()
+assert 'SetWindowsHookEx' not in host+input_host
+assert 'SetWindowRgn' in input_host and 'if(topLayer()&&ready&&composition)' in input_host
+assert 'let passive=true' in host and 'WS_EX_NOACTIVATE' in host and 'EnableWindow(windowHandle,FALSE)' in host

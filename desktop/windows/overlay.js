@@ -1,6 +1,6 @@
 // Hit testing keeps the desktop usable through every empty transparent pixel.
 const host=window.desktopHost;
-const passiveDesktop=host?.passive===true;
+let passiveDesktop=host?.passive===true;
 if(passiveDesktop)document.body.classList.add("passive-desktop");
 let holding=false,lastInteractive=null,lastHitRect='',lastPointer={x:-1,y:-1};
 function updateDesktopHit(x=lastPointer.x,y=lastPointer.y){
@@ -14,15 +14,35 @@ function updateDesktopHit(x=lastPointer.x,y=lastPointer.y){
  const signature=rect?.join(',')||'';
  if(interactive!==lastInteractive||signature!==lastHitRect){lastInteractive=interactive;lastHitRect=signature;host?.setInteractive(interactive,rect);}
 }
-if(!passiveDesktop){
 addEventListener('mousemove',event=>updateDesktopHit(event.clientX,event.clientY));
-addEventListener('pointerdown',event=>{if(event.button===0&&event.target.closest('.cat'))holding=true;updateDesktopHit(event.clientX,event.clientY);},true);
+addEventListener('pointerdown',event=>{if(!passiveDesktop&&event.button===0&&event.target.closest('.cat'))holding=true;updateDesktopHit(event.clientX,event.clientY);},true);
 for(const type of ['pointerup','pointercancel','lostpointercapture'])addEventListener(type,event=>{holding=false;updateDesktopHit(event.clientX,event.clientY);},true);
 addEventListener('blur',()=>{holding=false;host?.setInteractive(false);lastInteractive=false;});
 // Cats can move away from the pointer without another native mouse message.
 setInterval(()=>updateDesktopHit(),120);
+let lastRegions='',lastRegionsAt=0;
+function publishDesktopRegions(){
+ if(passiveDesktop||document.hidden||!host?.setHitRegions)return;
+ const rects=[...document.querySelectorAll('.cat,button,a,select')].filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden'&&getComputedStyle(el).pointerEvents!=='none').slice(0,64).map(el=>{
+  const r=el.getBoundingClientRect(),pad=el.classList.contains('cat')?8:0;
+  return [r.left-pad,r.top-pad,r.right+pad,r.bottom+pad].map(v=>Math.round(v*devicePixelRatio));
+ });
+ const signature=JSON.stringify(rects),now=performance.now();
+ if(signature!==lastRegions||now-lastRegionsAt>500){lastRegions=signature;lastRegionsAt=now;host.setHitRegions(rects);}
 }
+setInterval(publishDesktopRegions,80);
 host?.onCommand(command=>{
+ if(command==='layer-top'||command==='layer-background'){
+  passiveDesktop=command==='layer-background';holding=false;lastRegions='';lastRegionsAt=0;
+  document.body.classList.toggle('passive-desktop',passiveDesktop);
+  if(passiveDesktop){
+   const t=performance.now();for(const c of cats)if(c.mode==='bubble'){
+    c.el.classList.remove('in-bubble');c.air=true;c.vx=0;c.vy=0;c.stand=null;c.flight=null;setMode(c,'sit',t,2000);
+   }
+   setRoomControls(false);
+  }
+  publishDesktopRegions();
+ }
  if(command==='controls'&&!passiveDesktop)setRoomControls(!document.body.classList.contains('controls-visible'));
  if(command==='rest')$('restBtn').click();
  if(command==='view')$('viewBtn').click();

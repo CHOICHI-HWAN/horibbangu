@@ -5,7 +5,7 @@ struct DisplayChoice {RECT work,screen;wchar_t device[32];bool primary;};
 static DisplayChoice displays[32];
 static int displayCount=0,layer=2,transparency=0;
 static wchar_t selectedDisplay[32],settingsFile[2048];
-static HWND settingsWindow,monitorCombo,opacitySlider,opacityLabel;
+static HWND settingsWindow,monitorCombo,opacitySlider,opacityLabel,layerCheck;
 static HFONT settingsFont;
 static const wchar_t* settingsClass=APP_SETTINGS_CLASS;
 static void bounds();
@@ -28,11 +28,12 @@ static void saveSettings(){
  wchar_t text[32];
  WritePrivateProfileStringW(L"Desktop",L"Monitor",selectedDisplay,settingsFile);
  swprintf(text,32,L"%d",layer);WritePrivateProfileStringW(L"Desktop",L"Layer",text,settingsFile);
+ WritePrivateProfileStringW(L"Desktop",L"InteractiveTop",layer==1?L"1":L"0",settingsFile);
  swprintf(text,32,L"%d",transparency);WritePrivateProfileStringW(L"Desktop",L"Transparency",text,settingsFile);
 }
 static void loadSettings(){
  GetPrivateProfileStringW(L"Desktop",L"Monitor",L"",selectedDisplay,32,settingsFile);
- layer=2; // Older foreground/interactive preferences must not restore input.
+ layer=GetPrivateProfileIntW(L"Desktop",L"InteractiveTop",0,settingsFile)==1?1:2; // Legacy Layer=1 alone remains passive.
  transparency=GetPrivateProfileIntW(L"Desktop",L"Transparency",0,settingsFile);if(transparency<0||transparency>80)transparency=0;
 }
 static void applyOpacity(){if(opacityEffect){opacityEffect->SetOpacity((100-transparency)/100.0f);if(device)device->Commit();}}
@@ -49,8 +50,9 @@ static void bounds(){
  LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_EXSTYLE);
  SetWindowLongPtrW(windowHandle,GWL_EXSTYLE,(style&~WS_EX_LAYERED)|WS_EX_NOACTIVATE|WS_EX_TRANSPARENT|WS_EX_NOREDIRECTIONBITMAP);
  POINT position={work.left,work.top};if(wallpaperParent)ScreenToClient(wallpaperParent,&position);
- SetWindowPos(windowHandle,wallpaperParent?wallpaperAfter:HWND_BOTTOM,position.x,position.y,work.right-work.left,work.bottom-work.top,SWP_NOACTIVATE);
+ SetWindowPos(windowHandle,layer==1?HWND_TOPMOST:wallpaperParent?wallpaperAfter:HWND_BOTTOM,position.x,position.y,work.right-work.left,work.bottom-work.top,SWP_NOACTIVATE);
  if(controller){RECT area;GetClientRect(windowHandle,&area);controller->put_Bounds(area);controller->NotifyParentWindowPositionChanged();}
+ syncInputBounds();
 }
 static void labelOpacity(){
  wchar_t text[96];swprintf(text,96,L"투명도: %d%%  (0%% = 선명하게)",transparency);SetWindowTextW(opacityLabel,text);
@@ -69,6 +71,7 @@ static LRESULT CALLBACK settingsProcedure(HWND h,UINT message,WPARAM w,LPARAM l)
  }
  if(message==WM_COMMAND){
   int id=LOWORD(w);
+  if(id==203){setDesktopLayer(SendMessageW(layerCheck,BM_GETCHECK,0,0)==BST_CHECKED?1:2);return 0;}
   if(id==201&&HIWORD(w)==CBN_SELCHANGE){int i=(int)SendMessageW(monitorCombo,CB_GETCURSEL,0,0);if(i>=0&&i<displayCount){lstrcpynW(selectedDisplay,displays[i].device,32);bounds();saveSettings();}return 0;}
   if(id==IDCANCEL){DestroyWindow(h);return 0;}
  }
@@ -81,12 +84,12 @@ static void openSettings(){
  if(settingsWindow){ShowWindow(settingsWindow,SW_SHOW);SetForegroundWindow(settingsWindow);return;}
  WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=settingsProcedure;cls.hInstance=GetModuleHandleW(nullptr);cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=settingsClass;cls.hbrBackground=(HBRUSH)(COLOR_BTNFACE+1);RegisterClassExW(&cls);
  int selected=refreshDisplays();RECT work=displayCount?displays[selected].work:RECT{0,0,800,600};
- settingsWindow=CreateWindowExW(WS_EX_TOOLWINDOW,settingsClass,APP_TITLE L" · 화면 설정",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU,work.left+80,work.top+80,440,300,controlWindow,nullptr,cls.hInstance,nullptr);
+ settingsWindow=CreateWindowExW(WS_EX_TOOLWINDOW|WS_EX_TOPMOST,settingsClass,APP_TITLE L" · 화면 설정",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU,work.left+80,work.top+80,440,300,controlWindow,nullptr,cls.hInstance,nullptr);
  if(!settingsWindow)return;
  int dpi=(int)GetDpiForWindow(settingsWindow);if(!dpi)dpi=96;
  auto scale=[dpi](int n){return MulDiv(n,dpi,96);};
  RECT form={0,0,scale(420),scale(255)};AdjustWindowRectExForDpi(&form,WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU,FALSE,WS_EX_TOOLWINDOW,dpi);
- SetWindowPos(settingsWindow,HWND_TOP,work.left+scale(40),work.top+scale(40),form.right-form.left,form.bottom-form.top,SWP_NOACTIVATE);
+ SetWindowPos(settingsWindow,HWND_TOPMOST,work.left+scale(40),work.top+scale(40),form.right-form.left,form.bottom-form.top,SWP_NOACTIVATE);
  settingsFont=CreateFontW(-MulDiv(10,dpi,72),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Segoe UI");
  auto control=[&](LPCWSTR kind,LPCWSTR text,DWORD style,int x,int y,int width,int height,int id){
   HWND child=CreateWindowExW(0,kind,text,WS_CHILD|WS_VISIBLE|style,scale(x),scale(y),scale(width),scale(height),settingsWindow,(HMENU)(INT_PTR)id,cls.hInstance,nullptr);
@@ -97,7 +100,8 @@ static void openSettings(){
  opacityLabel=control(L"STATIC",L"",0,20,83,380,22,0);labelOpacity();
  opacitySlider=control(TRACKBAR_CLASSW,L"",TBS_HORZ|TBS_NOTICKS|WS_TABSTOP,16,108,388,32,202);
  SendMessageW(opacitySlider,TBM_SETRANGE,TRUE,MAKELPARAM(0,80));SendMessageW(opacitySlider,TBM_SETPOS,TRUE,transparency);
- control(L"STATIC",L"감상 전용 배경 · 모든 클릭은 바탕화면으로 통과합니다.",0,20,153,390,30,0);
+ layerCheck=control(L"BUTTON",L"항상 위에 · 고양이 클릭/드래그",BS_AUTOCHECKBOX|WS_TABSTOP,20,150,390,28,203);
+ SendMessageW(layerCheck,BM_SETCHECK,layer==1?BST_CHECKED:BST_UNCHECKED,0);
  control(L"STATIC",L"설정은 자동으로 저장됩니다.",0,20,194,260,22,0);
  control(L"BUTTON",L"닫기",BS_DEFPUSHBUTTON|WS_TABSTOP,320,211,80,28,IDCANCEL);
  ShowWindow(settingsWindow,SW_SHOW);SetForegroundWindow(settingsWindow);

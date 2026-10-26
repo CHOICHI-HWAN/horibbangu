@@ -85,6 +85,8 @@ jobs:
             }
             python desktop/windows/native/test_windows.py
             if ($LASTEXITCODE -ne 0) { throw 'Native runtime validation failed' }
+            python desktop/windows/native/test_interactive.py
+            if ($LASTEXITCODE -ne 0) { throw 'Topmost interaction validation failed' }
             python desktop/windows/native/test_screensaver.py
             if ($LASTEXITCODE -ne 0) { throw 'Screensaver validation failed' }
           } finally {
