@@ -43,6 +43,7 @@ def evaluate(expression):
  result=json.loads(r.stdout);assert result['ok'],result
  return result['result']
 try:
+ pump(3) # Let the preceding test's WebView browser release its profile/port.
  # The ordinary wallpaper can remain running while the saver uses a separate profile.
  desktop=launch();desktop_hwnd=visible(desktop,edition['window_class']+'View')
  saver=launch('/s');h=visible(saver,edition['window_class']+'Saver');pump(1)
@@ -91,6 +92,13 @@ try:
  (OUT/'screensaver-result.json').write_text(json.dumps({'ok':True,'checks':['same PE renamed .scr','fullscreen virtual desktop','independent wallpaper process and profile','mouse exit','keyboard exit','background and cats','embedded resizable preview','preview survives input and exits with parent','configuration without args','invalid preview handle rejected']},indent=2))
  print('Actual Windows screensaver checks passed.',flush=True)
 finally:
+ ImageGrab.grab().save(OUT/'screensaver-final.png')
+ logs=Path(os.environ['LOCALAPPDATA'])/edition['data']/'Native'
+ for folder in [edition['version'],edition['version']+'-Saver',edition['version']+'-Preview']:
+  log=logs/folder/'startup.log'
+  if log.exists():
+   shutil.copyfile(log,OUT/('startup-'+folder+'.log'))
+   print(folder,log.read_text(encoding='utf-8')[-6000:],flush=True)
  if parent:u.DestroyWindow(parent)
  for p in apps:
   if p.poll() is None:p.terminate();p.wait(timeout=10)
