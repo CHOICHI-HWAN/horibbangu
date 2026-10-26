@@ -13,6 +13,7 @@ faulthandler.dump_traceback_later(180,exit=True)
 u=C.WinDLL('user32',use_last_error=True)
 u.FindWindowW.argtypes=[W.LPCWSTR,W.LPCWSTR];u.FindWindowW.restype=W.HWND
 u.GetParent.argtypes=[W.HWND];u.GetParent.restype=W.HWND
+u.GetPropW.argtypes=[W.HWND,W.LPCWSTR];u.GetPropW.restype=W.HANDLE
 u.GetWindowLongPtrW.argtypes=[W.HWND,C.c_int];u.GetWindowLongPtrW.restype=C.c_ssize_t
 u.GetWindowRect.argtypes=[W.HWND,C.POINTER(W.RECT)]
 u.GetClientRect.argtypes=[W.HWND,C.POINTER(W.RECT)]
@@ -33,7 +34,10 @@ def visible(p,cls):
  end=time.time()+60
  while time.time()<end:
   assert p.poll() is None,'Screensaver exited before its first visible frame'
-  h=u.FindWindowW(cls,None)
+  if cls==edition['window_class']+'View':
+   control=u.FindWindowW(edition['window_class'],None)
+   h=u.GetPropW(control,'HoribbanguVisual') if control else None
+  else:h=u.FindWindowW(cls,None)
   if h and u.IsWindowVisible(h):return h
   pump(.1)
  raise AssertionError('Screensaver readiness timeout')
