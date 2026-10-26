@@ -20,6 +20,19 @@ u.GetDlgItem.argtypes=[W.HWND,C.c_int];u.GetDlgItem.restype=W.HWND
 u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
 u.CreateWindowExW.argtypes=[W.DWORD,W.LPCWSTR,W.LPCWSTR,W.DWORD,C.c_int,C.c_int,C.c_int,C.c_int,W.HWND,W.HMENU,W.HINSTANCE,W.LPVOID];u.CreateWindowExW.restype=W.HWND
 u.DestroyWindow.argtypes=[W.HWND]
+u.WindowFromPoint.argtypes=[W.POINT];u.WindowFromPoint.restype=W.HWND
+u.GetClassNameW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
+u.SetWindowLongPtrW.argtypes=[W.HWND,C.c_int,C.c_ssize_t];u.SetWindowLongPtrW.restype=C.c_ssize_t
+u.SetLayeredWindowAttributes.argtypes=[W.HWND,W.DWORD,W.BYTE,W.DWORD]
+u.DefWindowProcW.argtypes=[W.HWND,W.UINT,W.WPARAM,W.LPARAM];u.DefWindowProcW.restype=C.c_ssize_t
+WNDPROC=C.WINFUNCTYPE(C.c_ssize_t,W.HWND,W.UINT,W.WPARAM,W.LPARAM)
+class WNDCLASS(C.Structure):
+ _fields_=[('style',W.UINT),('proc',WNDPROC),('extra',C.c_int),('windowExtra',C.c_int),('instance',W.HINSTANCE),('icon',W.HANDLE),('cursor',W.HANDLE),('brush',W.HANDLE),('menu',W.LPCWSTR),('name',W.LPCWSTR)]
+probe_proc=WNDPROC(lambda h,m,w,l:u.DefWindowProcW(h,m,w,l))
+kernel=C.WinDLL('kernel32');kernel.GetModuleHandleW.argtypes=[W.LPCWSTR];kernel.GetModuleHandleW.restype=W.HINSTANCE
+instance=kernel.GetModuleHandleW(None)
+probe_class=WNDCLASS();probe_class.proc=probe_proc;probe_class.instance=instance;probe_class.brush=6;probe_class.name='HoribbanguInputProbe'
+u.RegisterClassW.argtypes=[C.POINTER(WNDCLASS)];assert u.RegisterClassW(C.byref(probe_class))
 apps=[];rpc=None;under=None
 def pump(seconds):
  end=time.time()+seconds;msg=W.MSG()
@@ -46,11 +59,20 @@ def launch():
  raise AssertionError('Interactive host readiness timeout')
 def click(x,y):
  u.SetCursorPos(int(x),int(y));pump(.08);u.mouse_event(2,0,0,0,0);pump(.05);u.mouse_event(4,0,0,0,0);pump(.2)
+def hit(x,y):
+ target=u.WindowFromPoint(W.POINT(x,y));name=C.create_unicode_buffer(128)
+ if target:u.GetClassNameW(target,name,128)
+ return {'window':target,'class':name.value}
 def cat_point(h):
  r=evaluate('(()=>{const r=cats[0].el.getBoundingClientRect();return {x:(r.left+r.width*.65)*devicePixelRatio,y:(r.top+r.height*.55)*devicePixelRatio};})()')
  rect=W.RECT();u.GetWindowRect(h,C.byref(rect));return int(rect.left+r['x']),int(rect.top+r['y'])
 try:
  pump(2);app,control,h=launch();assert u.GetParent(h)
+ under=u.CreateWindowExW(0,probe_class.name,'Horibbangu click-through probe',0x90000000,0,0,u.GetSystemMetrics(0),u.GetSystemMetrics(1),None,None,instance,None);assert under
+ probe=u.CreateWindowExW(0,'BUTTON','Underlying checkbox',0x50000003,40,150,190,45,under,None,None,None);assert probe
+ u.SetWindowPos(under,W.HWND(0),0,0,0,0,0x0013);pump(.2)
+ click(80,170);assert u.SendMessageW(probe,0xF0,0,0)==1,('Probe precondition',hit(80,170),probe)
+ u.SendMessageW(probe,0xF1,0,0)
  # Exercise the actual native checkbox, not a renderer-only flag.
  u.PostMessageW(h,0x111,110,0);pump(.3)
  settings=u.FindWindowW(edition['settings_class'],None);assert settings
@@ -66,8 +88,6 @@ try:
  deadline=time.time()+5
  while not u.IsWindowVisible(proxy) and time.time()<deadline:pump(.1)
  assert u.IsWindowVisible(proxy)
- under=u.CreateWindowExW(0,'STATIC','Horibbangu click-through probe',0x90000000,0,0,u.GetSystemMetrics(0),u.GetSystemMetrics(1),None,None,None,None);assert under
- probe=u.CreateWindowExW(0,'BUTTON','Underlying checkbox',0x50000003,40,150,190,45,under,None,None,None);assert probe
  u.SetWindowPos(under,W.HWND(0),0,0,0,0,0x0013);pump(.2)
  evaluate("(()=>{const e=document.createElement('div');e.style='position:fixed;right:80px;top:100px;width:24px;height:24px;background:rgb(255,0,255);z-index:9999';document.body.append(e);})()")
  rect=W.RECT();u.GetWindowRect(h,C.byref(rect));painted=False
@@ -76,8 +96,15 @@ try:
   if ImageGrab.grab().getpixel((rect.right-90,rect.top+110))[:3]==(255,0,255):painted=True;break
  assert painted,'Topmost composition is not visible above another application'
  # Empty parts of a topmost scene must let a real control in another window work.
- click(80,170);assert u.SendMessageW(probe,0xF0,0,0)==1
- x,y=cat_point(h);click(x,y);assert evaluate('topDowns>0 && topClicks>0')
+ click(80,170);through=u.SendMessageW(probe,0xF0,0,0)==1
+ if not through:
+  print('Empty-space target:',hit(80,170),'probe:',probe,flush=True)
+  original=u.GetWindowLongPtrW(h,-20);u.SetWindowLongPtrW(h,-20,original|0x80000);u.SetLayeredWindowAttributes(h,0,255,2);pump(.25)
+  click(80,170)
+  print('Layered top-level diagnostic:',{'click':u.SendMessageW(probe,0xF0,0,0),'pixel':ImageGrab.grab().getpixel((rect.right-90,rect.top+110))[:3]},flush=True)
+  u.SetWindowLongPtrW(h,-20,original)
+ assert through,('Topmost empty-space click-through',hit(80,170))
+ x,y=cat_point(h);click(x,y);assert evaluate('topDowns>0 && topClicks>0'),evaluate('({downs:topDowns,clicks:topClicks,mode:cats[0].mode})')
  x,y=cat_point(h);u.SetCursorPos(x,y);pump(.1);u.mouse_event(2,0,0,0,0);pump(.08)
  for i in range(1,11):u.SetCursorPos(x+i*10,y-i*8);pump(.035)
  assert evaluate('cats[0].mode==="bubble" && cats[0].el.classList.contains("in-bubble")')
@@ -101,6 +128,7 @@ try:
  (OUT/'interactive-result.json').write_text(json.dumps({'ok':True,'checks':['native always-on-top checkbox','topmost detached visual','empty-space physical click-through','physical cat click','physical bubble drag and release','background switch during capture','passive background and hidden input proxy','tray mode switch','explicit topmost preference persists']},indent=2))
  print('Actual topmost interaction and background click-through checks passed.',flush=True)
 finally:
+ ImageGrab.grab().save(OUT/'topmost-final.png')
  if rpc:stop_rpc()
  if under:u.DestroyWindow(under)
  for p in apps:
