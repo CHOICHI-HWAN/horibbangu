@@ -81,7 +81,11 @@ try:
  u.MoveWindow(parent,50,50,440,300,True);pump(.3)
  client=W.RECT();actual=W.RECT();u.GetClientRect(parent,C.byref(client));u.GetClientRect(child,C.byref(actual))
  assert (actual.right,actual.bottom)==(client.right,client.bottom)
- ImageGrab.grab().save(OUT/'screensaver-preview.png')
+ pump(.7)
+ screenshot=ImageGrab.grab();screenshot.save(OUT/'screensaver-preview.png')
+ rect=W.RECT();u.GetWindowRect(child,C.byref(rect))
+ image=screenshot.crop((rect.left+8,rect.top+25,rect.right-8,rect.bottom-8)).convert('RGB')
+ assert sum(high-low for low,high in image.getextrema())>90,'Preview window is blank'
  u.mouse_event(1,5,0,0,0);pump(.3);assert preview.poll() is None,'Preview incorrectly exits on mouse input'
  u.DestroyWindow(parent);parent=None;preview.wait(timeout=15);assert preview.returncode==0
  # A copied .scr is the identical tested PE. No arguments opens configuration.

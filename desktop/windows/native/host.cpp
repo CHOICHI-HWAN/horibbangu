@@ -86,7 +86,7 @@ static BOOL CALLBACK disableBrowserInput(HWND h,LPARAM){
  return TRUE;
 }
 static void muteBrowserInput(){
- if(!browserProcess)return;
+ if(!browserProcess||isPreview())return;
  EnumWindows(disableBrowserInput,0);
  EnumChildWindows(wallpaperParent?wallpaperParent:windowHandle,disableBrowserInput,0);
 }
@@ -284,24 +284,11 @@ struct ScriptReadyHandler:ICoreWebView2AddScriptToExecuteOnDocumentCreatedComple
   muteBrowserInput();bounds();controller->put_IsVisible(TRUE);webview->Navigate(pageUrl);return S_OK;
  }
 };
-struct CompositionHandler:ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler{
- CALLBACK_BASE(ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler)
- HRESULT STDMETHODCALLTYPE Invoke(HRESULT result,ICoreWebView2CompositionController* created) override{
-  if(FAILED(result)||!created){startupFailure(L"composition-controller",FAILED(result)?result:E_POINTER);return S_OK;}
-  composition=created;composition->AddRef();HRESULT hr=composition->QueryInterface(MY_ICoreWebView2Controller,(void**)&controller);
-  if(FAILED(hr)){error(L"WebView2 컨트롤러를 만들지 못했습니다.",hr);return S_OK;}
-  controller->get_CoreWebView2(&webview);webview->get_BrowserProcessId(&browserProcess);ICoreWebView2Controller2* color=nullptr;
-  if(SUCCEEDED(controller->QueryInterface(MY_ICoreWebView2Controller2,(void**)&color))){color->put_DefaultBackgroundColor({0,0,0,0});color->Release();}
-  hr=DCompositionCreateDevice(nullptr,MY_IDCompositionDevice,(void**)&device);
-  if(SUCCEEDED(hr))hr=device->CreateTargetForHwnd(windowHandle,TRUE,&target);
-  if(SUCCEEDED(hr))hr=device->CreateVisual(&visual);
-  if(SUCCEEDED(hr))hr=device->CreateEffectGroup(&opacityEffect);
-  if(SUCCEEDED(hr))hr=opacityEffect->SetOpacity((100-transparency)/100.0f);
-  if(SUCCEEDED(hr))hr=visual->SetEffect(opacityEffect);
-  if(SUCCEEDED(hr))hr=target->SetRoot(visual);
-  if(SUCCEEDED(hr))hr=composition->put_RootVisualTarget(visual);
-  if(SUCCEEDED(hr))hr=device->Commit();
-  if(FAILED(hr)){error(L"투명 화면 합성을 시작하지 못했습니다.",hr);return S_OK;}
+static HRESULT initializeWebView(){
+ HRESULT hr=controller->get_CoreWebView2(&webview);
+ if(FAILED(hr)||!webview){error(L"고양이 화면을 초기화하지 못했습니다.",FAILED(hr)?hr:E_POINTER);return S_OK;}
+ webview->get_BrowserProcessId(&browserProcess);ICoreWebView2Controller2* color=nullptr;
+ if(!isPreview()&&SUCCEEDED(controller->QueryInterface(MY_ICoreWebView2Controller2,(void**)&color))){color->put_DefaultBackgroundColor({0,0,0,0});color->Release();}
   ICoreWebView2_3* mapped=nullptr;
   if(FAILED(webview->QueryInterface(MY_ICoreWebView2_3,(void**)&mapped))){error(L"WebView2 런타임 업데이트가 필요합니다.");return S_OK;}
   mapped->SetVirtualHostNameToFolderMapping(L"horibbangu.local",assetFolder,COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS);mapped->Release();
@@ -315,13 +302,43 @@ struct CompositionHandler:ICoreWebView2CreateCoreWebView2CompositionControllerCo
   auto e=new ResourceHandler;webview->AddWebResourceRequestedFilter(L"http*",COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);webview->add_WebResourceRequested(e,&token);e->Release();
   auto f=new ReadyHandler;webview->add_NavigationCompleted(f,&token);f->Release();
   auto scriptReady=new ScriptReadyHandler;hr=webview->AddScriptToExecuteOnDocumentCreated(bridge,scriptReady);scriptReady->Release();if(FAILED(hr))error(L"앱 연결을 등록하지 못했습니다.",hr);return S_OK;
+}
+struct CompositionHandler:ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler{
+ CALLBACK_BASE(ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler)
+ HRESULT STDMETHODCALLTYPE Invoke(HRESULT result,ICoreWebView2CompositionController* created) override{
+  if(FAILED(result)||!created){startupFailure(L"composition-controller",FAILED(result)?result:E_POINTER);return S_OK;}
+  composition=created;composition->AddRef();HRESULT hr=composition->QueryInterface(MY_ICoreWebView2Controller,(void**)&controller);
+  if(FAILED(hr)){error(L"WebView2 컨트롤러를 만들지 못했습니다.",hr);return S_OK;}
+  hr=DCompositionCreateDevice(nullptr,MY_IDCompositionDevice,(void**)&device);
+  if(SUCCEEDED(hr))hr=device->CreateTargetForHwnd(windowHandle,TRUE,&target);
+  if(SUCCEEDED(hr))hr=device->CreateVisual(&visual);
+  if(SUCCEEDED(hr))hr=device->CreateEffectGroup(&opacityEffect);
+  if(SUCCEEDED(hr))hr=opacityEffect->SetOpacity((100-transparency)/100.0f);
+  if(SUCCEEDED(hr))hr=visual->SetEffect(opacityEffect);
+  if(SUCCEEDED(hr))hr=target->SetRoot(visual);
+  if(SUCCEEDED(hr))hr=composition->put_RootVisualTarget(visual);
+  if(SUCCEEDED(hr))hr=device->Commit();
+  if(FAILED(hr)){error(L"투명 화면 합성을 시작하지 못했습니다.",hr);return S_OK;}
+  return initializeWebView();
+ }
+};
+struct PreviewHandler:ICoreWebView2CreateCoreWebView2ControllerCompletedHandler{
+ CALLBACK_BASE(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler)
+ HRESULT STDMETHODCALLTYPE Invoke(HRESULT result,ICoreWebView2Controller* created) override{
+  if(FAILED(result)||!created){startupFailure(L"preview-controller",FAILED(result)?result:E_POINTER);return S_OK;}
+  controller=created;controller->AddRef();return initializeWebView();
  }
 };
 struct EnvironmentHandler:ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler{
  CALLBACK_BASE(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler)
  HRESULT STDMETHODCALLTYPE Invoke(HRESULT result,ICoreWebView2Environment* created) override{
   if(FAILED(result)||!created){startupFailure(L"environment-callback",FAILED(result)?result:E_POINTER);return S_OK;}
-  environment=created;environment->AddRef();ICoreWebView2Environment3* comp=nullptr;
+  environment=created;environment->AddRef();
+  if(isPreview()){
+   auto callback=new PreviewHandler;HRESULT hr=environment->CreateCoreWebView2Controller(windowHandle,callback);callback->Release();
+   if(FAILED(hr))startupFailure(L"preview-request",hr);return S_OK;
+  }
+  ICoreWebView2Environment3* comp=nullptr;
   HRESULT hr=environment->QueryInterface(MY_ICoreWebView2Environment3,(void**)&comp);
   if(FAILED(hr)){error(L"WebView2 런타임 업데이트가 필요합니다.",hr);return S_OK;}
   auto callback=new CompositionHandler;hr=comp->CreateCoreWebView2CompositionController(windowHandle,callback);callback->Release();comp->Release();
@@ -391,10 +408,10 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=controlProcedure;cls.hInstance=instance;cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=windowClass;cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(1));RegisterClassExW(&cls);
  controlWindow=CreateWindowExW(WS_EX_TOOLWINDOW,windowClass,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
  cls.lpfnWndProc=procedure;cls.lpszClassName=isDesktop()?APP_WINDOW_CLASS L"View":isSaver()?APP_WINDOW_CLASS L"Saver":APP_WINDOW_CLASS L"Preview";RegisterClassExW(&cls);
- DWORD exStyle=WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP|(isSaver()?WS_EX_TOPMOST:WS_EX_TRANSPARENT|WS_EX_NOACTIVATE);
+ DWORD exStyle=WS_EX_TOOLWINDOW|(isPreview()?WS_EX_NOACTIVATE:WS_EX_NOREDIRECTIONBITMAP|(isSaver()?WS_EX_TOPMOST:WS_EX_TRANSPARENT|WS_EX_NOACTIVATE));
  // Initialize WebView2 in an app-owned window before attaching a preview to
  // Windows' settings process, just as desktop mode attaches to Explorer later.
- windowHandle=CreateWindowExW(exStyle,cls.lpszClassName,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
+ windowHandle=CreateWindowExW(exStyle,cls.lpszClassName,APP_TITLE,WS_POPUP|WS_CLIPCHILDREN,0,0,1,1,nullptr,nullptr,instance,nullptr);
  SetPropW(controlWindow,L"HoribbanguPassive",(HANDLE)1);
  SetPropW(controlWindow,L"HoribbanguVisual",windowHandle);
  MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
