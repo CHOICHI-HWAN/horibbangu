@@ -68,6 +68,10 @@ try:
   assert app.poll() is None,'Host exited before its first visible frame'
   pump(.1)
  assert u.IsWindowVisible(hwnd),'Navigation did not reach the visible-ready state'
+ startup_log=Path(os.environ['LOCALAPPDATA'])/edition['data']/'Native'/edition['version']/'startup.log'
+ startup_text=startup_log.read_text(encoding='utf-8')
+ assert 'Horibbangu '+edition['version'] in startup_text and 'WebView2 ' in startup_text
+ assert 'Create environment, attempt 1' in startup_text
  assert u.GetParent(hwnd),'Visible visual was not attached to Explorer'
  def passive_flags():
   flags=u.GetWindowLongPtrW(hwnd,-20)

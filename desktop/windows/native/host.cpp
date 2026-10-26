@@ -16,6 +16,7 @@
 #include "WebView2.h"
 #include "webview-guids.h"
 #include "edition.h"
+#include "startup-policy.h"
 
 static HWND windowHandle,controlWindow,wallpaperParent,wallpaperAfter;
 static UINT32 browserProcess=0;
@@ -34,6 +35,11 @@ static const wchar_t* pageUrl=L"https://horibbangu.local/playground.html";
 static UINT taskbarCreated;
 static const UINT trayMessage=WM_APP+1,secondInstance=WM_APP+2;
 static const wchar_t* windowClass=APP_WINDOW_CLASS;
+typedef HRESULT(STDAPICALLTYPE* CreateEnvironmentFn)(PCWSTR,PCWSTR,ICoreWebView2EnvironmentOptions*,ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*);
+static CreateEnvironmentFn createEnvironment;
+static unsigned startupRetries=0;
+static bool startupRetryPending=false;
+static void beginEnvironment();
 
 // The shell keeps icons above this visual and normal applications above the shell.
 // Windows 11's raised desktop uses siblings under Progman; older shells use WorkerW.
@@ -81,15 +87,26 @@ static void muteBrowserInput(){
 #include "settings.h"
 
 static bool diagnostics=false;
-static void trace(const wchar_t* text){
- if(!diagnostics)return;wchar_t path[2048];swprintf(path,2048,L"%ls\\native-diagnostics.txt",assetFolder);
+static void trace(const wchar_t* text,bool startup=false){
+ if(!diagnostics&&!startup)return;wchar_t path[2048];swprintf(path,2048,L"%ls\\%ls",assetFolder,startup?L"startup.log":L"native-diagnostics.txt");
  HANDLE file=CreateFileW(path,FILE_APPEND_DATA,FILE_SHARE_READ|FILE_SHARE_WRITE,nullptr,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,nullptr);
  if(file!=INVALID_HANDLE_VALUE){char utf8[4096];int n=WideCharToMultiByte(CP_UTF8,0,text,-1,utf8,sizeof(utf8),nullptr,nullptr);DWORD written;if(n>0)WriteFile(file,utf8,n-1,&written,nullptr);WriteFile(file,"\r\n",2,&written,nullptr);CloseHandle(file);}
 }
 static void error(const wchar_t* message,HRESULT hr=E_FAIL){
- wchar_t text[2048];swprintf(text,2048,L"%ls\n\n오류 코드: 0x%08lX",message,(unsigned long)hr);
+ wchar_t text[4096];swprintf(text,4096,L"%ls\n\n버전: %ls\n오류 코드: 0x%08lX\n\n진단 파일: %ls\\startup.log",message,APP_VERSION,(unsigned long)hr,assetFolder);
+ trace(text,true);
  MessageBoxW(windowHandle,text,APP_TITLE,MB_OK|MB_ICONERROR);
  if(windowHandle)DestroyWindow(windowHandle);
+}
+static void startupFailure(const wchar_t* stage,HRESULT hr){
+ wchar_t log[512];swprintf(log,512,L"%ls: 0x%08lX (attempt %u)",stage,(unsigned long)hr,startupRetries+1);trace(log,true);
+ const unsigned delay=startupRetryDelay((uint32_t)hr,startupRetries);
+ if(delay&&!startupRetryPending){
+  startupRetryPending=true;++startupRetries;
+  if(SetTimer(windowHandle,2,delay,nullptr))return;
+  startupRetryPending=false;
+ }
+ error(L"WebView2가 고양이 화면을 시작하지 못했습니다.\n\nPC를 다시 시작한 뒤 앱을 일반 실행해 주세요. 계속 실패하면 Microsoft Edge WebView2 Runtime을 복구하거나 업데이트해 주세요.\n진단 파일을 보내주시면 원인을 더 확인할 수 있습니다.",hr);
 }
 static void command(const wchar_t* text){if(webview)webview->PostWebMessageAsString(text);}
 static void menu();
@@ -149,6 +166,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_MOUSEMOVE:case WM_LBUTTONDOWN:case WM_LBUTTONUP:case WM_LBUTTONDBLCLK:
  case WM_RBUTTONDOWN:case WM_RBUTTONUP:case WM_MBUTTONDOWN:case WM_MBUTTONUP:case WM_MOUSEWHEEL:case WM_MOUSEHWHEEL:return 0; // The visual never receives or forwards user input.
  case WM_TIMER:
+  if(w==2){KillTimer(h,2);startupRetryPending=false;if(environment){environment->Release();environment=nullptr;}beginEnvironment();return 0;}
   muteBrowserInput();
   if(IsWindowVisible(h))SetWindowPos(h,wallpaperParent?wallpaperAfter:HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
   return 0;
@@ -158,7 +176,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
   if(LOWORD(l)==WM_CONTEXTMENU||LOWORD(l)==WM_RBUTTONUP)menu();return 0;
  case WM_CLOSE:DestroyWindow(h);return 0;
  case WM_DESTROY:
-  ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);tray(true);UnregisterHotKey(controlWindow,1);UnregisterHotKey(controlWindow,2);
+  ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);KillTimer(h,2);tray(true);UnregisterHotKey(controlWindow,1);UnregisterHotKey(controlWindow,2);
   if(controller)controller->Close();PostQuitMessage(0);return 0;
  }return DefWindowProcW(h,message,w,l);
 }
@@ -243,7 +261,7 @@ struct ScriptReadyHandler:ICoreWebView2AddScriptToExecuteOnDocumentCreatedComple
 struct CompositionHandler:ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler{
  CALLBACK_BASE(ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler)
  HRESULT STDMETHODCALLTYPE Invoke(HRESULT result,ICoreWebView2CompositionController* created) override{
-  if(FAILED(result)||!created){error(L"투명 고양이 창을 만들지 못했습니다.",result);return S_OK;}
+  if(FAILED(result)||!created){startupFailure(L"composition-controller",FAILED(result)?result:E_POINTER);return S_OK;}
   composition=created;composition->AddRef();HRESULT hr=composition->QueryInterface(MY_ICoreWebView2Controller,(void**)&controller);
   if(FAILED(hr)){error(L"WebView2 컨트롤러를 만들지 못했습니다.",hr);return S_OK;}
   controller->get_CoreWebView2(&webview);webview->get_BrowserProcessId(&browserProcess);ICoreWebView2Controller2* color=nullptr;
@@ -276,14 +294,19 @@ struct CompositionHandler:ICoreWebView2CreateCoreWebView2CompositionControllerCo
 struct EnvironmentHandler:ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler{
  CALLBACK_BASE(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler)
  HRESULT STDMETHODCALLTYPE Invoke(HRESULT result,ICoreWebView2Environment* created) override{
-  if(FAILED(result)||!created){error(L"WebView2를 시작하지 못했습니다.",result);return S_OK;}
+  if(FAILED(result)||!created){startupFailure(L"environment-callback",FAILED(result)?result:E_POINTER);return S_OK;}
   environment=created;environment->AddRef();ICoreWebView2Environment3* comp=nullptr;
   HRESULT hr=environment->QueryInterface(MY_ICoreWebView2Environment3,(void**)&comp);
   if(FAILED(hr)){error(L"WebView2 런타임 업데이트가 필요합니다.",hr);return S_OK;}
   auto callback=new CompositionHandler;hr=comp->CreateCoreWebView2CompositionController(windowHandle,callback);callback->Release();comp->Release();
-  if(FAILED(hr))error(L"투명 창을 초기화하지 못했습니다.",hr);return S_OK;
+  if(FAILED(hr))startupFailure(L"composition-request",hr);return S_OK;
  }
 };
+static void beginEnvironment(){
+ wchar_t log[96];swprintf(log,96,L"Create environment, attempt %u",startupRetries+1);trace(log,true);
+ auto callback=new EnvironmentHandler;HRESULT hr=createEnvironment(nullptr,profileFolder,nullptr,callback);callback->Release();
+ if(FAILED(hr))startupFailure(L"environment-request",hr);
+}
 static bool resource(int id,const wchar_t* name){
  wchar_t path[2048];swprintf(path,2048,L"%ls\\%ls",assetFolder,name);
  HRSRC found=FindResourceW(nullptr,MAKEINTRESOURCEW(id),RT_RCDATA);if(!found)return false;
@@ -311,11 +334,11 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  wchar_t loaderPath[2048];swprintf(loaderPath,2048,L"%ls\\WebView2Loader.dll",assetFolder);
  HMODULE loader=LoadLibraryExW(loaderPath,nullptr,LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|LOAD_LIBRARY_SEARCH_SYSTEM32);
  typedef HRESULT(STDAPICALLTYPE* VersionFn)(PCWSTR,LPWSTR*);
- typedef HRESULT(STDAPICALLTYPE* CreateFn)(PCWSTR,PCWSTR,ICoreWebView2EnvironmentOptions*,ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*);
  auto version=loader?(VersionFn)GetProcAddress(loader,"GetAvailableCoreWebView2BrowserVersionString"):nullptr;
- auto create=loader?(CreateFn)GetProcAddress(loader,"CreateCoreWebView2EnvironmentWithOptions"):nullptr;
- LPWSTR installed=nullptr;HRESULT hr=version?version(nullptr,&installed):E_FAIL;CoTaskMemFree(installed);
- if(FAILED(hr)||!create){
+ createEnvironment=loader?(CreateEnvironmentFn)GetProcAddress(loader,"CreateCoreWebView2EnvironmentWithOptions"):nullptr;
+ LPWSTR installed=nullptr;HRESULT hr=version?version(nullptr,&installed):E_FAIL;
+ wchar_t startupInfo[1024];swprintf(startupInfo,1024,L"Horibbangu %ls; WebView2 %ls; process %lu; session start %llu",APP_VERSION,installed?installed:L"unavailable",GetCurrentProcessId(),GetTickCount64());trace(startupInfo,true);CoTaskMemFree(installed);
+ if(FAILED(hr)||!createEnvironment){
   const wchar_t* prompt=L"이 작은 실행파일은 Microsoft Edge WebView2 런타임을 사용합니다.\n\n런타임을 찾지 못했습니다. Microsoft 공식 설치 안내를 열까요?"
 #if APP_HAS_GUESTS
   L"\n설치를 원하지 않으면 브라우저 엔진을 포함한 호환판을 사용할 수 있습니다."
@@ -334,7 +357,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  SetPropW(controlWindow,L"HoribbanguVisual",windowHandle);
  MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
  taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");bounds();saveSettings();tray();RegisterHotKey(controlWindow,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(controlWindow,2,MOD_CONTROL|MOD_ALT,'Q');
- auto callback=new EnvironmentHandler;hr=create(nullptr,profileFolder,nullptr,callback);callback->Release();if(FAILED(hr))error(L"WebView2 환경을 만들지 못했습니다.",hr);
+ beginEnvironment();
  MSG message;while(GetMessageW(&message,nullptr,0,0)>0){if(settingsWindow&&IsDialogMessageW(settingsWindow,&message))continue;TranslateMessage(&message);DispatchMessageW(&message);}
  if(controlWindow)DestroyWindow(controlWindow);
  if(webview)webview->Release();if(controller)controller->Release();if(composition)composition->Release();if(environment)environment->Release();

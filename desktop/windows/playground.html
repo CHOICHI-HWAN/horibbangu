@@ -328,10 +328,26 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
 .cat.watch .blink-lid {animation-duration:8s;}
 .cat.kiss .blink-lid {animation:kiss-lid 2.8s ease-in-out;animation-delay:0s;}
 @keyframes kiss-lid {0%,27%,70%,100%{opacity:0;}32%,65%{opacity:1;}}
-.cat.stretch .all { animation:cat-stretch 3s ease-in-out; }
-.cat.stretch .l2,.cat.stretch .l4 { transform:rotate(-50deg); }
-.cat.stretch .tail { transform:rotate(-32deg); }
-@keyframes cat-stretch { 20%,70% { transform:translate(-4px,3px) scale(1.2,.72) rotate(5deg); } }
+.cat .yawn-mouth {display:none;transform-box:view-box;transform-origin:47px 27px;}
+.cat.yawn .mouth {visibility:hidden;}
+.cat.yawn .yawn-mouth {display:inline;animation:yawn-mouth 3.2s ease-in-out both;}
+.cat.dongle.yawn .yawn-mouth {translate:0 -2px;}
+.cat.yawn .head {animation:yawn-head 3.2s ease-in-out both;}
+.cat.yawn .eyes,.cat.yawn .blink-lid,.cat.stretch .eyes,.cat.stretch .blink-lid {visibility:hidden;}
+.cat.yawn .eyec,.cat.stretch .eyec {display:inline;}
+@keyframes yawn-mouth {0%,100%{transform:scale(.65,.03);}25%{transform:scale(.85,.5);}45%,62%{transform:scale(1,1);}82%{transform:scale(.8,.35);}}
+@keyframes yawn-head {0%,100%{rotate:0deg;translate:0 0;}35%,65%{rotate:-9deg;translate:-1px -1.5px;}}
+/* Hind paws stay planted while the chest dips and both front paws reach forward. */
+.cat.stretch svg .all {animation:cat-stretch 3.6s ease-in-out both;}
+.cat.stretch .head {animation:stretch-head 3.6s ease-in-out both;}
+.cat.stretch .l2,.cat.stretch .l4 {animation:stretch-front 3.6s ease-in-out both;}
+.cat.stretch .l1,.cat.stretch .l3 {animation:stretch-hind 3.6s ease-in-out both;}
+.cat.stretch .tail {animation:stretch-tail 3.6s ease-in-out both;}
+@keyframes cat-stretch {0%,100%{transform:none;}28%,65%{transform:translate(-2px,1px) rotate(7deg) scale(1.1,.94);}}
+@keyframes stretch-head {0%,100%{translate:0 0;rotate:0deg;}28%,65%{translate:3px 3px;rotate:8deg;}}
+@keyframes stretch-front {0%,100%{transform:none;}28%,65%{transform:translate(5px,1px) rotate(-38deg) scaleY(1.2);}}
+@keyframes stretch-hind {0%,100%{transform:none;}28%,65%{transform:translate(-1px,-1px) rotate(-7deg) scaleY(1.15);}}
+@keyframes stretch-tail {0%,100%{transform:rotate(0);}28%,65%{transform:rotate(-30deg);}}
 .cat.in-bubble { z-index:15!important; cursor:grabbing; }
 .cat.in-bubble::after { content:''; position:absolute; inset:-20px -15px -14px; border-radius:50%; border:1.5px solid #ffffffd9; background:radial-gradient(ellipse at 27% 20%,#ffffffa8 0 3%,transparent 14%),linear-gradient(125deg,#b9eff64a,#eccce851,#fff9); box-shadow:inset 0 0 13px #c9f2ff94,0 5px 15px #72b4be30; pointer-events:none; }
 .cat.tunnel .flip { transform:translateY(-22px) scale(.95)!important; }

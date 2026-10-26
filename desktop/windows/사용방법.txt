@@ -1,4 +1,4 @@
-호리빵구 · 바탕화면 친구들 3.3.2 (Windows 10/11 64비트 경량판)
+호리빵구 · 바탕화면 친구들 3.3.3 (Windows 10/11 64비트 경량판)
 
 ZIP 안의 실행파일 하나를 꺼내 실행하세요. 파일명에 버전이 표시됩니다.
 이전 버전이 켜져 있으면 먼저 시계 옆 트레이에서 종료해 주세요.
@@ -25,7 +25,9 @@ PC에 설치된 Microsoft Edge WebView2 런타임이 필요합니다.
 브라우저 엔진과 별도 언어팩은 EXE에 포함하지 않습니다.
 고양이 그림과 동작은 EXE에 포함되어 인터넷·로그인·체중 기록 없이 실행합니다.
 
-앱 파일: %LOCALAPPDATA%\HoribbanguDesktop\Native\3.3.2
+앱 파일: %LOCALAPPDATA%\HoribbanguDesktop\Native\3.3.3
 창 설정: %LOCALAPPDATA%\HoribbanguDesktop\settings.ini
 화면 내부 설정: %LOCALAPPDATA%\HoribbanguDesktop\WebView2
 EXE를 옮겨도 설정은 유지됩니다. 삭제하려면 종료 후 EXE와 위 폴더를 지우세요.
+
+시작 오류가 나면 자동으로 최대 두 번 다시 시도합니다. 계속 실패하면 오류창에 표시된 startup.log를 확인해 주세요. 기존 설정·고양이 정보는 지우지 않습니다.

@@ -41,6 +41,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Renderer build failed' }
           python desktop/windows/native/build.py --edition ${{ matrix.edition }}
           if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
+          & $env:ZIG c++ -std=c++17 desktop/windows/native/test_startup_policy.cpp -o startup-policy-test.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Startup policy test build failed' }
+          .\startup-policy-test.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Startup retry bounds failed' }
           python desktop/windows/native/test_binary.py --edition ${{ matrix.edition }}
           if ($LASTEXITCODE -ne 0) { throw 'Binary validation failed' }
           $edition = '${{ matrix.edition }}'
