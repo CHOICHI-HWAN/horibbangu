@@ -17,6 +17,7 @@
 #include "webview-guids.h"
 #include "edition.h"
 #include "startup-policy.h"
+#include "screensaver.h"
 
 static HWND windowHandle,controlWindow,wallpaperParent,wallpaperAfter;
 static UINT32 browserProcess=0;
@@ -40,6 +41,12 @@ static CreateEnvironmentFn createEnvironment;
 static unsigned startupRetries=0;
 static bool startupRetryPending=false;
 static void beginEnvironment();
+static LaunchMode launchMode=LaunchMode::Desktop;
+static HWND previewParent;
+static DWORD saverInputTime;
+static bool isSaver(){return launchMode==LaunchMode::Saver;}
+static bool isPreview(){return launchMode==LaunchMode::Preview;}
+static bool isDesktop(){return launchMode==LaunchMode::Desktop;}
 
 // The shell keeps icons above this visual and normal applications above the shell.
 // Windows 11's raised desktop uses siblings under Progman; older shells use WorkerW.
@@ -95,7 +102,7 @@ static void trace(const wchar_t* text,bool startup=false){
 static void error(const wchar_t* message,HRESULT hr=E_FAIL){
  wchar_t text[4096];swprintf(text,4096,L"%ls\n\n버전: %ls\n오류 코드: 0x%08lX\n\n진단 파일: %ls\\startup.log",message,APP_VERSION,(unsigned long)hr,assetFolder);
  trace(text,true);
- MessageBoxW(windowHandle,text,APP_TITLE,MB_OK|MB_ICONERROR);
+ if(isDesktop())MessageBoxW(windowHandle,text,APP_TITLE,MB_OK|MB_ICONERROR);
  if(windowHandle)DestroyWindow(windowHandle);
 }
 static void startupFailure(const wchar_t* stage,HRESULT hr){
@@ -113,6 +120,7 @@ static void menu();
 static void trayAction(UINT choice);
 static void showControls(){openSettings();}
 static void tray(bool remove=false){
+ if(!isDesktop())return;
  NOTIFYICONDATAW data={};data.cbSize=sizeof(data);data.hWnd=controlWindow;data.uID=1;
  data.uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP;data.uCallbackMessage=trayMessage;
  data.hIcon=(HICON)LoadImageW(GetModuleHandleW(nullptr),MAKEINTRESOURCEW(1),IMAGE_ICON,32,32,LR_SHARED);
@@ -151,6 +159,17 @@ static void trayAction(UINT choice){
  if(choice==104)command(L"friends");if(choice==105)command(L"motion");if(choice==199)DestroyWindow(windowHandle);
 }
 static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
+ if(!isDesktop()){
+  if(message==WM_NCHITTEST)return isPreview()?HTTRANSPARENT:HTCLIENT;
+  if(message==WM_SETCURSOR&&isSaver()){SetCursor(nullptr);return TRUE;}
+  if(isSaver()&&(message==WM_KEYDOWN||message==WM_SYSKEYDOWN||message==WM_LBUTTONDOWN||message==WM_RBUTTONDOWN||message==WM_MBUTTONDOWN||message==WM_MOUSEWHEEL)){DestroyWindow(h);return 0;}
+  if(message==WM_TIMER&&w==3){
+   if(isPreview()){if(!IsWindow(previewParent)){DestroyWindow(h);return 0;}bounds();}
+   else {LASTINPUTINFO input={sizeof(input)};if(GetLastInputInfo(&input)&&input.dwTime!=saverInputTime){DestroyWindow(h);return 0;}}
+   return 0;
+  }
+  if(message==WM_SYSCOMMAND&&(w&0xfff0)==SC_SCREENSAVE)return 0;
+ }
  if(taskbarCreated&&message==taskbarCreated){tray();return 0;}
  if(message==secondInstance){showControls();return 0;}
  switch(message){
@@ -158,8 +177,8 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_COMMAND:trayAction(LOWORD(w));return 0;
  case WM_MOUSEACTIVATE:return MA_NOACTIVATE;
  case WM_NCHITTEST:return HTTRANSPARENT;
- case WM_WINDOWPOSCHANGING:{auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=wallpaperParent?wallpaperAfter:HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
- case WM_ERASEBKGND:return 1;
+ case WM_WINDOWPOSCHANGING:{auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=isSaver()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
+ case WM_ERASEBKGND:if(!isDesktop()){RECT r;GetClientRect(h,&r);FillRect((HDC)w,&r,(HBRUSH)GetStockObject(BLACK_BRUSH));}return 1;
  case WM_PAINT:{PAINTSTRUCT ps;BeginPaint(h,&ps);EndPaint(h,&ps);return 0;}
  case WM_DISPLAYCHANGE:case WM_SETTINGCHANGE:bounds();if(settingsWindow)fillMonitors();return 0;
  case WM_DPICHANGED:bounds();return 0;
@@ -168,7 +187,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_TIMER:
   if(w==2){KillTimer(h,2);startupRetryPending=false;if(environment){environment->Release();environment=nullptr;}beginEnvironment();return 0;}
   muteBrowserInput();
-  if(IsWindowVisible(h))SetWindowPos(h,wallpaperParent?wallpaperAfter:HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+  if(IsWindowVisible(h))SetWindowPos(h,isSaver()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
   return 0;
  case WM_HOTKEY:if(w==1)showControls();else DestroyWindow(h);return 0;
  case WM_APP+1:
@@ -176,7 +195,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
   if(LOWORD(l)==WM_CONTEXTMENU||LOWORD(l)==WM_RBUTTONUP)menu();return 0;
  case WM_CLOSE:DestroyWindow(h);return 0;
  case WM_DESTROY:
-  ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);KillTimer(h,2);tray(true);UnregisterHotKey(controlWindow,1);UnregisterHotKey(controlWindow,2);
+  ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);KillTimer(h,2);KillTimer(h,3);tray(true);if(isDesktop()){UnregisterHotKey(controlWindow,1);UnregisterHotKey(controlWindow,2);}
   if(controller)controller->Close();PostQuitMessage(0);return 0;
  }return DefWindowProcW(h,message,w,l);
 }
@@ -234,9 +253,10 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
  CALLBACK_BASE(ICoreWebView2NavigationCompletedEventHandler)
  HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2*,ICoreWebView2NavigationCompletedEventArgs* args) override{
   BOOL success=FALSE;args->get_IsSuccess(&success);if(!success){error(L"고양이 화면을 불러오지 못했습니다.");return S_OK;}
-  if(!wallpaperParent&&!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");return S_OK;}
+  if(isDesktop()&&!wallpaperParent&&!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");return S_OK;}
   bounds();ready=true;
-  muteBrowserInput();EnableWindow(windowHandle,FALSE); // Disabled children pass all mouse input to Explorer.
+  muteBrowserInput();if(!isSaver())EnableWindow(windowHandle,FALSE); // Desktop/preview never consume mouse input.
+  if(!isDesktop())command(L"background-on");
   ShowWindow(windowHandle,SW_SHOWNOACTIVATE);SetTimer(windowHandle,1,1000,nullptr);return S_OK;
  }
 };
@@ -315,9 +335,21 @@ static bool resource(int id,const wchar_t* name){
  DWORD written=0;BOOL ok=WriteFile(file,bytes,count,&written,nullptr);CloseHandle(file);return ok&&written==count;
 }
 int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
+ wchar_t module[MAX_PATH];GetModuleFileNameW(nullptr,module,MAX_PATH);const wchar_t* extension=wcsrchr(module,L'.');
+ int argc=0;wchar_t** argv=CommandLineToArgvW(GetCommandLineW(),&argc);if(!argv)return 1;
+ auto launch=saverLaunch(argc,argv,extension&&!_wcsicmp(extension,L".scr"));LocalFree(argv);launchMode=launch.mode;
+ if(!isDesktop())windowClass=APP_WINDOW_CLASS L"SaverControl";
+ if(launchMode==LaunchMode::Invalid)return 2;
+ if(launchMode==LaunchMode::Configure){
+  HWND owner=(HWND)launch.parent;if(!IsWindow(owner))owner=nullptr;
+  MessageBoxW(owner,L"호리빵구 화면보호기 " APP_VERSION L"\n\n고양이들과 호수 풍경을 전체 화면으로 감상합니다.\n마우스나 키보드를 사용하면 종료됩니다.\n\n대기 시간과 ‘다시 시작할 때 로그온 화면 표시’는 Windows 화면 보호기 설정에서 선택해 주세요.",APP_TITLE L" · 화면보호기",MB_OK|MB_ICONINFORMATION);return 0;
+ }
+ previewParent=(HWND)launch.parent;if(isPreview()&&!IsWindow(previewParent))return 2;
  SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
- HANDLE mutex=CreateMutexW(nullptr,FALSE,APP_MUTEX);
+ wchar_t saverMutex[256];swprintf(saverMutex,256,L"%ls-Saver-%lu",APP_MUTEX,isPreview()?GetCurrentProcessId():0);
+ HANDLE mutex=CreateMutexW(nullptr,FALSE,isDesktop()?APP_MUTEX:saverMutex);
  if(GetLastError()==ERROR_ALREADY_EXISTS){
+  if(!isDesktop()){CloseHandle(mutex);return 0;}
   HWND old=FindWindowW(windowClass,nullptr);
   if(old&&GetPropW(old,L"HoribbanguPassive"))PostMessageW(old,secondInstance,0,0);
   else MessageBoxW(nullptr,L"이전 버전이 아직 실행 중입니다. 시계 옆 트레이에서 이전 앱을 종료한 뒤 새 버전을 실행해 주세요.",APP_TITLE,MB_OK|MB_ICONINFORMATION);
@@ -326,8 +358,9 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  if(FAILED(CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED))){CloseHandle(mutex);return 1;}
  PWSTR local=nullptr;if(FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData,0,nullptr,&local))){CoUninitialize();CloseHandle(mutex);return 1;}
  swprintf(settingsFile,2048,L"%ls\\%ls\\settings.ini",local,APP_DATA_DIR);
- swprintf(assetFolder,2048,L"%ls\\%ls\\Native\\%ls",local,APP_DATA_DIR,APP_VERSION);swprintf(profileFolder,2048,L"%ls\\%ls\\WebView2",local,APP_DATA_DIR);CoTaskMemFree(local);
+ swprintf(assetFolder,2048,L"%ls\\%ls\\Native\\%ls%ls",local,APP_DATA_DIR,APP_VERSION,isDesktop()?L"":isPreview()?L"-Preview":L"-Saver");swprintf(profileFolder,2048,L"%ls\\%ls\\WebView2%ls",local,APP_DATA_DIR,isDesktop()?L"":isPreview()?L"-Preview":L"-Saver");CoTaskMemFree(local);
  SHCreateDirectoryExW(nullptr,assetFolder,nullptr);SHCreateDirectoryExW(nullptr,profileFolder,nullptr);loadSettings();
+ if(!isDesktop())transparency=0;
  wchar_t diagnosticFlag[4]={};diagnostics=GetEnvironmentVariableW(L"HORIBBANGU_NATIVE_DIAGNOSTICS",diagnosticFlag,4)>0&&diagnosticFlag[0]==L'1';
  const wchar_t* names[]={L"playground.html",L"playground.js",L"WebView2Loader.dll",L"사용방법.txt",L"LICENSE",L"THIRD_PARTY_NOTICES.md",L"WebView2-LICENSE.txt",L"WebView2-NOTICE.txt",L"NativeRuntime-LICENSES.txt"};
  for(int i=0;i<9;i++)if(!resource(101+i,names[i])){error(L"앱 파일을 사용자 폴더에 준비하지 못했습니다.");CoUninitialize();CloseHandle(mutex);return 1;}
@@ -344,19 +377,22 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
   L"\n설치를 원하지 않으면 브라우저 엔진을 포함한 호환판을 사용할 수 있습니다."
 #endif
   ;
-  if(MessageBoxW(nullptr,prompt,APP_TITLE L" · WebView2 필요",MB_YESNO|MB_ICONINFORMATION)==IDYES)
+  if(isDesktop()&&MessageBoxW(nullptr,prompt,APP_TITLE L" · WebView2 필요",MB_YESNO|MB_ICONINFORMATION)==IDYES)
    ShellExecuteW(nullptr,L"open",L"https://developer.microsoft.com/microsoft-edge/webview2/",nullptr,nullptr,SW_SHOWNORMAL);
   if(loader)FreeLibrary(loader);CoUninitialize();CloseHandle(mutex);return 2;
  }
  INITCOMMONCONTROLSEX controls={sizeof(controls),ICC_BAR_CLASSES};InitCommonControlsEx(&controls);
  WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=controlProcedure;cls.hInstance=instance;cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=windowClass;cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(1));RegisterClassExW(&cls);
  controlWindow=CreateWindowExW(WS_EX_TOOLWINDOW,windowClass,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
- cls.lpfnWndProc=procedure;cls.lpszClassName=APP_WINDOW_CLASS L"View";RegisterClassExW(&cls);
- windowHandle=CreateWindowExW(WS_EX_TRANSPARENT|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP,cls.lpszClassName,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
+ cls.lpfnWndProc=procedure;cls.lpszClassName=isDesktop()?APP_WINDOW_CLASS L"View":isSaver()?APP_WINDOW_CLASS L"Saver":APP_WINDOW_CLASS L"Preview";RegisterClassExW(&cls);
+ DWORD exStyle=WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP|(isSaver()?WS_EX_TOPMOST:WS_EX_TRANSPARENT|WS_EX_NOACTIVATE);
+ windowHandle=CreateWindowExW(exStyle,cls.lpszClassName,APP_TITLE,isPreview()?WS_CHILD:WS_POPUP,0,0,1,1,isPreview()?previewParent:nullptr,nullptr,instance,nullptr);
  SetPropW(controlWindow,L"HoribbanguPassive",(HANDLE)1);
  SetPropW(controlWindow,L"HoribbanguVisual",windowHandle);
  MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
- taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");bounds();saveSettings();tray();RegisterHotKey(controlWindow,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(controlWindow,2,MOD_CONTROL|MOD_ALT,'Q');
+ bounds();
+ if(isDesktop()){taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");saveSettings();tray();RegisterHotKey(controlWindow,1,MOD_CONTROL|MOD_ALT,'H');RegisterHotKey(controlWindow,2,MOD_CONTROL|MOD_ALT,'Q');}
+ else {LASTINPUTINFO input={sizeof(input)};GetLastInputInfo(&input);saverInputTime=input.dwTime;SetTimer(windowHandle,3,100,nullptr);}
  beginEnvironment();
  MSG message;while(GetMessageW(&message,nullptr,0,0)>0){if(settingsWindow&&IsDialogMessageW(settingsWindow,&message))continue;TranslateMessage(&message);DispatchMessageW(&message);}
  if(controlWindow)DestroyWindow(controlWindow);

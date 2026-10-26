@@ -45,6 +45,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Startup policy test build failed' }
           .\startup-policy-test.exe
           if ($LASTEXITCODE -ne 0) { throw 'Startup retry bounds failed' }
+          & $env:ZIG c++ -std=c++17 desktop/windows/native/test_saver_args.cpp -o saver-args-test.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Screensaver argument test build failed' }
+          .\saver-args-test.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Screensaver argument parsing failed' }
           python desktop/windows/native/test_binary.py --edition ${{ matrix.edition }}
           if ($LASTEXITCODE -ne 0) { throw 'Binary validation failed' }
           $edition = '${{ matrix.edition }}'
@@ -81,6 +85,8 @@ jobs:
             }
             python desktop/windows/native/test_windows.py
             if ($LASTEXITCODE -ne 0) { throw 'Native runtime validation failed' }
+            python desktop/windows/native/test_screensaver.py
+            if ($LASTEXITCODE -ne 0) { throw 'Screensaver validation failed' }
           } finally {
             foreach ($exe in @('candidate.exe','cats.exe')) {
               Remove-ItemProperty -Path $policy -Name $exe -ErrorAction SilentlyContinue

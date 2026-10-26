@@ -37,6 +37,13 @@ static void loadSettings(){
 }
 static void applyOpacity(){if(opacityEffect){opacityEffect->SetOpacity((100-transparency)/100.0f);if(device)device->Commit();}}
 static void bounds(){
+ if(!isDesktop()){
+  RECT area={};
+  if(isPreview())GetClientRect(previewParent,&area);
+  else area={GetSystemMetrics(SM_XVIRTUALSCREEN),GetSystemMetrics(SM_YVIRTUALSCREEN),GetSystemMetrics(SM_XVIRTUALSCREEN)+GetSystemMetrics(SM_CXVIRTUALSCREEN),GetSystemMetrics(SM_YVIRTUALSCREEN)+GetSystemMetrics(SM_CYVIRTUALSCREEN)};
+  SetWindowPos(windowHandle,isSaver()?HWND_TOPMOST:HWND_TOP,area.left,area.top,area.right-area.left,area.bottom-area.top,SWP_NOACTIVATE);
+  if(controller){RECT client;GetClientRect(windowHandle,&client);controller->put_Bounds(client);controller->NotifyParentWindowPositionChanged();}return;
+ }
  int selected=refreshDisplays();RECT work={};
  if(displayCount)work=displays[selected].work;else SystemParametersInfoW(SPI_GETWORKAREA,0,&work,0);
  LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_EXSTYLE);

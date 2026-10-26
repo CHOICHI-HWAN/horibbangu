@@ -17,6 +17,14 @@ def publish_exe(source,edition):
  alias_exe=public/edition['archive_alias'].replace('.zip','.exe')
  if source.resolve()!=alias_exe.resolve():shutil.copyfile(exe,alias_exe)
  print(archive.name,archive.stat().st_size,'bytes;',exe.name)
+ # Windows screen savers are the same PE, selected by /s, /p, /c. Keep one
+ # versioned .scr inside its own ZIP, with byte identity to the tested EXE.
+ saver=folder/edition['saver_archive']
+ with zipfile.ZipFile(saver,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+  z.writestr(edition['saver_scr'],source.read_bytes())
+ with zipfile.ZipFile(saver) as z:assert z.namelist()==[edition['saver_scr']] and z.read(edition['saver_scr'])==source.read_bytes()
+ shutil.copyfile(saver,public/saver.name)
+ print(saver.name,saver.stat().st_size,'bytes;',edition['saver_scr'])
 
 def refresh_download_metadata():
  public=ROOT/'releases'

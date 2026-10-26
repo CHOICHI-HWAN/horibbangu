@@ -17,6 +17,8 @@ def edition_config(key='default'):
  e['archive_alias']=e['archive']
  e['archive']=e['archive'].replace('.zip','-v'+VERSION+'.zip')
  e['download_exe']=e['exe'].replace('.exe','-v'+VERSION+'.exe')
+ e['saver_scr']=e['exe'].replace('.exe','-화면보호기-v'+VERSION+'.scr')
+ e['saver_archive']=e['archive'].replace('-Windows-v','-Screensaver-v')
  e['build']=ROOT/('build/windows-native'+('' if key=='default' else '-'+key))
  e['renderer']=ROOT/'desktop/windows' if key=='default' else ROOT/'build/editions'/key
  e['data']='HoribbanguDesktop'+e['suffix']
@@ -28,7 +30,7 @@ def edition_config(key='default'):
 def download_archives():
  names=[]
  for key in EDITIONS:
-  e=edition_config(key);names.extend([e['archive'],e['archive_alias']])
+  e=edition_config(key);names.extend([e['archive'],e['archive_alias'],e['saver_archive']])
  return names+['Horibbangu-Windows-Standalone-v'+STANDALONE_VERSION+'.zip','Horibbangu-Windows-Standalone.zip']
 def requested_edition():
  parser=argparse.ArgumentParser();parser.add_argument('--edition',choices=EDITIONS,default='default')
