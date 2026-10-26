@@ -254,6 +254,12 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
  HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2*,ICoreWebView2NavigationCompletedEventArgs* args) override{
   BOOL success=FALSE;args->get_IsSuccess(&success);if(!success){error(L"고양이 화면을 불러오지 못했습니다.");return S_OK;}
   if(isDesktop()&&!wallpaperParent&&!attachWallpaper()){error(L"Windows 바탕화면 배경 계층에 연결하지 못했습니다. Explorer가 실행 중인지 확인해 주세요.");return S_OK;}
+  if(isPreview()){
+   if(!IsWindow(previewParent)){DestroyWindow(windowHandle);return S_OK;}
+   LONG_PTR style=GetWindowLongPtrW(windowHandle,GWL_STYLE);
+   SetWindowLongPtrW(windowHandle,GWL_STYLE,(style&~WS_POPUP)|WS_CHILD);SetParent(windowHandle,previewParent);
+   if(GetParent(windowHandle)!=previewParent){error(L"화면보호기 미리보기에 연결하지 못했습니다.",HRESULT_FROM_WIN32(GetLastError()));return S_OK;}
+  }
   bounds();ready=true;
   muteBrowserInput();if(!isSaver())EnableWindow(windowHandle,FALSE); // Desktop/preview never consume mouse input.
   if(!isDesktop())command(L"background-on");
@@ -386,7 +392,9 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  controlWindow=CreateWindowExW(WS_EX_TOOLWINDOW,windowClass,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
  cls.lpfnWndProc=procedure;cls.lpszClassName=isDesktop()?APP_WINDOW_CLASS L"View":isSaver()?APP_WINDOW_CLASS L"Saver":APP_WINDOW_CLASS L"Preview";RegisterClassExW(&cls);
  DWORD exStyle=WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP|(isSaver()?WS_EX_TOPMOST:WS_EX_TRANSPARENT|WS_EX_NOACTIVATE);
- windowHandle=CreateWindowExW(exStyle,cls.lpszClassName,APP_TITLE,isPreview()?WS_CHILD:WS_POPUP,0,0,1,1,isPreview()?previewParent:nullptr,nullptr,instance,nullptr);
+ // Initialize WebView2 in an app-owned window before attaching a preview to
+ // Windows' settings process, just as desktop mode attaches to Explorer later.
+ windowHandle=CreateWindowExW(exStyle,cls.lpszClassName,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
  SetPropW(controlWindow,L"HoribbanguPassive",(HANDLE)1);
  SetPropW(controlWindow,L"HoribbanguVisual",windowHandle);
  MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
