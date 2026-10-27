@@ -80,21 +80,23 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 
 ## Windows 바탕화면 배경 (3.5.2)
 
-[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows-v3.5.2.zip)에서 `호리빵구-v3.5.2.exe` 하나를 꺼내 실행합니다. ZIP은 약 0.76 MB이며 Windows 10/11 x64와 공유 Microsoft Edge WebView2 런타임을 사용합니다. 고양이와 풍경은 EXE에 내장되어 인터넷·로그인·체중 기록 없이 감상할 수 있습니다.
+[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows-v3.5.2.zip)에서 `호리빵구-v3.5.2.exe` 하나를 꺼내 실행합니다. ZIP은 약 0.77 MB이며 Windows 10/11 x64와 공유 Microsoft Edge WebView2 런타임을 사용합니다. 고양이와 풍경은 EXE에 내장되어 인터넷·로그인·체중 기록 없이 감상할 수 있습니다.
 
 **기본은 바탕화면 배경 모드입니다.** 모든 클릭은 바탕화면과 프로그램으로 통과합니다. 트레이에서 **항상 위에 · 고양이 클릭/드래그**를 선택하거나 화면 설정에서 같은 항목을 체크하면 다른 창 위에서 고양이와 화면 버튼을 조작할 수 있습니다. 빈 공간은 이 모드에서도 클릭을 통과시킵니다. 트레이의 **고양이 메뉴 열기 / 접기**로 화면 버튼을 열 수 있습니다.
 
 고양이·버튼 영역만 받는 별도 입력 창을 사용하며 전역 마우스 훅은 없습니다. **바탕화면 배경 · 클릭 통과**로 돌아가면 드래그를 끝내고 입력 창을 숨깁니다. 모드 선택은 별도 `InteractiveTop` 설정으로 저장하며 예전 `Layer=1` 값만으로 자동 켜지지 않습니다. 화면보호기는 기존처럼 입력 시 종료하며 조작 모드를 켜지 않습니다.
 
-EXE를 다시 실행하면 기존 방을 복원하고 전체 메뉴를 엽니다. Windows 애니메이션은 원래 키프레임을 공통 24fps 시계로 그립니다. 잠깐 숨긴 동안에는 WebView 렌더링도 쉽니다.
+EXE를 다시 실행하면 기존 방을 복원하고 전체 메뉴를 엽니다. Windows 애니메이션은 원래 키프레임을 공통 24fps 시계로 그립니다. [4K 성능 비교](docs/PERFORMANCE_3.5.2.md)에서 조건별 측정 결과를 볼 수 있습니다. 잠깐 숨긴 동안에는 WebView 렌더링도 쉽니다.
 
 시계 옆 고양이 트레이 아이콘을 클릭하거나 우클릭해 배경 켜기/끄기·숨기기·모니터·투명도·휴식·풍경 감상·움직임·날씨를 조절합니다. 기본판에서는 친구 초대와 날개 친구들도 선택할 수 있습니다. `Ctrl+Alt+H`는 화면 설정, `Ctrl+Alt+Q`는 종료입니다. 모니터와 투명도(0~80%)는 저장되고, 모니터 분리 시 주 모니터로 대체합니다.
 
-이전 EXE가 실행 중이면 먼저 트레이에서 종료한 뒤 새 버전을 실행해야 합니다. 사용자 설정은 `%LOCALAPPDATA%\HoribbanguDesktop`, 내장 파일은 그 안의 `Native\3.5.2`에 보관합니다. WebView2 프로필은 그대로 유지합니다. 코드 서명은 없습니다. 기존 3.2.1 Electron 호환판은 이전 입력 방식을 사용하므로 현재 다운로드 메뉴에서 제외했습니다.
+이전 EXE가 실행 중이면 먼저 Ctrl+Alt+Q 또는 트레이에서 종료한 뒤 새 버전을 실행해야 합니다. 사용자 설정은 `%LOCALAPPDATA%\HoribbanguDesktop`, 내장 파일은 그 안의 `Native\3.5.2`에 보관합니다. WebView2 프로필은 그대로 유지합니다. 코드 서명은 없습니다. 기존 3.2.1 Electron 호환판은 이전 입력 방식을 사용하므로 현재 다운로드 메뉴에서 제외했습니다.
 
 재빌드는 `desktop/windows/build.sh`입니다. `native/test_binary.py`는 EXE·내장 파일·라이선스·DPI/권한 선언을 검사합니다. Windows CI는 기본판과 두 개별판에서 배경 모드 클릭 통과·이전 설정 이관·모니터/투명도·트레이 명령·설정 유지와 실제 Explorer 바탕화면의 임시 바로가기를 검사합니다. `test_desktop_probe.cpp`는 이 CI 검사에만 사용하며 배포 ZIP에는 포함하지 않습니다.
 
 항상 위에 모드의 실제 창 표시·빈 공간 클릭 통과·고양이 클릭·공기방울 드래그·드래그 중 배경 전환·설정 유지도 [3.5.0 Windows CI](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/40418753088)에서 기본판·박박사판·김박사판을 각각 검사해 통과했습니다.
+
+3.5.2의 실제 트레이 팝업 표시·반복 항목 클릭·바깥 클릭 닫기·중복 실행·숨김 복원도 [세 Windows 배포판에서 검사해 통과했습니다](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/40480281974).
 
 ## Windows 화면보호기 (3.5.2)
 
