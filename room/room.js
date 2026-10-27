@@ -161,21 +161,30 @@ function updateRoomCalendar(date){
     return cell;
   }));
 }
+let lastLightMinute="",lastMoonHour="";
 function updateRoomTime(date=new Date()){
+  if(typeof desktopSuspended!=="undefined"&&desktopSuspended)return;
   const hour=date.getHours()+date.getMinutes()/60+date.getSeconds()/3600;
   const daylight=hour>=6&&hour<18, progress=((hour-(daylight?6:18)+24)%24)/12;
   const x=10+Math.min(1,progress)*80, top=40-Math.sin(Math.min(1,progress)*Math.PI)*33;
   const night=hour<5||hour>=20?1:hour<7?(7-hour)/2:hour>17?(hour-17)/3:0;
+  const minute=String(Math.floor(date.getTime()/60000));
+  if(minute!==lastLightMinute){
+    lastLightMinute=minute;
   const root=document.documentElement;root.style.setProperty('--night',Math.max(0,Math.min(1,night)).toFixed(3));
   root.style.setProperty('--reflection-x',x+'%');
   root.style.setProperty('--sun-angle',`${-30+progress*60}deg`);root.style.setProperty('--warmth',daylight?(hour<9||hour>16?.85:.4):.04);
   if($('moon')){$('moon').hidden=daylight;$('moon').style.left=x+'%';$('moon').style.top=top+'%';}
+    document.body.dataset.time=night>.7?'night':'day';
+  }
   $('clockHour').setAttribute('transform',`rotate(${(hour%12)*30} 60 78)`);
   $('clockMinute').setAttribute('transform',`rotate(${(date.getMinutes()+date.getSeconds()/60)*6} 60 78)`);
-  updateClockMoon(date);updateRoomCalendar(date);
-  $('catClockText').textContent=date.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
+  const moonHour=String(Math.floor(date.getTime()/3600000));
+  if(moonHour!==lastMoonHour){lastMoonHour=moonHour;updateClockMoon(date);}
+  updateRoomCalendar(date);
+  const clockText=date.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
+  if($('catClockText').textContent!==clockText)$('catClockText').textContent=clockText;
   $('roomClock').textContent=date.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+(night>.7?' · 달빛의 방':hour>16?' · 노을의 방':' · 호수의 방');
-  document.body.dataset.time=night>.7?'night':'day';
   const dateKey=`${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}-${Math.floor(hour*2)}`;
   if(dateKey!==lastRoomDate){lastRoomDate=dateKey;if(weatherChoice==='auto')setRoomWeather('auto',date);}
 }
@@ -227,7 +236,7 @@ function drawLake(t){
   }
 }
 function drawWeather(t){
-  const idle=document.hidden||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground);
+  const idle=document.hidden||(typeof desktopSuspended!=='undefined'&&desktopSuspended)||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground);
   weatherFrame=setTimeout(()=>requestAnimationFrame(drawWeather),idle||reduceMotion?500:40);
   if(idle||t-lastWeatherFrame<40)return;lastWeatherFrame=t;
   drawLake(t);

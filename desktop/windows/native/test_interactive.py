@@ -163,12 +163,12 @@ try:
  popup,menu=open_tray();click(20,20);pump(.2);assert not u.IsWindowVisible(popup),'Outside click must dismiss the tray popup'
  # Hiding must stop WebView rendering; relaunch restores the room and opens the menu.
  u.PostMessageW(h,0x111,102,0);pump(.5);assert not u.IsWindowVisible(h)
- assert evaluate('document.hidden'),'Hidden native host did not hide its WebView'
- snapshot=evaluate('lastLakeFrame');pump(1.1);assert evaluate('lastLakeFrame')==snapshot
+ assert evaluate('desktopSuspended'),'Hidden native host did not suspend its animation clock'
+ snapshot=evaluate('({lake:lastLakeFrame,cats:lastT})');pump(1.1);assert evaluate('({lake:lastLakeFrame,cats:lastT})')==snapshot
  u.SetCursorPos(u.GetSystemMetrics(0)-120,u.GetSystemMetrics(1)-80)
  second=subprocess.Popen([str(ROOT/'candidate.exe')]);second.wait(timeout=10);assert second.returncode==0
  popup,menu=popup_info();assert u.IsWindowVisible(h);assert not u.FindWindowW(edition['settings_class'],None)
- choose_menu(menu,103);assert evaluate('!document.hidden')
+ choose_menu(menu,103);assert evaluate('!desktopSuspended')
  print('Topmost native popup visibility, repeated physical selection, outside dismissal and second-launch menu verified.',flush=True)
  evaluate("setDesktopBackground(false);setRoomControls(false);cats.slice(1).forEach(c=>c.el.style.display='none');const c=cats[0];c.cozy=null;c.goal=null;c.edge=null;c.air=false;c.stand=null;c.x=innerWidth*.5;c.y=0;c.mode='watch';c.until=Infinity;renderCatPosition(c);window.topDowns=0;window.topClicks=0;c.el.addEventListener('pointerdown',()=>topDowns++);c.el.addEventListener('click',()=>topClicks++);")
  proxy=u.GetPropW(control,'HoribbanguInput');assert proxy
@@ -212,7 +212,7 @@ try:
  assert evaluate('!desktopHost.passive')
  u.PostMessageW(h,0x111,115,0);pump(.5);assert u.GetParent(h)
  stop_rpc();u.PostMessageW(h,0x10,0,0);app.wait(timeout=15)
- (OUT/'interactive-result.json').write_text(json.dumps({'ok':True,'checks':['native always-on-top checkbox','topmost detached visual','empty-space physical click-through','physical cat click','physical bubble drag and release','background switch during capture','passive background and hidden input proxy','tray mode switch','explicit topmost preference persists']},indent=2))
+ (OUT/'interactive-result.json').write_text(json.dumps({'ok':True,'checks':['visible native topmost tray popup','physical repeated menu selection and outside dismissal','second launch restores room and opens menu','hidden animation clock stops and resumes','native always-on-top checkbox','topmost detached visual','empty-space physical click-through','physical cat click','physical bubble drag and release','background switch during capture','passive background and hidden input proxy','tray mode switch','explicit topmost preference persists']},indent=2))
  print('Actual topmost interaction and background click-through checks passed.',flush=True)
 finally:
  ImageGrab.grab().save(OUT/'topmost-final.png')

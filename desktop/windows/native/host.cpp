@@ -209,7 +209,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_WINDOWPOSCHANGING:{auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=isSaver()||topLayer()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
  case WM_ERASEBKGND:if(!isDesktop()){RECT r;GetClientRect(h,&r);FillRect((HDC)w,&r,(HBRUSH)GetStockObject(BLACK_BRUSH));}return 1;
  case WM_PAINT:{PAINTSTRUCT ps;BeginPaint(h,&ps);EndPaint(h,&ps);return 0;}
- case WM_SHOWWINDOW:if(controller&&ready)controller->put_IsVisible((BOOL)w);break;
+ case WM_SHOWWINDOW:if(controller&&ready){controller->put_IsVisible((BOOL)w);command(w?L"host-visible":L"host-hidden");}break;
  case WM_DISPLAYCHANGE:case WM_SETTINGCHANGE:bounds();if(settingsWindow)fillMonitors();return 0;
  case WM_DPICHANGED:bounds();return 0;
  case WM_MOUSEMOVE:case WM_LBUTTONDOWN:case WM_LBUTTONUP:case WM_LBUTTONDBLCLK:
@@ -302,7 +302,7 @@ struct ReadyHandler:ICoreWebView2NavigationCompletedEventHandler{
  }
 };
 static const wchar_t* bridge=LR"JS((()=>{
- const allowed=['controls','layer-top','layer-background','friends','motion','rest','view','wings','background-on','background-off','weather-auto','weather-clear','weather-rain','weather-snow','weather-hail'];
+ const allowed=['controls','host-visible','host-hidden','layer-top','layer-background','friends','motion','rest','view','wings','background-on','background-off','weather-auto','weather-clear','weather-rain','weather-snow','weather-hail'];
  const send=s=>chrome.webview.postMessage(s);
  let passive=true;
  window.desktopHost=Object.freeze({

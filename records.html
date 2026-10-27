@@ -1489,12 +1489,17 @@ function renderCats() {
   });
 }
 
-function queueCatFrame(){requestAnimationFrame(t=>{const fps=typeof desktopOverlay!=='undefined'&&desktopOverlay?24:30;if(t-lastT<1000/fps-1)queueCatFrame();else tickCats(t);});}
+let catFramePending=false;
+function queueCatFrame(){
+ if(catFramePending||(typeof desktopSuspended!=='undefined'&&desktopSuspended))return;
+ catFramePending=true;
+ requestAnimationFrame(t=>{catFramePending=false;if(typeof desktopSuspended!=='undefined'&&desktopSuspended)return;const fps=typeof desktopOverlay!=='undefined'&&desktopOverlay?24:30;if(t-lastT<1000/fps-1)queueCatFrame();else tickCats(t);});
+}
 function tickCats(t) {
   queueCatFrame();
   if(typeof tickDesktopAnimations==='function')tickDesktopAnimations(t);
   const dt = Math.min(.1, (t - lastT) / 1000 || 0); lastT = t;
-  if (!catsOn || document.hidden) return;
+  if (!catsOn || document.hidden || (typeof desktopSuspended!=='undefined'&&desktopSuspended)) return;
   if (typeof tickRoomGuests === 'function') tickRoomGuests(t, dt);
   const max = Math.max(0, innerWidth - CAT_W), still = reduceMotion;
   const mouseOn = t - mouse.t < 2500 && mouse.x >= 0;

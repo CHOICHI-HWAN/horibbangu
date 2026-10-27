@@ -1,5 +1,7 @@
 // Hit testing keeps the desktop usable through every empty transparent pixel.
 const host=window.desktopHost;
+// Hoisted because initRoom runs the shared clock before this overlay initializes.
+var desktopSuspended=false;
 // Drive the original CSS keyframes and transitions from the same modest frame
 // clock as the cats. Otherwise every SVG keeps the compositor busy at 60–144 Hz.
 const desktopAnimations=new Map();
@@ -9,7 +11,7 @@ for(const type of ['animationstart','transitionrun'])document.addEventListener(t
 document.addEventListener('visibilitychange',()=>{lastDesktopAnimationTime=null;desktopAnimationsDirty=true;});
 function tickDesktopAnimations(t){
  const dt=lastDesktopAnimationTime===null?0:Math.min(100,t-lastDesktopAnimationTime);lastDesktopAnimationTime=t;
- if(document.hidden||reduceMotion)return;
+ if(document.hidden||desktopSuspended||reduceMotion)return;
  if(desktopAnimationsDirty){
   desktopAnimationsDirty=false;
   for(const animation of document.getAnimations())if(!desktopAnimations.has(animation)&&animation.playState==='running'){
@@ -49,7 +51,7 @@ let lastRegions='',lastRegionsAt=0;
 let catGeometry=new WeakMap();
 addEventListener('resize',()=>{catGeometry=new WeakMap();});
 function publishDesktopRegions(){
- if(passiveDesktop||document.hidden||!host?.setHitRegions)return;
+ if(passiveDesktop||document.hidden||desktopSuspended||!host?.setHitRegions)return;
  const modal=document.querySelector('dialog[open]');
  const rects=[];
  if(!modal&&catsOn&&!$('cats').hidden)for(const c of cats){
@@ -70,6 +72,8 @@ function publishDesktopRegions(){
 }
 setInterval(publishDesktopRegions,125);
 host?.onCommand(command=>{
+ if(command==='host-hidden')desktopSuspended=true;
+ if(command==='host-visible'&&desktopSuspended){desktopSuspended=false;lastDesktopAnimationTime=null;lastT=performance.now();queueCatFrame();updateRoomTime();}
  if(command==='layer-top'||command==='layer-background'){
   passiveDesktop=command==='layer-background';holding=false;lastRegions='';lastRegionsAt=0;
   document.body.classList.toggle('passive-desktop',passiveDesktop);

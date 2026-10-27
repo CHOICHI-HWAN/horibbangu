@@ -458,6 +458,8 @@ body.desktop-overlay:not(.desktop-background),.desktop-overlay:not(.desktop-back
 .desktop-overlay:not(.desktop-background) .brand {font-size:21px;}
 .desktop-overlay:not(.desktop-background) .kicker {display:none;}
 .cat-wall-clock,.wall-calendar,.art-wall {pointer-events:none;}
+/* Keep the painting still; water, clouds and mist retain their own motion. */
+.desktop-overlay .landscape-motion {animation:none;transform:none;}
 
 /* Native Windows edition is a passive visual; only its native tray is interactive. */
 body.passive-desktop * {pointer-events:none!important;}
