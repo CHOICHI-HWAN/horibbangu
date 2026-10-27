@@ -20,7 +20,7 @@
 #include "startup-policy.h"
 #include "screensaver.h"
 
-static HWND windowHandle,controlWindow,wallpaperParent,wallpaperAfter;
+static HWND windowHandle,controlWindow,menuWindow,wallpaperParent,wallpaperAfter;
 static UINT32 browserProcess=0;
 static ICoreWebView2Environment* environment;
 static ICoreWebView2Controller* controller;
@@ -135,6 +135,7 @@ static void tray(bool remove=false){
  if(!remove){data.uVersion=NOTIFYICON_VERSION_4;Shell_NotifyIconW(NIM_SETVERSION,&data);}
 }
 static void menu(){
+ if(desktopMenuOpen||!menuWindow)return;
  HMENU m=CreatePopupMenu();
  AppendMenuW(m,MF_STRING|(background?MF_CHECKED:0),101,L"호수 배경 보이기");
  AppendMenuW(m,MF_STRING|(!IsWindowVisible(windowHandle)?MF_CHECKED:0),102,L"잠깐 숨기기");
@@ -157,10 +158,15 @@ static void menu(){
  AppendMenuW(m,MF_SEPARATOR,0,nullptr);
  AppendMenuW(m,MF_STRING,116,L"만든이 · 이용 안내…");
  AppendMenuW(m,MF_STRING,199,L"종료 (Ctrl+Alt+Q)");
- POINT p;GetCursorPos(&p);SetForegroundWindow(controlWindow);
+ POINT p;GetCursorPos(&p);
  desktopMenuOpen=true;cancelTopInput();if(inputWindow)ShowWindow(inputWindow,SW_HIDE);
- UINT choice=TrackPopupMenu(m,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,p.x,p.y,0,controlWindow,nullptr);DestroyMenu(m);
- desktopMenuOpen=false;trayAction(choice);syncInputBounds();PostMessageW(windowHandle,WM_NULL,0,0);
+ // A visible, activatable topmost owner keeps the system popup above the scene.
+ // The owner is a transparent 1px tool window, never the disabled cat visual.
+ SetWindowPos(menuWindow,HWND_TOPMOST,p.x,p.y,1,1,SWP_NOACTIVATE|SWP_SHOWWINDOW);
+ SetForegroundWindow(menuWindow);
+ UINT choice=TrackPopupMenu(m,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,p.x,p.y,0,menuWindow,nullptr);DestroyMenu(m);
+ PostMessageW(menuWindow,WM_NULL,0,0);ShowWindow(menuWindow,SW_HIDE);
+ desktopMenuOpen=false;trayAction(choice);syncInputBounds();
 }
 static void trayAction(UINT choice){
  if(choice==116){
@@ -191,7 +197,10 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
   if(message==WM_SYSCOMMAND&&(w&0xfff0)==SC_SCREENSAVE)return 0;
  }
  if(taskbarCreated&&message==taskbarCreated){tray();return 0;}
- if(message==secondInstance){showControls();return 0;}
+ if(message==secondInstance){
+  if(!IsWindowVisible(windowHandle))ShowWindow(windowHandle,SW_SHOWNOACTIVATE);
+  syncInputBounds();menu();return 0;
+ }
  switch(message){
  case WM_APP+3:return 0; // Ignore legacy queued mouse forwarding.
  case WM_COMMAND:trayAction(LOWORD(w));return 0;
@@ -200,6 +209,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_WINDOWPOSCHANGING:{auto p=(WINDOWPOS*)l;if(!(p->flags&SWP_NOZORDER)){p->hwndInsertAfter=isSaver()||topLayer()?HWND_TOPMOST:isPreview()?HWND_TOP:wallpaperParent?wallpaperAfter:HWND_BOTTOM;p->flags|=SWP_NOACTIVATE;}}break;
  case WM_ERASEBKGND:if(!isDesktop()){RECT r;GetClientRect(h,&r);FillRect((HDC)w,&r,(HBRUSH)GetStockObject(BLACK_BRUSH));}return 1;
  case WM_PAINT:{PAINTSTRUCT ps;BeginPaint(h,&ps);EndPaint(h,&ps);return 0;}
+ case WM_SHOWWINDOW:if(controller&&ready)controller->put_IsVisible((BOOL)w);break;
  case WM_DISPLAYCHANGE:case WM_SETTINGCHANGE:bounds();if(settingsWindow)fillMonitors();return 0;
  case WM_DPICHANGED:bounds();return 0;
  case WM_MOUSEMOVE:case WM_LBUTTONDOWN:case WM_LBUTTONUP:case WM_LBUTTONDBLCLK:
@@ -218,6 +228,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l){
  case WM_DESTROY:
   ready=false;if(settingsWindow)DestroyWindow(settingsWindow);KillTimer(h,1);KillTimer(h,2);KillTimer(h,3);tray(true);if(isDesktop()){UnregisterHotKey(controlWindow,1);UnregisterHotKey(controlWindow,2);}
   cancelTopInput();if(inputWindow)DestroyWindow(inputWindow);inputWindow=nullptr;
+  if(menuWindow)DestroyWindow(menuWindow);menuWindow=nullptr;
   if(controller)controller->Close();PostQuitMessage(0);return 0;
  }return DefWindowProcW(h,message,w,l);
 }
@@ -400,7 +411,10 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  if(GetLastError()==ERROR_ALREADY_EXISTS){
   if(!isDesktop()){CloseHandle(mutex);return 0;}
   HWND old=FindWindowW(windowClass,nullptr);
-  if(old&&GetPropW(old,L"HoribbanguPassive"))PostMessageW(old,secondInstance,0,0);
+  if(old&&GetPropW(old,L"HoribbanguPassive")){
+   DWORD pid=0;GetWindowThreadProcessId(old,&pid);if(pid)AllowSetForegroundWindow(pid);
+   PostMessageW(old,secondInstance,0,0);
+  }
   else MessageBoxW(nullptr,L"이전 버전이 아직 실행 중입니다. 시계 옆 트레이에서 이전 앱을 종료한 뒤 새 버전을 실행해 주세요.",APP_TITLE,MB_OK|MB_ICONINFORMATION);
   CloseHandle(mutex);return 0;
  }
@@ -433,6 +447,11 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  INITCOMMONCONTROLSEX controls={sizeof(controls),ICC_BAR_CLASSES};InitCommonControlsEx(&controls);
  WNDCLASSEXW cls={};cls.cbSize=sizeof(cls);cls.lpfnWndProc=controlProcedure;cls.hInstance=instance;cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.lpszClassName=windowClass;cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(1));RegisterClassExW(&cls);
  controlWindow=CreateWindowExW(WS_EX_TOOLWINDOW,windowClass,APP_TITLE,WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
+ if(isDesktop()){
+  cls.lpfnWndProc=DefWindowProcW;cls.lpszClassName=APP_WINDOW_CLASS L"Menu";RegisterClassExW(&cls);
+  menuWindow=CreateWindowExW(WS_EX_TOOLWINDOW|WS_EX_LAYERED,cls.lpszClassName,L"Horibbangu menu owner",WS_POPUP,0,0,1,1,nullptr,nullptr,instance,nullptr);
+  if(menuWindow)SetLayeredWindowAttributes(menuWindow,0,0,LWA_ALPHA);
+ }
  cls.lpfnWndProc=procedure;cls.lpszClassName=isDesktop()?APP_WINDOW_CLASS L"View":isSaver()?APP_WINDOW_CLASS L"Saver":APP_WINDOW_CLASS L"Preview";RegisterClassExW(&cls);
  DWORD exStyle=WS_EX_TOOLWINDOW|(isPreview()?WS_EX_NOACTIVATE:WS_EX_NOREDIRECTIONBITMAP|(isSaver()?WS_EX_TOPMOST:WS_EX_TRANSPARENT|WS_EX_NOACTIVATE));
  // Initialize WebView2 in an app-owned window before attaching a preview to

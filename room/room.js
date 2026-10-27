@@ -190,15 +190,17 @@ function setRoomWeather(choice,date=new Date()){
 }
 // Animate only the painted lake reflections; the village and mountains stay solid.
 let lastLakeFrame=-Infinity,lastWeatherFrame=-Infinity;
-let sceneDimensions=null,lakePaint=null,weatherPaint=null;
+let sceneDimensions=null,weatherDimensions=null,weatherViewport='',lakePaint=null,weatherPaint=null;
 function drawLake(t){
   const canvas=$('lakeCanvas'),image=$('landscape');
   if(!canvas||!image||!image.complete||!image.naturalWidth)return;
   const dimensions=sceneDimensions||(sceneDimensions={width:image.clientWidth,height:image.clientHeight});
-  const w=dimensions.width,h=dimensions.height;
+  if(!dimensions.width||!dimensions.height)return;
+  const rasterScale=Math.min(1,1280/Math.max(1,dimensions.width));
+  const w=Math.max(1,Math.round(dimensions.width*rasterScale)),h=Math.max(1,Math.round(dimensions.height*rasterScale));
   if(!w||!h)return;
   const resized=canvas.width!==w||canvas.height!==h;
-  if(!resized&&t-lastLakeFrame<33)return;
+  if(!resized&&t-lastLakeFrame<50)return;
   lastLakeFrame=t;
   if(resized){canvas.width=w;canvas.height=h;}
   const ctx=lakePaint?.context||canvas.getContext('2d');
@@ -225,15 +227,19 @@ function drawLake(t){
   }
 }
 function drawWeather(t){
-  weatherFrame=requestAnimationFrame(drawWeather);
-  if(document.hidden||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground)||t-lastWeatherFrame<33)return;lastWeatherFrame=t;
+  const idle=document.hidden||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground);
+  weatherFrame=setTimeout(()=>requestAnimationFrame(drawWeather),idle||reduceMotion?500:40);
+  if(idle||t-lastWeatherFrame<40)return;lastWeatherFrame=t;
   drawLake(t);
   const canvas=$('weatherCanvas');if(!canvas)return;
   // Measure the precipitation layer itself: image sizing is independent of this overlay.
-  const w=canvas.clientWidth,h=canvas.clientHeight;
+  const viewport=innerWidth+'x'+innerHeight;
+  if(!weatherDimensions||weatherViewport!==viewport){weatherViewport=viewport;weatherDimensions={width:canvas.clientWidth,height:canvas.clientHeight};}
+  const dimensions=weatherDimensions;
+  const w=dimensions.width,h=dimensions.height;
   if(!w||!h)return;
   // Keep high-DPI droplets crisp without allocating an unbounded multi-monitor canvas.
-  const scale=Math.min(devicePixelRatio||1,2,Math.sqrt(8388608/(w*h)));
+  const scale=Math.min(devicePixelRatio||1,2,Math.sqrt(3145728/(w*h)));
   const width=Math.max(1,Math.round(w*scale)),height=Math.max(1,Math.round(h*scale));
   const resized=canvas.width!==width||canvas.height!==height;
   if(resized){canvas.width=width;canvas.height=height;}
@@ -290,7 +296,8 @@ function initRoom(){
   setRoomControls(false);updateRoomTime();setInterval(updateRoomTime,1000);
   if($('weatherCanvas')){
     const image=$('landscape');sceneDimensions={width:image.clientWidth,height:image.clientHeight};
-    new ResizeObserver(entries=>{const r=entries[0].contentRect;sceneDimensions={width:Math.round(r.width),height:Math.round(r.height)};}).observe(image);
+    const observer=new ResizeObserver(entries=>{for(const entry of entries){const r=entry.contentRect,dimensions={width:Math.round(r.width),height:Math.round(r.height)};if(entry.target===image)sceneDimensions=dimensions;else weatherDimensions=dimensions;}});
+    observer.observe(image);observer.observe($('weatherCanvas'));
     weatherFrame=requestAnimationFrame(drawWeather);
   }
 }

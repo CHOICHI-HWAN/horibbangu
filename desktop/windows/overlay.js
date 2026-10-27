@@ -1,10 +1,35 @@
 // Hit testing keeps the desktop usable through every empty transparent pixel.
 const host=window.desktopHost;
+// Drive the original CSS keyframes and transitions from the same modest frame
+// clock as the cats. Otherwise every SVG keeps the compositor busy at 60–144 Hz.
+const desktopAnimations=new Map();
+let desktopAnimationsDirty=true,lastDesktopAnimationTime=null;
+new MutationObserver(()=>{desktopAnimationsDirty=true;}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','data-motion']});
+for(const type of ['animationstart','transitionrun'])document.addEventListener(type,()=>{desktopAnimationsDirty=true;});
+document.addEventListener('visibilitychange',()=>{lastDesktopAnimationTime=null;desktopAnimationsDirty=true;});
+function tickDesktopAnimations(t){
+ const dt=lastDesktopAnimationTime===null?0:Math.min(100,t-lastDesktopAnimationTime);lastDesktopAnimationTime=t;
+ if(document.hidden||reduceMotion)return;
+ if(desktopAnimationsDirty){
+  desktopAnimationsDirty=false;
+  for(const animation of document.getAnimations())if(!desktopAnimations.has(animation)&&animation.playState==='running'){
+   const time=animation.currentTime??0;
+   animation.pause();animation.currentTime=time;
+   desktopAnimations.set(animation,{time,added:t});
+  }
+ }
+ for(const [animation,state] of desktopAnimations){
+  if(animation.playState==='idle'||!animation.effect?.target?.isConnected){desktopAnimations.delete(animation);continue;}
+  const time=state.time+(state.added===t?0:dt*animation.playbackRate),end=animation.effect.getComputedTiming().endTime;
+  if(Number.isFinite(end)&&time>=end){animation.finish();desktopAnimations.delete(animation);}
+  else {animation.currentTime=time;state.time=time;}
+ }
+}
 let passiveDesktop=host?.passive===true;
 if(passiveDesktop)document.body.classList.add("passive-desktop");
 let holding=false,lastInteractive=null,lastHitRect='',lastPointer={x:-1,y:-1};
 function updateDesktopHit(x=lastPointer.x,y=lastPointer.y){
- if(passiveDesktop)return;
+ if(passiveDesktop||host?.setHitRegions)return;
  lastPointer={x,y};
  const target=document.elementFromPoint(x,y);
  const hit=target?.closest('.cat,button,a,select');
@@ -19,19 +44,31 @@ addEventListener('pointerdown',event=>{if(!passiveDesktop&&event.button===0&&eve
 for(const type of ['pointerup','pointercancel','lostpointercapture'])addEventListener(type,event=>{holding=false;updateDesktopHit(event.clientX,event.clientY);},true);
 addEventListener('blur',()=>{holding=false;host?.setInteractive(false);lastInteractive=false;});
 // Cats can move away from the pointer without another native mouse message.
-setInterval(()=>updateDesktopHit(),120);
+if(!host?.setHitRegions)setInterval(()=>updateDesktopHit(),120);
 let lastRegions='',lastRegionsAt=0;
+let catGeometry=new WeakMap();
+addEventListener('resize',()=>{catGeometry=new WeakMap();});
 function publishDesktopRegions(){
  if(passiveDesktop||document.hidden||!host?.setHitRegions)return;
  const modal=document.querySelector('dialog[open]');
- const rects=[...(modal?[modal]:document.querySelectorAll('.cat,button,a,select'))].filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden'&&getComputedStyle(el).pointerEvents!=='none').slice(0,64).map(el=>{
-  const r=el.getBoundingClientRect(),pad=el.classList.contains('cat')?8:0;
-  return [r.left-pad,r.top-pad,r.right+pad,r.bottom+pad].map(v=>Math.round(v*devicePixelRatio));
- });
- const signature=JSON.stringify(rects),now=performance.now();
- if(signature!==lastRegions||now-lastRegionsAt>500){lastRegions=signature;lastRegionsAt=now;host.setHitRegions(rects);}
+ const rects=[];
+ if(!modal&&catsOn&&!$('cats').hidden)for(const c of cats){
+  const el=c.el;if(el.hidden||el.style.display==='none'||el.style.pointerEvents==='none'||el.style.visibility==='hidden')continue;
+  let box=catGeometry.get(el);
+  if(!box){const style=getComputedStyle(el);box={width:parseFloat(style.width),height:parseFloat(style.height),bottom:parseFloat(style.bottom)};catGeometry.set(el,box);}
+  const left=Number((c.renderedX??c.x).toFixed(1)),bottom=innerHeight-box.bottom-Number((c.renderedY??c.y).toFixed(1));
+  rects.push([left-8,bottom-box.height-8,left+box.width+8,bottom+8].map(v=>Math.round(v*devicePixelRatio)));
+ }
+ const controls=modal?[modal]:document.body.classList.contains('controls-visible')?document.querySelectorAll('button,a,select'):[];
+ for(const el of controls){
+  if(!el.getClientRects().length||getComputedStyle(el).visibility==='hidden'||getComputedStyle(el).pointerEvents==='none')continue;
+  const r=el.getBoundingClientRect();rects.push([r.left,r.top,r.right,r.bottom].map(v=>Math.round(v*devicePixelRatio)));
+ }
+ const regions=rects.slice(0,64);
+ const signature=JSON.stringify(regions),now=performance.now();
+ if(signature!==lastRegions||now-lastRegionsAt>500){lastRegions=signature;lastRegionsAt=now;host.setHitRegions(regions);}
 }
-setInterval(publishDesktopRegions,80);
+setInterval(publishDesktopRegions,125);
 host?.onCommand(command=>{
  if(command==='layer-top'||command==='layer-background'){
   passiveDesktop=command==='layer-background';holding=false;lastRegions='';lastRegionsAt=0;
@@ -69,7 +106,7 @@ function setDesktopBackground(enabled,notify=true){
  backgroundButton.setAttribute('aria-pressed',String(desktopBackground));
  $('viewBtn').hidden=!desktopBackground;
  try{localStorage.setItem('horibbangu-desktop-background',String(desktopBackground));}catch(e){}
- sceneDimensions=null;lastLakeFrame=-Infinity;lastWeatherFrame=-Infinity;
+ sceneDimensions=null;weatherDimensions=null;lastLakeFrame=-Infinity;lastWeatherFrame=-Infinity;
  if(!desktopBackground){
   const t=performance.now();
   for(const c of cats){

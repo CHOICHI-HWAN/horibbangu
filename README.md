@@ -78,25 +78,27 @@ Playwright가 설치된 개발 환경에서 `node tests/playground.cjs`를 실�
 `PLAYWRIGHT_MODULE`로 모듈 경로, `BROWSER_EXECUTABLE`로 설치된 Chromium 계열 브라우저 경로를 지정할 수도 있습니다.
 검사는 별도 브라우저 세션에서 실행하며 Firebase 연결을 차단하고 실제 체중기록을 저장하지 않습니다.
 
-## Windows 바탕화면 배경 (3.5.1)
+## Windows 바탕화면 배경 (3.5.2)
 
-[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows-v3.5.1.zip)에서 `호리빵구-v3.5.1.exe` 하나를 꺼내 실행합니다. ZIP은 약 0.76 MB이며 Windows 10/11 x64와 공유 Microsoft Edge WebView2 런타임을 사용합니다. 고양이와 풍경은 EXE에 내장되어 인터넷·로그인·체중 기록 없이 감상할 수 있습니다.
+[Firebase 직접 다운로드](https://horibbangu.web.app/releases/Horibbangu-Windows-v3.5.2.zip)에서 `호리빵구-v3.5.2.exe` 하나를 꺼내 실행합니다. ZIP은 약 0.76 MB이며 Windows 10/11 x64와 공유 Microsoft Edge WebView2 런타임을 사용합니다. 고양이와 풍경은 EXE에 내장되어 인터넷·로그인·체중 기록 없이 감상할 수 있습니다.
 
 **기본은 바탕화면 배경 모드입니다.** 모든 클릭은 바탕화면과 프로그램으로 통과합니다. 트레이에서 **항상 위에 · 고양이 클릭/드래그**를 선택하거나 화면 설정에서 같은 항목을 체크하면 다른 창 위에서 고양이와 화면 버튼을 조작할 수 있습니다. 빈 공간은 이 모드에서도 클릭을 통과시킵니다. 트레이의 **고양이 메뉴 열기 / 접기**로 화면 버튼을 열 수 있습니다.
 
 고양이·버튼 영역만 받는 별도 입력 창을 사용하며 전역 마우스 훅은 없습니다. **바탕화면 배경 · 클릭 통과**로 돌아가면 드래그를 끝내고 입력 창을 숨깁니다. 모드 선택은 별도 `InteractiveTop` 설정으로 저장하며 예전 `Layer=1` 값만으로 자동 켜지지 않습니다. 화면보호기는 기존처럼 입력 시 종료하며 조작 모드를 켜지 않습니다.
 
+EXE를 다시 실행하면 기존 방을 복원하고 전체 메뉴를 엽니다. Windows 애니메이션은 원래 키프레임을 공통 24fps 시계로 그립니다. 잠깐 숨긴 동안에는 WebView 렌더링도 쉽니다.
+
 시계 옆 고양이 트레이 아이콘을 클릭하거나 우클릭해 배경 켜기/끄기·숨기기·모니터·투명도·휴식·풍경 감상·움직임·날씨를 조절합니다. 기본판에서는 친구 초대와 날개 친구들도 선택할 수 있습니다. `Ctrl+Alt+H`는 화면 설정, `Ctrl+Alt+Q`는 종료입니다. 모니터와 투명도(0~80%)는 저장되고, 모니터 분리 시 주 모니터로 대체합니다.
 
-이전 EXE가 실행 중이면 먼저 트레이에서 종료한 뒤 새 버전을 실행해야 합니다. 사용자 설정은 `%LOCALAPPDATA%\HoribbanguDesktop`, 내장 파일은 그 안의 `Native\3.5.1`에 보관합니다. WebView2 프로필은 그대로 유지합니다. 코드 서명은 없습니다. 기존 3.2.1 Electron 호환판은 이전 입력 방식을 사용하므로 현재 다운로드 메뉴에서 제외했습니다.
+이전 EXE가 실행 중이면 먼저 트레이에서 종료한 뒤 새 버전을 실행해야 합니다. 사용자 설정은 `%LOCALAPPDATA%\HoribbanguDesktop`, 내장 파일은 그 안의 `Native\3.5.2`에 보관합니다. WebView2 프로필은 그대로 유지합니다. 코드 서명은 없습니다. 기존 3.2.1 Electron 호환판은 이전 입력 방식을 사용하므로 현재 다운로드 메뉴에서 제외했습니다.
 
 재빌드는 `desktop/windows/build.sh`입니다. `native/test_binary.py`는 EXE·내장 파일·라이선스·DPI/권한 선언을 검사합니다. Windows CI는 기본판과 두 개별판에서 배경 모드 클릭 통과·이전 설정 이관·모니터/투명도·트레이 명령·설정 유지와 실제 Explorer 바탕화면의 임시 바로가기를 검사합니다. `test_desktop_probe.cpp`는 이 CI 검사에만 사용하며 배포 ZIP에는 포함하지 않습니다.
 
 항상 위에 모드의 실제 창 표시·빈 공간 클릭 통과·고양이 클릭·공기방울 드래그·드래그 중 배경 전환·설정 유지도 [3.5.0 Windows CI](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/40418753088)에서 기본판·박박사판·김박사판을 각각 검사해 통과했습니다.
 
-## Windows 화면보호기 (3.5.1)
+## Windows 화면보호기 (3.5.2)
 
-기존 고양이·호수 풍경을 그대로 사용하는 별도 화면보호기입니다. [기본판](https://horibbangu.web.app/releases/Horibbangu-Screensaver-v3.5.1.zip), [박박사판](https://horibbangu.web.app/releases/Horibbangu-Park-Screensaver-v3.5.1.zip), [김박사판](https://horibbangu.web.app/releases/Horibbangu-Kim-Screensaver-v3.5.1.zip)을 제공합니다. ZIP마다 버전이 표시된 `.scr` 파일 하나가 들어 있습니다.
+기존 고양이·호수 풍경을 그대로 사용하는 별도 화면보호기입니다. [기본판](https://horibbangu.web.app/releases/Horibbangu-Screensaver-v3.5.2.zip), [박박사판](https://horibbangu.web.app/releases/Horibbangu-Park-Screensaver-v3.5.2.zip), [김박사판](https://horibbangu.web.app/releases/Horibbangu-Kim-Screensaver-v3.5.2.zip)을 제공합니다. ZIP마다 버전이 표시된 `.scr` 파일 하나가 들어 있습니다.
 
 ZIP을 풀고 계속 보관할 폴더에 `.scr`을 둔 뒤, 파일 우클릭 → 더 많은 옵션 표시 → 설치를 선택합니다. Windows 화면 보호기 설정에서 대기 시간과 **다시 시작할 때 로그온 화면 표시**를 선택하고 적용하세요. WebView2 Runtime이 필요합니다. 이 앱이 Windows 로그인·잠금 정책을 변경하지는 않습니다.
 
@@ -106,12 +108,12 @@ ZIP을 풀고 계속 보관할 폴더에 `.scr`을 둔 뒤, 파일 우클릭 →
 
 ## Windows 개별판 · 박박사 / 김박사
 
-- [박박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Park-Windows-v3.5.1.zip): 소양·소미만 처음부터 계속 함께합니다.
-- [김박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Kim-Windows-v3.5.1.zip): 팡이만 처음부터 계속 함께합니다.
+- [박박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Park-Windows-v3.5.2.zip): 소양·소미만 처음부터 계속 함께합니다.
+- [김박사판 다운로드](https://horibbangu.web.app/releases/Horibbangu-Kim-Windows-v3.5.2.zip): 팡이만 처음부터 계속 함께합니다.
 
-ZIP과 내부 EXE 이름 모두 `v3.5.1`처럼 버전을 포함합니다. 다음 빌드에서도 `desktop/windows/package.json`의 버전으로 파일명을 자동 생성합니다. 예전 공유 주소도 버전이 붙은 다운로드 파일명을 제공합니다. 각 ZIP에는 해당 EXE 하나만 포함합니다. 기존 고양이 SVG·색상·체형과 방·호수 효과를 유지하며 다른 고양이를 자동 추가하거나 방문 후 퇴장시키지 않습니다. 체중 기록·로그인·네트워크 연결은 없습니다. Windows 10/11 x64와 공유 WebView2 런타임이 필요합니다. 기본판의 모니터 선택·투명도·배경 전환·항상 위에·배경 모드 클릭 통과 기능을 함께 사용합니다. 웹 첫 화면을 탭하면 두 다운로드 버튼이 나타납니다.
+ZIP과 내부 EXE 이름 모두 `v3.5.2`처럼 버전을 포함합니다. 다음 빌드에서도 `desktop/windows/package.json`의 버전으로 파일명을 자동 생성합니다. 예전 공유 주소도 버전이 붙은 다운로드 파일명을 제공합니다. 각 ZIP에는 해당 EXE 하나만 포함합니다. 기존 고양이 SVG·색상·체형과 방·호수 효과를 유지하며 다른 고양이를 자동 추가하거나 방문 후 퇴장시키지 않습니다. 체중 기록·로그인·네트워크 연결은 없습니다. Windows 10/11 x64와 공유 WebView2 런타임이 필요합니다. 기본판의 모니터 선택·투명도·배경 전환·항상 위에·배경 모드 클릭 통과 기능을 함께 사용합니다. 웹 첫 화면을 탭하면 두 다운로드 버튼이 나타납니다.
 
-실행파일은 `downloads/호리빵구-박박사-v3.5.1.exe`, `downloads/호리빵구-김박사-v3.5.1.exe`에 보관합니다. 각 개별판은 창 클래스·단일 실행 잠금·트레이 이름·설정·WebView2 프로필을 분리하여 기본판 및 서로와 함께 실행할 수 있습니다. 설정 폴더는 `%LOCALAPPDATA%\HoribbanguDesktop-Park`, `%LOCALAPPDATA%\HoribbanguDesktop-Kim`입니다.
+실행파일은 `downloads/호리빵구-박박사-v3.5.2.exe`, `downloads/호리빵구-김박사-v3.5.2.exe`에 보관합니다. 각 개별판은 창 클래스·단일 실행 잠금·트레이 이름·설정·WebView2 프로필을 분리하여 기본판 및 서로와 함께 실행할 수 있습니다. 설정 폴더는 `%LOCALAPPDATA%\HoribbanguDesktop-Park`, `%LOCALAPPDATA%\HoribbanguDesktop-Kim`입니다.
 
 재빌드는 `python3 desktop/windows/build-editions.py`이며, `--edition park` 또는 `--edition kim`으로 렌더러·네이티브 빌드·패키징 단계를 각각 실행할 수도 있습니다. `tests/desktop-editions.cjs`는 기본판 방문 고양이와 SVG·색상·크기를 대조하고, 정확한 고양이 목록·장시간 방문 방지·오프라인 동작·배경·감상 전용 화면·웹 다운로드 링크를 검사합니다. Windows CI는 기본판·박박사판·김박사판을 각각 빌드하고 실제 창과 마우스 동작을 검사합니다. 3.3.2의 세 버전 실행 검증은 [Windows CI](https://github.com/CHOICHI-HWAN/horibbangu/actions/runs/40080294326)에서 통과했습니다. 실제 Explorer 아이콘 선택과 바로가기 실행, 클릭 통과, 투명 영역·투명도, 물결 갱신, 트레이 명령과 재실행을 검사했습니다. 검증한 EXE와 배포 ZIP의 내부 EXE가 같은지도 확인합니다.
 

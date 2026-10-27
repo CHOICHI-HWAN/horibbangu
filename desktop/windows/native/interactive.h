@@ -18,19 +18,24 @@ static void cancelTopInput(){
  sendTopMouse(WM_MOUSELEAVE,0,{0,0});
 }
 static void raiseTopSettings(){
- if(settingsWindow&&IsWindowVisible(settingsWindow))SetWindowPos(settingsWindow,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+ if(!desktopMenuOpen&&settingsWindow&&IsWindowVisible(settingsWindow))SetWindowPos(settingsWindow,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
 }
 static void syncInputBounds(){
  if(!inputWindow)return;
  if(!topLayer()||!ready||desktopMenuOpen||!IsWindowVisible(windowHandle)||!hasHits||GetTickCount64()-hitTime>2000){
   cancelTopInput();ShowWindow(inputWindow,SW_HIDE);raiseTopSettings();return;
  }
- RECT r;GetWindowRect(windowHandle,&r);
- SetWindowPos(inputWindow,HWND_TOPMOST,r.left,r.top,r.right-r.left,r.bottom-r.top,SWP_NOACTIVATE|SWP_SHOWWINDOW);
- raiseTopSettings();
+ RECT r,current;GetWindowRect(windowHandle,&r);GetWindowRect(inputWindow,&current);
+ if(!EqualRect(&r,&current)||!IsWindowVisible(inputWindow)){
+  SetWindowPos(inputWindow,HWND_TOPMOST,r.left,r.top,r.right-r.left,r.bottom-r.top,SWP_NOACTIVATE|SWP_SHOWWINDOW);
+  raiseTopSettings();
+ }
 }
 static void acceptHitRegions(const wchar_t* text){
  if(!topLayer()||!ready||!inputWindow||wcslen(text)>10000)return;
+ static wchar_t previous[10001]={};
+ if(hasHits&&!wcscmp(previous,text)){hitTime=GetTickCount64();syncInputBounds();return;}
+ const wchar_t* original=text;
  RECT client;GetClientRect(windowHandle,&client);
  HRGN all=CreateRectRgn(0,0,0,0);if(!all)return;
  int count=0;bool any=false;
@@ -49,6 +54,7 @@ static void acceptHitRegions(const wchar_t* text){
   }++count;
  }
  if(*text){DeleteObject(all);return;}
+ wcscpy(previous,original);
  hitTime=GetTickCount64();hasHits=any;
  if(!SetWindowRgn(inputWindow,all,TRUE)){DeleteObject(all);hasHits=false;}
  syncInputBounds();

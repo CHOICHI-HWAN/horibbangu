@@ -28,6 +28,16 @@ u.DefWindowProcW.argtypes=[W.HWND,W.UINT,W.WPARAM,W.LPARAM];u.DefWindowProcW.res
 u.GetWindowTextW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
 ENUMCHILD=C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
 u.EnumChildWindows.argtypes=[W.HWND,ENUMCHILD,W.LPARAM]
+u.EnumWindows.argtypes=[ENUMCHILD,W.LPARAM]
+u.GetWindowThreadProcessId.argtypes=[W.HWND,C.POINTER(W.DWORD)]
+u.AllowSetForegroundWindow.argtypes=[W.DWORD]
+u.GetMenuItemCount.argtypes=[W.HMENU]
+u.GetMenuItemID.argtypes=[W.HMENU,C.c_int];u.GetMenuItemID.restype=W.UINT
+u.GetMenuItemRect.argtypes=[W.HWND,W.HMENU,W.UINT,C.POINTER(W.RECT)]
+u.GetWindow.argtypes=[W.HWND,W.UINT];u.GetWindow.restype=W.HWND
+class MENUBARINFO(C.Structure):
+ _fields_=[('size',W.DWORD),('rect',W.RECT),('menu',W.HMENU),('window',W.HWND),('flags',W.DWORD)]
+u.GetMenuBarInfo.argtypes=[W.HWND,W.LONG,W.LONG,C.POINTER(MENUBARINFO)]
 WNDPROC=C.WINFUNCTYPE(C.c_ssize_t,W.HWND,W.UINT,W.WPARAM,W.LPARAM)
 class WNDCLASS(C.Structure):
  _fields_=[('style',W.UINT),('proc',WNDPROC),('extra',C.c_int),('windowExtra',C.c_int),('instance',W.HINSTANCE),('icon',W.HANDLE),('cursor',W.HANDLE),('brush',W.HANDLE),('menu',W.LPCWSTR),('name',W.LPCWSTR)]
@@ -69,6 +79,41 @@ def hit(x,y):
 def cat_point(h):
  r=evaluate('(()=>{const r=cats[0].el.getBoundingClientRect();return {x:(r.left+r.width*.65)*devicePixelRatio,y:(r.top+r.height*.55)*devicePixelRatio};})()')
  rect=W.RECT();u.GetWindowRect(h,C.byref(rect));return int(rect.left+r['x']),int(rect.top+r['y'])
+def popup_info():
+ menus=[]
+ @ENUMCHILD
+ def inspect(window,param):
+  kind=C.create_unicode_buffer(128);u.GetClassNameW(window,kind,len(kind));pid=W.DWORD();u.GetWindowThreadProcessId(window,C.byref(pid))
+  if kind.value=='#32768' and pid.value==app.pid and u.IsWindowVisible(window):menus.append(window)
+  return True
+ deadline=time.time()+5
+ while time.time()<deadline:
+  u.EnumWindows(inspect,0)
+  for popup in menus:
+   info=MENUBARINFO();info.size=C.sizeof(info)
+   if u.GetMenuBarInfo(popup,-4,0,C.byref(info)) and info.menu:return popup,info.menu
+  pump(.05)
+ raise AssertionError('Actual native tray popup did not appear')
+def open_tray():
+ u.AllowSetForegroundWindow(app.pid);u.SetCursorPos(u.GetSystemMetrics(0)-120,u.GetSystemMetrics(1)-80)
+ before=ImageGrab.grab()
+ # Dispatch the shell notification path, then inspect and physically click its real popup.
+ u.PostMessageW(control,0x8001,0,0x007b|(1<<16))
+ popup,menu=popup_info();pump(1.2)
+ above=u.GetWindow(popup,3)
+ while above:
+  assert above!=h,'Always-on-top scene is above its tray menu'
+  above=u.GetWindow(above,3)
+ r=W.RECT();u.GetWindowRect(popup,C.byref(r));after=ImageGrab.grab()
+ a=before.crop((r.left,r.top,r.right,r.bottom));z=after.crop((r.left,r.top,r.right,r.bottom))
+ assert sum(x!=y for x,y in zip(a.getdata(),z.getdata()))>500,'Tray menu is covered by the always-on-top scene'
+ ImageGrab.grab().save(OUT/'tray-menu-topmost.png')
+ return popup,menu
+def choose_menu(menu,command):
+ positions=[i for i in range(u.GetMenuItemCount(menu)) if u.GetMenuItemID(menu,i)==command];assert len(positions)==1
+ r=W.RECT();assert u.GetMenuItemRect(None,menu,positions[0],C.byref(r))
+ assert hit((r.left+r.right)//2,(r.top+r.bottom)//2)['class']=='#32768','Popup does not receive real mouse input'
+ click((r.left+r.right)//2,(r.top+r.bottom)//2);pump(.2)
 try:
  pump(2);app,control,h=launch();assert u.GetParent(h)
  # Credits must be accessible from the passive background's native tray command.
@@ -106,6 +151,25 @@ try:
  slider=u.GetDlgItem(settings,202);u.SendMessageW(slider,0x0405,1,0);u.SendMessageW(settings,0x0114,0,slider)
  u.PostMessageW(settings,0x10,0,0);pump(.2)
  assert evaluate('!desktopHost.passive && !document.body.classList.contains("passive-desktop")')
+ evaluate('setDesktopBackground(true)');pump(.6)
+ popup,menu=open_tray();choose_menu(menu,103)
+ assert evaluate('document.body.classList.contains("controls-visible")')
+ evaluate('window.menuRestClicks=0;$("restBtn").addEventListener("click",()=>menuRestClicks++)')
+ rest=evaluate('(()=>{const r=$("restBtn").getBoundingClientRect();return {x:(r.left+r.width/2)*devicePixelRatio,y:(r.top+r.height/2)*devicePixelRatio};})()')
+ visual=W.RECT();u.GetWindowRect(h,C.byref(visual));click(visual.left+rest['x'],visual.top+rest['y']);assert evaluate('menuRestClicks===1')
+ popup,menu=open_tray();choose_menu(menu,110);pump(.2)
+ settings=u.FindWindowW(edition['settings_class'],None);assert settings and u.IsWindowVisible(settings)
+ u.PostMessageW(settings,0x10,0,0);pump(.2)
+ popup,menu=open_tray();click(20,20);pump(.2);assert not u.IsWindowVisible(popup),'Outside click must dismiss the tray popup'
+ # Hiding must stop WebView rendering; relaunch restores the room and opens the menu.
+ u.PostMessageW(h,0x111,102,0);pump(.5);assert not u.IsWindowVisible(h)
+ assert evaluate('document.hidden'),'Hidden native host did not hide its WebView'
+ snapshot=evaluate('lastLakeFrame');pump(1.1);assert evaluate('lastLakeFrame')==snapshot
+ u.SetCursorPos(u.GetSystemMetrics(0)-120,u.GetSystemMetrics(1)-80)
+ second=subprocess.Popen([str(ROOT/'candidate.exe')]);second.wait(timeout=10);assert second.returncode==0
+ popup,menu=popup_info();assert u.IsWindowVisible(h);assert not u.FindWindowW(edition['settings_class'],None)
+ choose_menu(menu,103);assert evaluate('!document.hidden')
+ print('Topmost native popup visibility, repeated physical selection, outside dismissal and second-launch menu verified.',flush=True)
  evaluate("setDesktopBackground(false);setRoomControls(false);cats.slice(1).forEach(c=>c.el.style.display='none');const c=cats[0];c.cozy=null;c.goal=null;c.edge=null;c.air=false;c.stand=null;c.x=innerWidth*.5;c.y=0;c.mode='watch';c.until=Infinity;renderCatPosition(c);window.topDowns=0;window.topClicks=0;c.el.addEventListener('pointerdown',()=>topDowns++);c.el.addEventListener('click',()=>topClicks++);")
  proxy=u.GetPropW(control,'HoribbanguInput');assert proxy
  deadline=time.time()+5
