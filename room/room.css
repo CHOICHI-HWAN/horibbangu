@@ -142,3 +142,18 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
 .calendar-days .calendar-today {border-radius:50%;background:#819073;color:#fff9e6!important;box-shadow:0 0 0 1px #6b7c5a44;}
 @media(max-width:650px){.wall-calendar{right:3%;top:7.5%;width:72px;padding:5px 4px 4px;}.calendar-caption{font-size:4px;letter-spacing:.5px;}#calendarMonth{font-size:8px;}.calendar-header{padding-bottom:2px;gap:0;}.calendar-weekdays,.calendar-days{font-size:6px;line-height:9px;}.calendar-days>span{min-height:9px;}.calendar-weekdays{font-size:5px;padding-top:2px;}.calendar-rings{height:7px;top:-4px;}}
 @media(max-height:500px){.wall-calendar{top:8px;right:4%;width:70px;padding:4px;}.calendar-caption{display:none;}#calendarMonth{font-size:8px;}.calendar-weekdays,.calendar-days{font-size:6px;line-height:8px;}.calendar-days>span{min-height:8px;}}
+
+/* A small memorial note, opened only from the menu. */
+.about-dialog {box-sizing:border-box;width:min(460px,calc(100% - 32px));max-height:calc(100dvh - 40px);overflow:auto;margin:auto;padding:28px 30px;color:#5e624f;background:#fffaf0;border:1px solid #d8c7a6;border-radius:22px;box-shadow:0 18px 70px #34433b33;font-size:14px;line-height:1.8;}
+.about-dialog::backdrop {background:#25372f70;backdrop-filter:blur(4px);}
+.about-dialog h2 {margin:0 0 18px;font-size:24px;font-weight:500;color:#596b53;}
+.about-dialog h3 {margin:22px 0 6px;font-size:13px;color:#8b7657;}
+.about-dialog p {margin:8px 0;overflow-wrap:anywhere;}
+.about-dialog a {color:#627c70;text-underline-offset:4px;}
+.about-dialog .about-maker {font-size:19px;color:#56684e;}
+.about-dialog .about-kicker {font-size:10px;letter-spacing:1px;color:#978766;}
+.about-mark {float:right;color:#a6b293;font-size:30px;line-height:1;}
+.about-tools,.about-aside,.about-permission {font-size:12px;color:#8a8776;}
+.about-dialog form {margin:24px 0 0;text-align:right;}
+.about-dialog button {color:#53634f;background:#edf0e3;border-color:#c9d1b6;}
+@media(max-width:420px){.about-dialog{padding:22px;font-size:13px;}}

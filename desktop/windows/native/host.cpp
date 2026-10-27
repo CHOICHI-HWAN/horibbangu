@@ -16,6 +16,7 @@
 #include "WebView2.h"
 #include "webview-guids.h"
 #include "edition.h"
+#include "about.h"
 #include "startup-policy.h"
 #include "screensaver.h"
 
@@ -153,13 +154,20 @@ static void menu(){
  const wchar_t* weatherNames[]={L"자동",L"맑음",L"비",L"눈",L"우박"};
  for(int i=0;i<5;i++)AppendMenuW(weather,MF_STRING,120+i,weatherNames[i]);
  AppendMenuW(m,MF_POPUP,(UINT_PTR)weather,L"창밖 날씨");
- AppendMenuW(m,MF_SEPARATOR,0,nullptr);AppendMenuW(m,MF_STRING,199,L"종료 (Ctrl+Alt+Q)");
+ AppendMenuW(m,MF_SEPARATOR,0,nullptr);
+ AppendMenuW(m,MF_STRING,116,L"만든이 · 이용 안내…");
+ AppendMenuW(m,MF_STRING,199,L"종료 (Ctrl+Alt+Q)");
  POINT p;GetCursorPos(&p);SetForegroundWindow(controlWindow);
  desktopMenuOpen=true;cancelTopInput();if(inputWindow)ShowWindow(inputWindow,SW_HIDE);
  UINT choice=TrackPopupMenu(m,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,p.x,p.y,0,controlWindow,nullptr);DestroyMenu(m);
  desktopMenuOpen=false;trayAction(choice);syncInputBounds();PostMessageW(windowHandle,WM_NULL,0,0);
 }
 static void trayAction(UINT choice){
+ if(choice==116){
+  desktopMenuOpen=true;cancelTopInput();if(inputWindow)ShowWindow(inputWindow,SW_HIDE);
+  MessageBoxW(controlWindow,APP_ABOUT,APP_TITLE L" · 만든이",MB_OK|MB_TOPMOST);
+  desktopMenuOpen=false;syncInputBounds();return;
+ }
  if(choice==114)setDesktopLayer(1);if(choice==115)setDesktopLayer(2);
  if(choice==103&&layer==1)command(L"controls");
  if(choice==101){background=!background;command(background?L"background-on":L"background-off");}

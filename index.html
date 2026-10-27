@@ -143,6 +143,21 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
 @media(max-width:650px){.wall-calendar{right:3%;top:7.5%;width:72px;padding:5px 4px 4px;}.calendar-caption{font-size:4px;letter-spacing:.5px;}#calendarMonth{font-size:8px;}.calendar-header{padding-bottom:2px;gap:0;}.calendar-weekdays,.calendar-days{font-size:6px;line-height:9px;}.calendar-days>span{min-height:9px;}.calendar-weekdays{font-size:5px;padding-top:2px;}.calendar-rings{height:7px;top:-4px;}}
 @media(max-height:500px){.wall-calendar{top:8px;right:4%;width:70px;padding:4px;}.calendar-caption{display:none;}#calendarMonth{font-size:8px;}.calendar-weekdays,.calendar-days{font-size:6px;line-height:8px;}.calendar-days>span{min-height:8px;}}
 
+/* A small memorial note, opened only from the menu. */
+.about-dialog {box-sizing:border-box;width:min(460px,calc(100% - 32px));max-height:calc(100dvh - 40px);overflow:auto;margin:auto;padding:28px 30px;color:#5e624f;background:#fffaf0;border:1px solid #d8c7a6;border-radius:22px;box-shadow:0 18px 70px #34433b33;font-size:14px;line-height:1.8;}
+.about-dialog::backdrop {background:#25372f70;backdrop-filter:blur(4px);}
+.about-dialog h2 {margin:0 0 18px;font-size:24px;font-weight:500;color:#596b53;}
+.about-dialog h3 {margin:22px 0 6px;font-size:13px;color:#8b7657;}
+.about-dialog p {margin:8px 0;overflow-wrap:anywhere;}
+.about-dialog a {color:#627c70;text-underline-offset:4px;}
+.about-dialog .about-maker {font-size:19px;color:#56684e;}
+.about-dialog .about-kicker {font-size:10px;letter-spacing:1px;color:#978766;}
+.about-mark {float:right;color:#a6b293;font-size:30px;line-height:1;}
+.about-tools,.about-aside,.about-permission {font-size:12px;color:#8a8776;}
+.about-dialog form {margin:24px 0 0;text-align:right;}
+.about-dialog button {color:#53634f;background:#edf0e3;border-color:#c9d1b6;}
+@media(max-width:420px){.about-dialog{padding:22px;font-size:13px;}}
+
   #cats { position: fixed; left: 0; right: 0; bottom: 0; top: 0; pointer-events: none; z-index: 5; overflow: hidden; }
   #cats[hidden] { display: none; }
   .cat { position: absolute; left: 0; bottom: 2px; width: 64px; height: 44px; pointer-events: auto; cursor: pointer; will-change: transform; }
@@ -477,11 +492,17 @@ svg.wheel.spin .ring {animation-duration:.75s;}
  <div id="calendarDays" class="calendar-days" aria-hidden="true"></div>
 </aside>
 </main>
-<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="viewBtn">풍경 감상</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><a id="windowsDownload" class="download-link" href="/releases/Horibbangu-Windows-v3.5.0.zip" download="Horibbangu-Windows-v3.5.0.zip" title="Windows 10/11 64비트 경량판 · Microsoft Edge WebView2 필요 · EXE 하나">Windows 배경판 v3.5.0 ↓</a><a id="windowsPark" class="download-link" href="/releases/Horibbangu-Park-Windows-v3.5.0.zip" download="Horibbangu-Park-Windows-v3.5.0.zip" title="소양·소미만 함께하는 Windows 경량판 · WebView2 필요">박박사판 v3.5.0 ↓</a><a id="windowsKim" class="download-link" href="/releases/Horibbangu-Kim-Windows-v3.5.0.zip" download="Horibbangu-Kim-Windows-v3.5.0.zip" title="팡이만 함께하는 Windows 경량판 · WebView2 필요">김박사판 v3.5.0 ↓</a><a id="windowsSaver" class="download-link" href="/releases/Horibbangu-Screensaver-v3.5.0.zip" download="Horibbangu-Screensaver-v3.5.0.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">화면보호기 v3.5.0 ↓</a><a id="windowsParkSaver" class="download-link" href="/releases/Horibbangu-Park-Screensaver-v3.5.0.zip" download="Horibbangu-Park-Screensaver-v3.5.0.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">박박사 화면보호기 v3.5.0 ↓</a><a id="windowsKimSaver" class="download-link" href="/releases/Horibbangu-Kim-Screensaver-v3.5.0.zip" download="Horibbangu-Kim-Screensaver-v3.5.0.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">김박사 화면보호기 v3.5.0 ↓</a><button id="closeControls">풍경만 보기</button></nav></header>
+<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="viewBtn">풍경 감상</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><a id="windowsDownload" class="download-link" href="/releases/Horibbangu-Windows-v3.5.1.zip" download="Horibbangu-Windows-v3.5.1.zip" title="Windows 10/11 64비트 경량판 · Microsoft Edge WebView2 필요 · EXE 하나">Windows 배경판 v3.5.1 ↓</a><a id="windowsPark" class="download-link" href="/releases/Horibbangu-Park-Windows-v3.5.1.zip" download="Horibbangu-Park-Windows-v3.5.1.zip" title="소양·소미만 함께하는 Windows 경량판 · WebView2 필요">박박사판 v3.5.1 ↓</a><a id="windowsKim" class="download-link" href="/releases/Horibbangu-Kim-Windows-v3.5.1.zip" download="Horibbangu-Kim-Windows-v3.5.1.zip" title="팡이만 함께하는 Windows 경량판 · WebView2 필요">김박사판 v3.5.1 ↓</a><a id="windowsSaver" class="download-link" href="/releases/Horibbangu-Screensaver-v3.5.1.zip" download="Horibbangu-Screensaver-v3.5.1.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">화면보호기 v3.5.1 ↓</a><a id="windowsParkSaver" class="download-link" href="/releases/Horibbangu-Park-Screensaver-v3.5.1.zip" download="Horibbangu-Park-Screensaver-v3.5.1.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">박박사 화면보호기 v3.5.1 ↓</a><a id="windowsKimSaver" class="download-link" href="/releases/Horibbangu-Kim-Screensaver-v3.5.1.zip" download="Horibbangu-Kim-Screensaver-v3.5.1.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">김박사 화면보호기 v3.5.1 ↓</a><button id="aboutBtn">만든이</button><button id="closeControls">풍경만 보기</button></nav></header>
 <a class="login-link" id="recordsLink" href="records.html">로그인 · 체중 기록 ↗</a>
 <div id="cats" aria-label="고양이 놀이터"><div id="props"></div></div>
 <div class="scene-label"><div id="status" role="status"><strong>호수가 보이는 작은 방</strong>고양이를 끌어 옮기거나, 눈을 맞춰 보세요.</div><div id="roomClock"></div></div>
 <label class="weather-control"><span>창밖의 날씨</span><select id="weather" aria-label="창밖 날씨"><option value="auto">날씨 · 자동</option><option value="clear">맑음</option><option value="rain">비</option><option value="snow">눈</option><option value="hail">우박</option></select></label>
+<dialog id="aboutDialog" class="about-dialog" aria-labelledby="aboutTitle">
+<div class="about-mark" aria-hidden="true">♡</div><p class="about-kicker">호리빵구 · 함께 쉬는 작은 방</p><h2 id="aboutTitle">만든이</h2>
+<p class="about-maker">치치박사</p><p><a href="mailto:c.mario8609@gmail.com">c.mario8609@gmail.com</a><br><span class="about-tools">with Codex, Claude Code</span></p>
+<h3>만든 마음</h3><p>로이와 동글이의 평화로운 휴식을 기리는 마음에서 시작하였습니다.</p><p>또한 모든 고양이가 행복하길 바라는 마음으로 이 앱을 만들었습니다.</p><p class="about-aside">조금 의외지만, 이 프로그램의 시작은 고양이들의 체중 기록이었어요.</p>
+<h3>라이선스</h3><p>저와 아내를 위한 프로그램이므로 무단 배포를 금지합니다. 허락을 받고 사용하는 것은 괜찮습니다.</p><p class="about-permission">사용 허락과 배포에 관한 문의는 위 이메일로 보내주세요.</p>
+<form method="dialog"><button autofocus>고양이들 곁으로</button></form></dialog>
 <script>
 const roomMode = true;
 const KEY='horibbangu:standalone-playground:v1';
@@ -754,7 +775,7 @@ function setRoomControls(visible){
 function initRoom(){
   document.body.append(document.querySelector('.cat-wall-clock'));
   let press=null;
-  const isControl=target=>target.closest('button,a,input,select,label,.cat,[role="button"]');
+  const isControl=target=>target.closest('button,a,input,select,label,.cat,dialog,[role="button"]');
   document.addEventListener('pointerdown',e=>{
     press=e.isPrimary&&e.button===0&&!isControl(e.target)?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;
   });
@@ -764,6 +785,7 @@ function initRoom(){
   });
   document.addEventListener('pointercancel',()=>{press=null;});
   document.addEventListener('keydown',e=>{
+    if($('aboutDialog').open)return;
     if(e.key==='Escape'){setRoomControls(false);$('roomScene').focus({preventScroll:true});}
     else if(e.key==='Tab')setRoomControls(true);
     else if((e.key==='Enter'||e.key===' ')&&e.target===$('roomScene')){e.preventDefault();setRoomControls(!document.body.classList.contains('controls-visible'));}
@@ -771,6 +793,7 @@ function initRoom(){
   $('viewBtn').onclick=()=>{let n=0;for(const c of cats){if(n<3&&chooseRoomScenery(c,performance.now()))n++;}$('status').textContent=reduceMotion?'움직임을 켜면 아이들이 호수를 보러 가요.':'위쪽 캣워커에 나란히 앉아 호수를 바라봐요.';};
   $('friendsBtn').onclick=()=>{inviteRoomFriends();$('status').textContent='소양이, 소미, 팡이가 놀러 왔어요.';};
   $('closeControls').onclick=()=>setRoomControls(false);
+  $('aboutBtn').onclick=()=>$('aboutDialog').showModal();
   $('weather').onchange=e=>setRoomWeather(e.target.value);
   $('catBtn').addEventListener('click',()=>{$('catBtn').textContent=catsOn?'고양이 숨기기':'고양이 보이기';});
   $('restBtn').onclick=()=>{const t=performance.now();cats.forEach(c=>{if(!c.air&&!['angel','bubble'].includes(c.mode)){leave(c,t);if(!chooseFavorite(c,t))sleepNow(c,t);}});$('status').textContent='각자 좋아하는 폭신한 자리로 가요.';};

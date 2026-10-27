@@ -264,7 +264,7 @@ function setRoomControls(visible){
 function initRoom(){
   document.body.append(document.querySelector('.cat-wall-clock'));
   let press=null;
-  const isControl=target=>target.closest('button,a,input,select,label,.cat,[role="button"]');
+  const isControl=target=>target.closest('button,a,input,select,label,.cat,dialog,[role="button"]');
   document.addEventListener('pointerdown',e=>{
     press=e.isPrimary&&e.button===0&&!isControl(e.target)?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;
   });
@@ -274,6 +274,7 @@ function initRoom(){
   });
   document.addEventListener('pointercancel',()=>{press=null;});
   document.addEventListener('keydown',e=>{
+    if($('aboutDialog').open)return;
     if(e.key==='Escape'){setRoomControls(false);$('roomScene').focus({preventScroll:true});}
     else if(e.key==='Tab')setRoomControls(true);
     else if((e.key==='Enter'||e.key===' ')&&e.target===$('roomScene')){e.preventDefault();setRoomControls(!document.body.classList.contains('controls-visible'));}
@@ -281,6 +282,7 @@ function initRoom(){
   $('viewBtn').onclick=()=>{let n=0;for(const c of cats){if(n<3&&chooseRoomScenery(c,performance.now()))n++;}$('status').textContent=reduceMotion?'움직임을 켜면 아이들이 호수를 보러 가요.':'위쪽 캣워커에 나란히 앉아 호수를 바라봐요.';};
   $('friendsBtn').onclick=()=>{inviteRoomFriends();$('status').textContent='소양이, 소미, 팡이가 놀러 왔어요.';};
   $('closeControls').onclick=()=>setRoomControls(false);
+  $('aboutBtn').onclick=()=>$('aboutDialog').showModal();
   $('weather').onchange=e=>setRoomWeather(e.target.value);
   $('catBtn').addEventListener('click',()=>{$('catBtn').textContent=catsOn?'고양이 숨기기':'고양이 보이기';});
   $('restBtn').onclick=()=>{const t=performance.now();cats.forEach(c=>{if(!c.air&&!['angel','bubble'].includes(c.mode)){leave(c,t);if(!chooseFavorite(c,t))sleepNow(c,t);}});$('status').textContent='각자 좋아하는 폭신한 자리로 가요.';};

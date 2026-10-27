@@ -23,7 +23,8 @@ setInterval(()=>updateDesktopHit(),120);
 let lastRegions='',lastRegionsAt=0;
 function publishDesktopRegions(){
  if(passiveDesktop||document.hidden||!host?.setHitRegions)return;
- const rects=[...document.querySelectorAll('.cat,button,a,select')].filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden'&&getComputedStyle(el).pointerEvents!=='none').slice(0,64).map(el=>{
+ const modal=document.querySelector('dialog[open]');
+ const rects=[...(modal?[modal]:document.querySelectorAll('.cat,button,a,select'))].filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden'&&getComputedStyle(el).pointerEvents!=='none').slice(0,64).map(el=>{
   const r=el.getBoundingClientRect(),pad=el.classList.contains('cat')?8:0;
   return [r.left-pad,r.top-pad,r.right+pad,r.bottom+pad].map(v=>Math.round(v*devicePixelRatio));
  });
@@ -36,6 +37,7 @@ host?.onCommand(command=>{
   passiveDesktop=command==='layer-background';holding=false;lastRegions='';lastRegionsAt=0;
   document.body.classList.toggle('passive-desktop',passiveDesktop);
   if(passiveDesktop){
+   document.querySelector('dialog[open]')?.close();
    const t=performance.now();for(const c of cats)if(c.mode==='bubble'){
     c.el.classList.remove('in-bubble');c.air=true;c.vx=0;c.vy=0;c.stand=null;c.flight=null;setMode(c,'sit',t,2000);
    }

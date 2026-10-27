@@ -6,6 +6,8 @@ from editions import requested_edition
 edition=requested_edition()
 ROOT=Path(__file__).resolve().parents[3]
 SOURCE=Path(__file__).resolve().parent
+sys.path.insert(0,str(ROOT/'scripts'))
+from about import about_text
 CACHE=Path(os.environ.get('HORIBBANGU_NATIVE_CACHE','/tmp/horibbangu-build'))
 SDK_VERSION='1.0.4258.31'
 SDK_SHA256='56f7f4b8bf9aee4b8efefbbdd4f67d5f74ebd1b100ed0806da71bf76af481aa9'
@@ -19,6 +21,7 @@ if not sdk.exists():
  with zipfile.ZipFile(package) as z:z.extractall(sdk)
 zig=os.environ.get('ZIG') or str(CACHE/'zig-aarch64-macos-0.15.2/zig')
 BUILD=edition['build'];BUILD.mkdir(parents=True,exist_ok=True)
+(BUILD/'about.h').write_text('#define APP_ABOUT L'+json.dumps(about_text(),ensure_ascii=False)+'\n',encoding='utf-8')
 config={'APP_VERSION':edition['version'],'APP_TITLE':edition['title'],'APP_DATA_DIR':edition['data'],'APP_WINDOW_CLASS':edition['window_class'],'APP_SETTINGS_CLASS':edition['settings_class'],'APP_MUTEX':edition['mutex']}
 (BUILD/'edition.h').write_text('\n'.join('#define '+key+' L'+json.dumps(value,ensure_ascii=False) for key,value in config.items())+'\n#define APP_HAS_GUESTS '+str(int(edition['cats'] is None))+'\n',encoding='utf-8')
 header=(sdk/'build/native/include/WebView2.h').read_text()

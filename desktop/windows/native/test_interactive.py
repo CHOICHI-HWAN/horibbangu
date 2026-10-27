@@ -25,6 +25,9 @@ u.GetClassNameW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
 u.SetWindowLongPtrW.argtypes=[W.HWND,C.c_int,C.c_ssize_t];u.SetWindowLongPtrW.restype=C.c_ssize_t
 u.SetLayeredWindowAttributes.argtypes=[W.HWND,W.DWORD,W.BYTE,W.DWORD]
 u.DefWindowProcW.argtypes=[W.HWND,W.UINT,W.WPARAM,W.LPARAM];u.DefWindowProcW.restype=C.c_ssize_t
+u.GetWindowTextW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
+ENUMCHILD=C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
+u.EnumChildWindows.argtypes=[W.HWND,ENUMCHILD,W.LPARAM]
 WNDPROC=C.WINFUNCTYPE(C.c_ssize_t,W.HWND,W.UINT,W.WPARAM,W.LPARAM)
 class WNDCLASS(C.Structure):
  _fields_=[('style',W.UINT),('proc',WNDPROC),('extra',C.c_int),('windowExtra',C.c_int),('instance',W.HINSTANCE),('icon',W.HANDLE),('cursor',W.HANDLE),('brush',W.HANDLE),('menu',W.LPCWSTR),('name',W.LPCWSTR)]
@@ -68,6 +71,17 @@ def cat_point(h):
  rect=W.RECT();u.GetWindowRect(h,C.byref(rect));return int(rect.left+r['x']),int(rect.top+r['y'])
 try:
  pump(2);app,control,h=launch();assert u.GetParent(h)
+ # Credits must be accessible from the passive background's native tray command.
+ u.PostMessageW(h,0x111,116,0);pump(.4)
+ about=u.FindWindowW('#32770',edition['title']+' · 만든이');assert about
+ credits=[]
+ @ENUMCHILD
+ def read_credit(child,param):
+  text=C.create_unicode_buffer(4096);u.GetWindowTextW(child,text,len(text));credits.append(text.value);return True
+ u.EnumChildWindows(about,read_credit,0);text='\n'.join(credits)
+ assert all(part in text for part in ['치치박사','c.mario8609@gmail.com','Codex, Claude Code','로이와 동글이','무단 배포를 금지','허락을 받고'])
+ u.PostMessageW(about,0x111,1,0);pump(.3);assert not u.FindWindowW('#32770',edition['title']+' · 만든이')
+ print('Native maker, memorial and permission policy dialog verified.',flush=True)
  under=u.CreateWindowExW(0,probe_class.name,'Horibbangu click-through probe',0x90000000,0,0,u.GetSystemMetrics(0),u.GetSystemMetrics(1),None,None,instance,None);assert under
  probe=u.CreateWindowExW(0,'BUTTON','Underlying checkbox',0x50000003,40,150,190,45,under,None,None,None);assert probe
  u.SetWindowPos(under,W.HWND(0),0,0,0,0,0x0013);pump(.2)
