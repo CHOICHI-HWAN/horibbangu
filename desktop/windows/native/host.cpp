@@ -415,7 +415,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
    DWORD pid=0;GetWindowThreadProcessId(old,&pid);if(pid)AllowSetForegroundWindow(pid);
    PostMessageW(old,secondInstance,0,0);
   }
-  else MessageBoxW(nullptr,L"이전 버전이 아직 실행 중입니다. 시계 옆 트레이에서 이전 앱을 종료한 뒤 새 버전을 실행해 주세요.",APP_TITLE,MB_OK|MB_ICONINFORMATION);
+  else MessageBoxW(nullptr,L"이전 버전이 아직 실행 중입니다.\n\nCtrl+Alt+Q 또는 시계 옆 트레이에서 이전 앱을 종료한 뒤 새 버전을 실행해 주세요.",APP_TITLE,MB_OK|MB_ICONINFORMATION|MB_TOPMOST|MB_SETFOREGROUND);
   CloseHandle(mutex);return 0;
  }
  if(FAILED(CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED))){CloseHandle(mutex);return 1;}
