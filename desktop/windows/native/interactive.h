@@ -33,10 +33,10 @@ static void syncInputBounds(){
 }
 static void acceptHitRegions(const wchar_t* text){
  if(!topLayer()||!ready||!inputWindow||wcslen(text)>10000)return;
- static wchar_t previous[10001]={};
- if(hasHits&&!wcscmp(previous,text)){hitTime=GetTickCount64();syncInputBounds();return;}
- const wchar_t* original=text;
+ static wchar_t previous[10001]={};static RECT previousClient={};
  RECT client;GetClientRect(windowHandle,&client);
+ if(hasHits&&EqualRect(&client,&previousClient)&&!wcscmp(previous,text)){hitTime=GetTickCount64();syncInputBounds();return;}
+ const wchar_t* original=text;
  HRGN all=CreateRectRgn(0,0,0,0);if(!all)return;
  int count=0;bool any=false;
  while(*text&&count<64){
@@ -55,6 +55,7 @@ static void acceptHitRegions(const wchar_t* text){
  }
  if(*text){DeleteObject(all);return;}
  wcscpy(previous,original);
+ previousClient=client;
  hitTime=GetTickCount64();hasHits=any;
  if(!SetWindowRgn(inputWindow,all,TRUE)){DeleteObject(all);hasHits=false;}
  syncInputBounds();
