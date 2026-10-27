@@ -80,7 +80,12 @@ try:
   text=C.create_unicode_buffer(4096);u.GetWindowTextW(child,text,len(text));credits.append(text.value);return True
  u.EnumChildWindows(about,read_credit,0);text='\n'.join(credits)
  assert all(part in text for part in ['치치박사','c.mario8609@gmail.com','Codex, Claude Code','로이와 동글이','무단 배포를 금지','허락을 받고'])
- u.PostMessageW(about,0x111,1,0);pump(.3);assert not u.FindWindowW('#32770',edition['title']+' · 만든이')
+ ImageGrab.grab().save(OUT/'about.png')
+ ok=u.GetDlgItem(about,1);assert ok
+ button=W.RECT();u.GetWindowRect(ok,C.byref(button));click((button.left+button.right)//2,(button.top+button.bottom)//2)
+ deadline=time.time()+3
+ while u.FindWindowW('#32770',edition['title']+' · 만든이') and time.time()<deadline:pump(.1)
+ assert not u.FindWindowW('#32770',edition['title']+' · 만든이'),'Actual About OK button did not close the dialog'
  print('Native maker, memorial and permission policy dialog verified.',flush=True)
  under=u.CreateWindowExW(0,probe_class.name,'Horibbangu click-through probe',0x90000000,0,0,u.GetSystemMetrics(0),u.GetSystemMetrics(1),None,None,instance,None);assert under
  probe=u.CreateWindowExW(0,'BUTTON','Underlying checkbox',0x50000003,40,150,190,45,under,None,None,None);assert probe
