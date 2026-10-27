@@ -411,7 +411,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  if(GetLastError()==ERROR_ALREADY_EXISTS){
   if(!isDesktop()){CloseHandle(mutex);return 0;}
   HWND old=FindWindowW(windowClass,nullptr);
-  if(old&&GetPropW(old,L"HoribbanguPassive")){
+  if(old&&GetPropW(old,L"HoribbanguVersion-" APP_VERSION)){
    DWORD pid=0;GetWindowThreadProcessId(old,&pid);if(pid)AllowSetForegroundWindow(pid);
    PostMessageW(old,secondInstance,0,0);
   }
@@ -458,6 +458,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int){
  // Windows' settings process, just as desktop mode attaches to Explorer later.
  windowHandle=CreateWindowExW(exStyle,cls.lpszClassName,APP_TITLE,WS_POPUP|WS_CLIPCHILDREN,0,0,1,1,nullptr,nullptr,instance,nullptr);
  SetPropW(controlWindow,L"HoribbanguPassive",(HANDLE)1);
+ SetPropW(controlWindow,L"HoribbanguVersion-" APP_VERSION,(HANDLE)1);
  SetPropW(controlWindow,L"HoribbanguVisual",windowHandle);
  if(isDesktop())createInputWindow(instance);
  MARGINS margins={-1,-1,-1,-1};DwmExtendFrameIntoClientArea(windowHandle,&margins);
