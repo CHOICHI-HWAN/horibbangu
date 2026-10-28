@@ -1489,15 +1489,23 @@ function renderCats() {
   });
 }
 
-let catFramePending=false;
+let catFramePending=false,catNextFrame=0;
 function queueCatFrame(){
  if(catFramePending||(typeof desktopSuspended!=='undefined'&&desktopSuspended))return;
  catFramePending=true;
- requestAnimationFrame(t=>{catFramePending=false;if(typeof desktopSuspended!=='undefined'&&desktopSuspended)return;const fps=typeof desktopOverlay!=='undefined'&&desktopOverlay?24:30;if(t-lastT<1000/fps-1)queueCatFrame();else tickCats(t);});
+ requestAnimationFrame(t=>{
+  catFramePending=false;
+  if(typeof desktopSuspended!=='undefined'&&desktopSuspended)return;
+  const interval=1000/60;
+  if(t+.5<catNextFrame){queueCatFrame();return;}
+  // Carry the fractional remainder: irregular refreshes must not turn 60 into
+  // 30 fps, nor build up a backlog to replay after a long stall.
+  catNextFrame=t+interval-(Math.max(0,t-catNextFrame)%interval);
+  tickCats(t);
+ });
 }
 function tickCats(t) {
   queueCatFrame();
-  if(typeof tickDesktopAnimations==='function')tickDesktopAnimations(t);
   const dt = Math.min(.1, (t - lastT) / 1000 || 0); lastT = t;
   if (!catsOn || document.hidden || (typeof desktopSuspended!=='undefined'&&desktopSuspended)) return;
   if (typeof tickRoomGuests === 'function') tickRoomGuests(t, dt);

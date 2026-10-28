@@ -2,30 +2,12 @@
 const host=window.desktopHost;
 // Hoisted because initRoom runs the shared clock before this overlay initializes.
 var desktopSuspended=false;
-// Drive the original CSS keyframes and transitions from the same modest frame
-// clock as the cats. Otherwise every SVG keeps the compositor busy at 60–144 Hz.
-const desktopAnimations=new Map();
-let desktopAnimationsDirty=true,lastDesktopAnimationTime=null;
-new MutationObserver(()=>{desktopAnimationsDirty=true;}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','data-motion']});
-for(const type of ['animationstart','transitionrun'])document.addEventListener(type,()=>{desktopAnimationsDirty=true;});
-document.addEventListener('visibilitychange',()=>{lastDesktopAnimationTime=null;desktopAnimationsDirty=true;});
-function tickDesktopAnimations(t){
- const dt=lastDesktopAnimationTime===null?0:Math.min(100,t-lastDesktopAnimationTime);lastDesktopAnimationTime=t;
- if(document.hidden||desktopSuspended||reduceMotion)return;
- if(desktopAnimationsDirty){
-  desktopAnimationsDirty=false;
-  for(const animation of document.getAnimations())if(!desktopAnimations.has(animation)&&animation.playState==='running'){
-   const time=animation.currentTime??0;
-   animation.pause();animation.currentTime=time;
-   desktopAnimations.set(animation,{time,added:t});
-  }
- }
- for(const [animation,state] of desktopAnimations){
-  if(animation.playState==='idle'||!animation.effect?.target?.isConnected){desktopAnimations.delete(animation);continue;}
-  const time=state.time+(state.added===t?0:dt*animation.playbackRate),end=animation.effect.getComputedTiming().endTime;
-  if(Number.isFinite(end)&&time>=end){animation.finish();desktopAnimations.delete(animation);}
-  else {animation.currentTime=time;state.time=time;}
- }
+// Let Chromium animate CSS on its own compositor clock. Pausing and seeking every
+// Animation each cat frame also drives transitions and forces repeated style work.
+function suspendDesktop(suspended){
+ desktopSuspended=suspended;
+ document.body.classList.toggle('desktop-suspended',suspended);
+ if(!suspended){lastT=performance.now();queueCatFrame();updateRoomTime();}
 }
 let passiveDesktop=host?.passive===true;
 if(passiveDesktop)document.body.classList.add("passive-desktop");
@@ -61,7 +43,7 @@ function publishDesktopRegions(){
   const left=Number((c.renderedX??c.x).toFixed(1)),bottom=innerHeight-box.bottom-Number((c.renderedY??c.y).toFixed(1));
   rects.push([left-8,bottom-box.height-8,left+box.width+8,bottom+8].map(v=>Math.round(v*devicePixelRatio)));
  }
- const controls=modal?[modal]:document.body.classList.contains('controls-visible')?document.querySelectorAll('button,a,select'):[];
+ const controls=modal?[modal]:document.body.classList.contains('controls-visible')?document.querySelectorAll('button,a,select'):[desktopMenuButton];
  for(const el of controls){
   if(!el.getClientRects().length||getComputedStyle(el).visibility==='hidden'||getComputedStyle(el).pointerEvents==='none')continue;
   const r=el.getBoundingClientRect();rects.push([r.left,r.top,r.right,r.bottom].map(v=>Math.round(v*devicePixelRatio)));
@@ -72,8 +54,8 @@ function publishDesktopRegions(){
 }
 setInterval(publishDesktopRegions,125);
 host?.onCommand(command=>{
- if(command==='host-hidden')desktopSuspended=true;
- if(command==='host-visible'&&desktopSuspended){desktopSuspended=false;lastDesktopAnimationTime=null;lastT=performance.now();queueCatFrame();updateRoomTime();}
+ if(command==='host-hidden')suspendDesktop(true);
+ if(command==='host-visible'&&desktopSuspended)suspendDesktop(false);
  if(command==='layer-top'||command==='layer-background'){
   passiveDesktop=command==='layer-background';holding=false;lastRegions='';lastRegionsAt=0;
   document.body.classList.toggle('passive-desktop',passiveDesktop);
@@ -84,6 +66,7 @@ host?.onCommand(command=>{
    }
    setRoomControls(false);
   }
+  if(!passiveDesktop)setRoomControls(true);
   publishDesktopRegions();
  }
  if(command==='controls'&&!passiveDesktop)setRoomControls(!document.body.classList.contains('controls-visible'));
@@ -96,10 +79,27 @@ host?.onCommand(command=>{
  if(command==='background-on'||command==='background-off')setDesktopBackground(command==='background-on',false);
  updateDesktopHit();
 });
+// A permanent entry point in topmost mode does not depend on the taskbar being
+// reachable through a topmost scene. Leave empty desktop pixels click-through.
+const desktopMenuButton=document.createElement('button');
+desktopMenuButton.id='desktopMenuButton';desktopMenuButton.textContent='☰ 메뉴';
+desktopMenuButton.setAttribute('aria-label','고양이 메뉴 열기');
+desktopMenuButton.onclick=()=>{setRoomControls(!document.body.classList.contains('controls-visible'));publishDesktopRegions();};
+document.body.append(desktopMenuButton);
+addEventListener('click',event=>{
+ if(passiveDesktop||!event.target.closest('.cat'))return;
+ const c=cats.find(c=>c.el.contains(event.target));
+ if(c&&performance.now()<(c.ignoreClickUntil||0))return;
+ setRoomControls(true);publishDesktopRegions();
+});
+const desktopSettings=document.createElement('button');desktopSettings.id='desktopSettings';desktopSettings.textContent='화면 설정';
+desktopSettings.onclick=()=>host?.openSettings?.();$('roomControls').append(desktopSettings);
+const desktopLayer=document.createElement('button');desktopLayer.id='desktopLayer';desktopLayer.textContent='배경 모드';
+desktopLayer.onclick=()=>host?.setLayer?.(2);$('roomControls').append(desktopLayer);
 const quit=document.createElement('button');quit.id='desktopQuit';quit.textContent='종료';quit.onclick=()=>host?.quit();$('roomControls').append(quit);
 $('closeControls').textContent='메뉴 접기';
 document.querySelector('.brand').textContent='바탕화면의 작은 친구들';
-document.querySelector('.small-copy').textContent='트레이의 고양이 아이콘에서 메뉴를 열 수 있어요.';
+document.querySelector('.small-copy').textContent='고양이나 왼쪽 위 메뉴 버튼을 클릭하면 메뉴가 열려요.';
 // Keep the user's choice in the host's persistent local profile.
 const backgroundButton=document.createElement('button');backgroundButton.id='desktopBackground';
 backgroundButton.onclick=()=>setDesktopBackground(!desktopBackground);

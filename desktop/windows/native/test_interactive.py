@@ -151,7 +151,8 @@ try:
  slider=u.GetDlgItem(settings,202);u.SendMessageW(slider,0x0405,1,0);u.SendMessageW(settings,0x0114,0,slider)
  u.PostMessageW(settings,0x10,0,0);pump(.2)
  assert evaluate('!desktopHost.passive && !document.body.classList.contains("passive-desktop")')
- evaluate('setDesktopBackground(true)');pump(.6)
+ assert evaluate('document.body.classList.contains("controls-visible")'),'Topmost must open scene menu immediately'
+ evaluate('setDesktopBackground(true);setRoomControls(false)');pump(.6)
  popup,menu=open_tray();choose_menu(menu,103)
  assert evaluate('document.body.classList.contains("controls-visible")')
  evaluate('window.menuRestClicks=0;$("restBtn").addEventListener("click",()=>menuRestClicks++)')
@@ -192,11 +193,23 @@ try:
   u.SetWindowLongPtrW(h,-20,original)
  assert through,('Topmost empty-space click-through',hit(80,170))
  x,y=cat_point(h);click(x,y);assert evaluate('topDowns>0 && topClicks>0'),evaluate('({downs:topDowns,clicks:topClicks,mode:cats[0].mode})')
+ assert evaluate('document.body.classList.contains("controls-visible")'),'Cat tap must open scene menu'
+ evaluate('setRoomControls(false)');pump(.3)
+ entry=evaluate('(()=>{const r=$("desktopMenuButton").getBoundingClientRect();return {x:(r.left+r.width/2)*devicePixelRatio,y:(r.top+r.height/2)*devicePixelRatio};})()')
+ click(visual.left+entry['x'],visual.top+entry['y'])
+ assert evaluate('document.body.classList.contains("controls-visible")'),'Permanent menu button must work with physical input'
+ ImageGrab.grab().save(OUT/'topmost-click-menu.png')
+ settingsButton=evaluate('(()=>{const r=$("desktopSettings").getBoundingClientRect();return {x:(r.left+r.width/2)*devicePixelRatio,y:(r.top+r.height/2)*devicePixelRatio};})()')
+ click(visual.left+settingsButton['x'],visual.top+settingsButton['y']);pump(.3)
+ settings=u.FindWindowW(edition['settings_class'],None);assert settings and u.IsWindowVisible(settings),'Scene menu settings must open native settings'
+ u.PostMessageW(settings,0x10,0,0);pump(.2)
+ evaluate('setRoomControls(false)');pump(.3)
  x,y=cat_point(h);u.SetCursorPos(x,y);pump(.1);u.mouse_event(2,0,0,0,0);pump(.08)
  for i in range(1,11):u.SetCursorPos(x+i*10,y-i*8);pump(.035)
  assert evaluate('cats[0].mode==="bubble" && cats[0].el.classList.contains("in-bubble")')
  ImageGrab.grab().save(OUT/'topmost-drag.png')
  u.mouse_event(4,0,0,0,0);pump(.2);assert evaluate('cats[0].mode!=="bubble"')
+ assert evaluate('!document.body.classList.contains("controls-visible")'),'Dragging must not open the menu'
  # Switch to background during a second drag: it must release capture and input.
  x,y=cat_point(h);u.SetCursorPos(x,y);pump(.1);u.mouse_event(2,0,0,0,0);pump(.1);u.SetCursorPos(x+45,y-40);pump(.15)
  u.PostMessageW(h,0x111,115,0);pump(.6);u.mouse_event(4,0,0,0,0)
@@ -212,7 +225,7 @@ try:
  assert evaluate('!desktopHost.passive')
  u.PostMessageW(h,0x111,115,0);pump(.5);assert u.GetParent(h)
  stop_rpc();u.PostMessageW(h,0x10,0,0);app.wait(timeout=15)
- (OUT/'interactive-result.json').write_text(json.dumps({'ok':True,'checks':['visible native topmost tray popup','physical repeated menu selection and outside dismissal','second launch restores room and opens menu','hidden animation clock stops and resumes','native always-on-top checkbox','topmost detached visual','empty-space physical click-through','physical cat click','physical bubble drag and release','background switch during capture','passive background and hidden input proxy','tray mode switch','explicit topmost preference persists']},indent=2))
+ (OUT/'interactive-result.json').write_text(json.dumps({'ok':True,'checks':['visible native topmost tray popup','physical repeated menu selection and outside dismissal','second launch restores room and opens menu','hidden animation clock stops and resumes','native always-on-top checkbox','topmost detached visual','empty-space physical click-through','physical cat click opens menu','permanent menu button physical click','scene menu opens native settings','physical bubble drag and release','background switch during capture','passive background and hidden input proxy','tray mode switch','explicit topmost preference persists']},indent=2))
  print('Actual topmost interaction and background click-through checks passed.',flush=True)
 finally:
  ImageGrab.grab().save(OUT/'topmost-final.png')

@@ -253,6 +253,9 @@ struct MessageHandler:ICoreWebView2WebMessageReceivedEventHandler{
   if(!source||wcscmp(source,pageUrl)){CoTaskMemFree(source);return S_OK;}CoTaskMemFree(source);
   if(SUCCEEDED(args->TryGetWebMessageAsString(&message))&&message){trace(message);
    if(!wcsncmp(message,L"regions:",8))acceptHitRegions(message+8);
+   // Queue UI actions outside the WebView callback, just like tray commands.
+   if(isDesktop()&&!wcscmp(message,L"settings"))PostMessageW(controlWindow,WM_COMMAND,110,0);
+   if(isDesktop()&&!wcscmp(message,L"layer:2"))PostMessageW(controlWindow,WM_COMMAND,115,0);
    if(!wcscmp(message,L"background:1"))background=true;if(!wcscmp(message,L"background:0"))background=false;
    if(!wcscmp(message,L"quit"))PostMessageW(windowHandle,WM_CLOSE,0,0);
   }CoTaskMemFree(message);return S_OK;
@@ -310,6 +313,8 @@ static const wchar_t* bridge=LR"JS((()=>{
   setInteractive:()=>{}, // No route can re-enable window input.
   setHitRegions:rects=>{if(Array.isArray(rects)&&rects.length<=64&&rects.every(r=>Array.isArray(r)&&r.length===4&&r.every(v=>Number.isInteger(v)&&Math.abs(v)<=100000)))send('regions:'+rects.map(r=>r.join(',')).join(';'));},
   setBackground:v=>{if(typeof v==='boolean')send('background:'+(v?'1':'0'));},
+  openSettings:()=>send('settings'),
+  setLayer:v=>{if(v===2)send('layer:2');},
   quit:()=>send('quit'),
   onCommand:cb=>{if(typeof cb==='function')chrome.webview.addEventListener('message',e=>{if(allowed.includes(e.data)){if(e.data==='layer-top')passive=false;if(e.data==='layer-background')passive=true;cb(e.data);}});}
  });

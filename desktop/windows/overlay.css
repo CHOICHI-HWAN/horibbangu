@@ -12,3 +12,7 @@ body.desktop-overlay:not(.desktop-background),.desktop-overlay:not(.desktop-back
 /* Native Windows edition is a passive visual; only its native tray is interactive. */
 body.passive-desktop * {pointer-events:none!important;}
 body.passive-desktop .room-header,body.passive-desktop .scene-label,body.passive-desktop .weather-control {display:none!important;}
+
+.desktop-suspended *, .desktop-suspended *::before, .desktop-suspended *::after {animation-play-state:paused!important;}
+#desktopMenuButton {position:fixed;left:12px;top:12px;z-index:10000;padding:8px 13px;border:1px solid #95795a66;border-radius:18px;background:#fff8e9;color:#594530;box-shadow:0 2px 8px #37281922;cursor:pointer;}
+body.passive-desktop #desktopMenuButton,body.controls-visible #desktopMenuButton {display:none;}
