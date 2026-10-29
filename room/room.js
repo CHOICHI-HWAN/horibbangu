@@ -198,7 +198,16 @@ function setRoomWeather(choice,date=new Date()){
   document.body.dataset.weather=roomWeather;
 }
 // Animate only the painted lake reflections; the village and mountains stay solid.
-let lastLakeFrame=-Infinity,lastWeatherFrame=-Infinity;
+let lastLakeFrame=-Infinity,lastWeatherFrame=-Infinity,weatherEvery=40;
+// 경량 모드: auto(느려지면 자동 전환) / on / off. 고양이 갱신을 30fps로, 날씨·호수 갱신을 줄이고 비싼 효과를 끈다.
+let liteChoice='auto',liteOn=false;
+try{liteChoice=localStorage.getItem('horibbangu-lite')||'auto';}catch(e){}
+const LITE_LABEL={auto:'경량 모드 · 자동',on:'경량 모드 · 켬',off:'경량 모드 · 끔'};
+function applyLite(on){
+  liteOn=on;document.documentElement.dataset.lite=on?'1':'0';
+  catFps=on?30:60;weatherEvery=on?100:40;weatherDimensions=null;
+  if($('liteBtn'))$('liteBtn').textContent=LITE_LABEL[liteChoice]+(liteChoice==='auto'&&on?' (적용 중)':'');
+}
 let sceneDimensions=null,weatherDimensions=null,weatherViewport='',lakePaint=null,weatherPaint=null;
 function drawLake(t){
   const canvas=$('lakeCanvas'),image=$('landscape');
@@ -237,8 +246,8 @@ function drawLake(t){
 }
 function drawWeather(t){
   const idle=document.hidden||(typeof desktopSuspended!=='undefined'&&desktopSuspended)||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground);
-  weatherFrame=setTimeout(()=>requestAnimationFrame(drawWeather),idle||reduceMotion?500:40);
-  if(idle||t-lastWeatherFrame<40)return;lastWeatherFrame=t;
+  weatherFrame=setTimeout(()=>requestAnimationFrame(drawWeather),idle||reduceMotion?500:weatherEvery);
+  if(idle||t-lastWeatherFrame<weatherEvery)return;lastWeatherFrame=t;
   drawLake(t);
   const canvas=$('weatherCanvas');if(!canvas)return;
   // Measure the precipitation layer itself: image sizing is independent of this overlay.
@@ -248,7 +257,7 @@ function drawWeather(t){
   const w=dimensions.width,h=dimensions.height;
   if(!w||!h)return;
   // Keep high-DPI droplets crisp without allocating an unbounded multi-monitor canvas.
-  const scale=Math.min(devicePixelRatio||1,2,Math.sqrt(3145728/(w*h)));
+  const scale=Math.min(devicePixelRatio||1,liteOn?1:2,Math.sqrt((liteOn?1572864:3145728)/(w*h)));
   const width=Math.max(1,Math.round(w*scale)),height=Math.max(1,Math.round(h*scale));
   const resized=canvas.width!==width||canvas.height!==height;
   if(resized){canvas.width=width;canvas.height=height;}
@@ -271,6 +280,27 @@ function drawWeather(t){
       else{ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x-4,yy+13);ctx.stroke();}
     }
   }
+}
+// 자동 모드: 5초 단위로 프레임 간격을 보고, 연속 두 번 느리면 경량 모드로 바꾼다 (한 번 켜면 유지).
+let slowWindows=0;
+function watchFrameRate(){
+  let last=0,frames=0,slow=0,start=0;
+  function sample(t){
+    requestAnimationFrame(sample);
+    const idle=document.hidden||(typeof desktopSuspended!=='undefined'&&desktopSuspended)||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground);
+    if(idle||liteChoice!=='auto'||liteOn){last=0;frames=0;slow=0;start=0;return;}
+    if(!last){last=t;start=t;return;}
+    const gap=t-last;last=t;
+    if(gap>600){frames=0;slow=0;start=t;return;}   // 숨김·절전에서 돌아온 직후의 긴 간격은 무시
+    frames++;if(gap>40)slow++;
+    if(t-start>=5000){
+      const avg=(t-start)/frames;
+      slowWindows=(avg>24||slow/frames>.12)?slowWindows+1:0;
+      frames=0;slow=0;start=t;
+      if(slowWindows>=2){applyLite(true);$('status').textContent='화면이 무거워 경량 모드로 바꿨어요. 아래 버튼에서 끌 수 있어요.';}
+    }
+  }
+  requestAnimationFrame(sample);
 }
 function setRoomControls(visible){
   document.body.classList.toggle('controls-visible',visible);
@@ -299,6 +329,14 @@ function initRoom(){
   $('closeControls').onclick=()=>setRoomControls(false);
   $('aboutBtn').onclick=()=>$('aboutDialog').showModal();
   $('weather').onchange=e=>setRoomWeather(e.target.value);
+  $('liteBtn').onclick=()=>{
+    liteChoice=liteChoice==='auto'?'on':liteChoice==='on'?'off':'auto';
+    try{localStorage.setItem('horibbangu-lite',liteChoice);}catch(e){}
+    applyLite(liteChoice==='on');slowWindows=0;
+    $('status').textContent=liteChoice==='on'?'경량 모드를 켰어요. 움직임은 그대로, 자원 사용을 줄여요.':liteChoice==='off'?'경량 모드를 껐어요. 가장 부드러운 화면이에요.':'화면이 무거워지면 자동으로 경량 모드로 바꿔요.';
+  };
+  applyLite(liteChoice==='on');
+  watchFrameRate();
   $('catBtn').addEventListener('click',()=>{$('catBtn').textContent=catsOn?'고양이 숨기기':'고양이 보이기';});
   $('restBtn').onclick=()=>{const t=performance.now();cats.forEach(c=>{if(!c.air&&!['angel','bubble'].includes(c.mode)){leave(c,t);if(!chooseFavorite(c,t))sleepNow(c,t);}});$('status').textContent='각자 좋아하는 폭신한 자리로 가요.';};
   $('wingsBtn').onclick=()=>{if(reduceMotion){$('status').textContent='움직임을 켜면 로이와 동글이가 날개를 펼쳐요.';return;}const t=performance.now();cats.filter(c=>['로이','동글이'].includes(c.name)).forEach(c=>{c.angelAfter=0;c.restUntil=0;if(!c.air)startAngelFlight(c,t);});};

@@ -3,7 +3,7 @@
 body { margin:0; height:100dvh; overflow:hidden; color:var(--ink); font:14px/1.5 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--wall); }
 button,a,select { -webkit-tap-highlight-color:transparent; }
 button,.login-link,.download-link,select { font:inherit; color:inherit; }
-button,.login-link,.download-link { border:1px solid #a98f6c44; background:#fffaf0b8; cursor:pointer; border-radius:99px; padding:8px 13px; backdrop-filter:blur(12px); text-decoration:none; }
+button,.login-link,.download-link { border:1px solid #a98f6c44; background:#fffaf0b8; cursor:pointer; border-radius:99px; padding:8px 13px; text-decoration:none; }
 button:hover,.login-link:hover,.download-link:hover { background:#fffdf6; }
 button:focus-visible,a:focus-visible,select:focus-visible { outline:2px solid #56818e; outline-offset:3px; }
 .room { position:fixed; inset:0; isolation:isolate; background:linear-gradient(90deg,#bdac9412,transparent 22%,transparent 78%,#bdac9412),var(--wall); }
@@ -16,7 +16,7 @@ button:focus-visible,a:focus-visible,select:focus-visible { outline:2px solid #5
 .window-cross { position:absolute; inset:0; pointer-events:none; border-radius:inherit; box-shadow:inset 0 0 18px #65859a18; }
 .window-cross::before { content:''; position:absolute; left:49.3%; width:1.4%; top:0; bottom:0; background:#fdf8e9; box-shadow:2px 0 4px #59829b33; }
 .window-cross::after { content:''; position:absolute; top:65%; height:7px; left:0; right:0; background:#fdf8e9; }
-.shimmer { position:absolute; left:calc(var(--reflection-x,65%) - 20%); top:35%; width:40%; height:43%; background:repeating-linear-gradient(175deg,transparent 0 10px,#fff6c59a 12px,transparent 14px); clip-path:polygon(48% 0,58% 0,100% 100%,0 100%); opacity:.65; animation:sea-sparkle 5s ease-in-out infinite; mix-blend-mode:screen; }
+.shimmer { position:absolute; left:calc(var(--reflection-x,65%) - 20%); top:35%; width:40%; height:43%; background:repeating-linear-gradient(175deg,transparent 0 10px,#fff6c59a 12px,transparent 14px); clip-path:polygon(48% 0,58% 0,100% 100%,0 100%); opacity:.65; animation:sea-sparkle 5s ease-in-out infinite; }
 @keyframes sea-sparkle { 50% { transform:translateX(9px) scaleX(.8); opacity:.3; } }
 #moon { position:absolute; width:30px; height:30px; top:12%; left:65%; border-radius:50%; background:#fff2b2; box-shadow:0 0 25px #fff0ac99; transition:left 1s,top 1s; }
 #moon { width:23px; height:23px; background:#fff4d3; box-shadow:inset -7px -2px #aabed3,0 0 16px #eaf4ff88; }
@@ -100,14 +100,13 @@ body[data-time="night"]>.cat-wall-clock { filter:brightness(.78) drop-shadow(0 5
 .room:focus-visible {outline:2px solid #a2ad87;outline-offset:-5px;}
 .room {--wall:#f3ebd9;background:radial-gradient(ellipse at 62% 37%,#fff8e499,transparent 60%),linear-gradient(95deg,#d7d3b21a,transparent 27%,transparent 75%,#d4b98c18),var(--wall);}
 .floor {background:repeating-linear-gradient(91deg,transparent 0 17%,#947c4f26 17.08% 17.2%),linear-gradient(#b6a580,#d6c39c 7%,#e7d4b0);border-top-color:#e8ddbe;}
-.sunbeam {background:linear-gradient(110deg,#fff6c965,#f8c56a00 77%);filter:blur(7px);}
+.sunbeam {background:linear-gradient(110deg,#fff6c965,#f8c56a00 77%);}
 .painting {background:linear-gradient(125deg,#98805b,#d6bf8b 45%,#a28b5e);box-shadow:1px 3px 7px #64563c24;}
 .room-page .room-furniture svg,.room-page .cozy svg {filter:drop-shadow(0 1px 1px #6d62441a);}
-.room-page .cat> .flip >svg {filter:drop-shadow(0 1.2px .7px #5b563519);}
 button,.login-link,.download-link,.weather-control select {background:#fff9e8de;border-color:#a99a704c;color:#58644c;box-shadow:0 1px 0 #fffbe6;}
 @media(prefers-reduced-motion:reduce){.room-header,.login-link,.scene-label,.weather-control{transition:none;}}
 
-.room::before {content:"";position:absolute;inset:0;z-index:8;pointer-events:none;opacity:.18;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.7%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%22.15%22%2F%3E%3C%2Fsvg%3E");}
+.room::before {content:"";position:absolute;inset:0;z-index:8;pointer-events:none;opacity:.1;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.7%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%22.15%22%2F%3E%3C%2Fsvg%3E");}
 
 /* A gentle camera breath and independently rippling painted water. */
 .landscape-motion {position:absolute;inset:0;transform-origin:50% 0;animation:landscape-breathe 32s ease-in-out infinite;}
@@ -157,6 +156,11 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
 .about-dialog form {margin:24px 0 0;text-align:right;}
 .about-dialog button {color:#53634f;background:#edf0e3;border-color:#c9d1b6;}
 @media(max-width:420px){.about-dialog{padding:22px;font-size:13px;}}
+
+/* 경량 모드: 부드러운 움직임은 유지하고 비싼 그리기 효과만 줄인다. */
+html[data-lite="1"] .room-page .room-furniture svg,html[data-lite="1"] .room-page .cozy svg,html[data-lite="1"] .cat-wall-clock,html[data-lite="1"] .sky-cloud {filter:none;}
+html[data-lite="1"] .room::before,html[data-lite="1"] .shimmer {display:none;}
+html[data-lite="1"] .landscape-motion {animation:none;}
 
   #cats { position: fixed; left: 0; right: 0; bottom: 0; top: 0; pointer-events: none; z-index: 5; overflow: hidden; }
   #cats[hidden] { display: none; }
@@ -210,7 +214,10 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
   .cat .tailp { stroke: var(--tail); }
   .cat .tailst { stroke: var(--stripe); }
   .cat .leg { fill: var(--leg); }
-  .cat .l1, .cat .l2 { filter: brightness(.92); }
+  .cat .l1 path, .cat .l2 path { fill: color-mix(in srgb, var(--leg) 91%, #000); }   /* 필터 없이 뒷다리를 살짝 어둡게 */
+  .cat.resting .tail { animation-play-state: paused; }                                    /* 쉬는 아이의 꼬리는 멈춰 자원을 아낀다 */
+  html[data-lite="1"] .cat .head { animation: none; }
+  html[data-lite="1"] .cat:not(.walking) .tail { animation-play-state: paused; }
   .cat .bori-triangle, .cat .nose-patch { display: none; }
   .cat.bori .bori-triangle, .cat.geonppang .nose-patch { display: inline; }
   .cat .calico, .cat .ruff, .cat .coat-fluff { display: none; }
@@ -321,6 +328,7 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
   .cat.angel .wing-right { animation-direction: reverse; }
   @keyframes angel-flap { 0%, 100% { transform: rotate(-10deg) scaleX(.85); } 50% { transform: rotate(10deg) scaleX(1.1); } }
   #cats.motion-paused .cat * { animation: none !important; }
+  .tm { color: var(--muted); font-size: 12px; margin-left: 4px; }
 
 .cat.walking .head { animation-duration:1s; }
 .cat.walking .leg { animation-duration:.95s; }
@@ -492,7 +500,7 @@ svg.wheel.spin .ring {animation-duration:.75s;}
  <div id="calendarDays" class="calendar-days" aria-hidden="true"></div>
 </aside>
 </main>
-<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="viewBtn">풍경 감상</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><a id="windowsDownload" class="download-link" href="/releases/Horibbangu-Windows-v3.5.3.zip" download="Horibbangu-Windows-v3.5.3.zip" title="Windows 10/11 64비트 경량판 · Microsoft Edge WebView2 필요 · EXE 하나">Windows 배경판 v3.5.3 ↓</a><a id="windowsPark" class="download-link" href="/releases/Horibbangu-Park-Windows-v3.5.3.zip" download="Horibbangu-Park-Windows-v3.5.3.zip" title="소양·소미만 함께하는 Windows 경량판 · WebView2 필요">박박사판 v3.5.3 ↓</a><a id="windowsKim" class="download-link" href="/releases/Horibbangu-Kim-Windows-v3.5.3.zip" download="Horibbangu-Kim-Windows-v3.5.3.zip" title="팡이만 함께하는 Windows 경량판 · WebView2 필요">김박사판 v3.5.3 ↓</a><a id="windowsSaver" class="download-link" href="/releases/Horibbangu-Screensaver-v3.5.3.zip" download="Horibbangu-Screensaver-v3.5.3.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">화면보호기 v3.5.3 ↓</a><a id="windowsParkSaver" class="download-link" href="/releases/Horibbangu-Park-Screensaver-v3.5.3.zip" download="Horibbangu-Park-Screensaver-v3.5.3.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">박박사 화면보호기 v3.5.3 ↓</a><a id="windowsKimSaver" class="download-link" href="/releases/Horibbangu-Kim-Screensaver-v3.5.3.zip" download="Horibbangu-Kim-Screensaver-v3.5.3.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">김박사 화면보호기 v3.5.3 ↓</a><button id="aboutBtn">만든이</button><button id="closeControls">풍경만 보기</button></nav></header>
+<header class="room-header"><div><div class="kicker">A LITTLE ROOM BY THE ALPINE LAKE</div><h1 class="brand">호리빵구의 느린 하루</h1><div class="small-copy">빈 곳을 탭하면 조작 버튼을 접을 수 있어요.</div></div><nav id="roomControls" class="header-actions" aria-label="고양이 방 조작"><button id="restBtn">쉬는 시간</button><button id="viewBtn">풍경 감상</button><button id="wingsBtn">날개 친구들</button><button id="friendsBtn">친구 초대</button><button id="catBtn">고양이 숨기기</button><button id="liteBtn" title="화면이 무거울 때 자원을 아껴요">경량 모드 · 자동</button><a id="windowsDownload" class="download-link" href="/releases/Horibbangu-Windows-v3.5.3.zip" download="Horibbangu-Windows-v3.5.3.zip" title="Windows 10/11 64비트 경량판 · Microsoft Edge WebView2 필요 · EXE 하나">Windows 배경판 v3.5.3 ↓</a><a id="windowsPark" class="download-link" href="/releases/Horibbangu-Park-Windows-v3.5.3.zip" download="Horibbangu-Park-Windows-v3.5.3.zip" title="소양·소미만 함께하는 Windows 경량판 · WebView2 필요">박박사판 v3.5.3 ↓</a><a id="windowsKim" class="download-link" href="/releases/Horibbangu-Kim-Windows-v3.5.3.zip" download="Horibbangu-Kim-Windows-v3.5.3.zip" title="팡이만 함께하는 Windows 경량판 · WebView2 필요">김박사판 v3.5.3 ↓</a><a id="windowsSaver" class="download-link" href="/releases/Horibbangu-Screensaver-v3.5.3.zip" download="Horibbangu-Screensaver-v3.5.3.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">화면보호기 v3.5.3 ↓</a><a id="windowsParkSaver" class="download-link" href="/releases/Horibbangu-Park-Screensaver-v3.5.3.zip" download="Horibbangu-Park-Screensaver-v3.5.3.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">박박사 화면보호기 v3.5.3 ↓</a><a id="windowsKimSaver" class="download-link" href="/releases/Horibbangu-Kim-Screensaver-v3.5.3.zip" download="Horibbangu-Kim-Screensaver-v3.5.3.zip" title="ZIP을 풀고 .scr 파일 우클릭 → 설치 · WebView2 필요">김박사 화면보호기 v3.5.3 ↓</a><button id="aboutBtn">만든이</button><button id="closeControls">풍경만 보기</button></nav></header>
 <a class="login-link" id="recordsLink" href="records.html">로그인 · 체중 기록 ↗</a>
 <div id="cats" aria-label="고양이 놀이터"><div id="props"></div></div>
 <div class="scene-label"><div id="status" role="status"><strong>호수가 보이는 작은 방</strong>고양이를 끌어 옮기거나, 눈을 맞춰 보세요.</div><div id="roomClock"></div></div>
@@ -709,7 +717,16 @@ function setRoomWeather(choice,date=new Date()){
   document.body.dataset.weather=roomWeather;
 }
 // Animate only the painted lake reflections; the village and mountains stay solid.
-let lastLakeFrame=-Infinity,lastWeatherFrame=-Infinity;
+let lastLakeFrame=-Infinity,lastWeatherFrame=-Infinity,weatherEvery=40;
+// 경량 모드: auto(느려지면 자동 전환) / on / off. 고양이 갱신을 30fps로, 날씨·호수 갱신을 줄이고 비싼 효과를 끈다.
+let liteChoice='auto',liteOn=false;
+try{liteChoice=localStorage.getItem('horibbangu-lite')||'auto';}catch(e){}
+const LITE_LABEL={auto:'경량 모드 · 자동',on:'경량 모드 · 켬',off:'경량 모드 · 끔'};
+function applyLite(on){
+  liteOn=on;document.documentElement.dataset.lite=on?'1':'0';
+  catFps=on?30:60;weatherEvery=on?100:40;weatherDimensions=null;
+  if($('liteBtn'))$('liteBtn').textContent=LITE_LABEL[liteChoice]+(liteChoice==='auto'&&on?' (적용 중)':'');
+}
 let sceneDimensions=null,weatherDimensions=null,weatherViewport='',lakePaint=null,weatherPaint=null;
 function drawLake(t){
   const canvas=$('lakeCanvas'),image=$('landscape');
@@ -748,8 +765,8 @@ function drawLake(t){
 }
 function drawWeather(t){
   const idle=document.hidden||(typeof desktopSuspended!=='undefined'&&desktopSuspended)||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground);
-  weatherFrame=setTimeout(()=>requestAnimationFrame(drawWeather),idle||reduceMotion?500:40);
-  if(idle||t-lastWeatherFrame<40)return;lastWeatherFrame=t;
+  weatherFrame=setTimeout(()=>requestAnimationFrame(drawWeather),idle||reduceMotion?500:weatherEvery);
+  if(idle||t-lastWeatherFrame<weatherEvery)return;lastWeatherFrame=t;
   drawLake(t);
   const canvas=$('weatherCanvas');if(!canvas)return;
   // Measure the precipitation layer itself: image sizing is independent of this overlay.
@@ -759,7 +776,7 @@ function drawWeather(t){
   const w=dimensions.width,h=dimensions.height;
   if(!w||!h)return;
   // Keep high-DPI droplets crisp without allocating an unbounded multi-monitor canvas.
-  const scale=Math.min(devicePixelRatio||1,2,Math.sqrt(3145728/(w*h)));
+  const scale=Math.min(devicePixelRatio||1,liteOn?1:2,Math.sqrt((liteOn?1572864:3145728)/(w*h)));
   const width=Math.max(1,Math.round(w*scale)),height=Math.max(1,Math.round(h*scale));
   const resized=canvas.width!==width||canvas.height!==height;
   if(resized){canvas.width=width;canvas.height=height;}
@@ -782,6 +799,27 @@ function drawWeather(t){
       else{ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x-4,yy+13);ctx.stroke();}
     }
   }
+}
+// 자동 모드: 5초 단위로 프레임 간격을 보고, 연속 두 번 느리면 경량 모드로 바꾼다 (한 번 켜면 유지).
+let slowWindows=0;
+function watchFrameRate(){
+  let last=0,frames=0,slow=0,start=0;
+  function sample(t){
+    requestAnimationFrame(sample);
+    const idle=document.hidden||(typeof desktopSuspended!=='undefined'&&desktopSuspended)||(typeof desktopOverlay!=='undefined'&&desktopOverlay&&!desktopBackground);
+    if(idle||liteChoice!=='auto'||liteOn){last=0;frames=0;slow=0;start=0;return;}
+    if(!last){last=t;start=t;return;}
+    const gap=t-last;last=t;
+    if(gap>600){frames=0;slow=0;start=t;return;}   // 숨김·절전에서 돌아온 직후의 긴 간격은 무시
+    frames++;if(gap>40)slow++;
+    if(t-start>=5000){
+      const avg=(t-start)/frames;
+      slowWindows=(avg>24||slow/frames>.12)?slowWindows+1:0;
+      frames=0;slow=0;start=t;
+      if(slowWindows>=2){applyLite(true);$('status').textContent='화면이 무거워 경량 모드로 바꿨어요. 아래 버튼에서 끌 수 있어요.';}
+    }
+  }
+  requestAnimationFrame(sample);
 }
 function setRoomControls(visible){
   document.body.classList.toggle('controls-visible',visible);
@@ -810,6 +848,14 @@ function initRoom(){
   $('closeControls').onclick=()=>setRoomControls(false);
   $('aboutBtn').onclick=()=>$('aboutDialog').showModal();
   $('weather').onchange=e=>setRoomWeather(e.target.value);
+  $('liteBtn').onclick=()=>{
+    liteChoice=liteChoice==='auto'?'on':liteChoice==='on'?'off':'auto';
+    try{localStorage.setItem('horibbangu-lite',liteChoice);}catch(e){}
+    applyLite(liteChoice==='on');slowWindows=0;
+    $('status').textContent=liteChoice==='on'?'경량 모드를 켰어요. 움직임은 그대로, 자원 사용을 줄여요.':liteChoice==='off'?'경량 모드를 껐어요. 가장 부드러운 화면이에요.':'화면이 무거워지면 자동으로 경량 모드로 바꿔요.';
+  };
+  applyLite(liteChoice==='on');
+  watchFrameRate();
   $('catBtn').addEventListener('click',()=>{$('catBtn').textContent=catsOn?'고양이 숨기기':'고양이 보이기';});
   $('restBtn').onclick=()=>{const t=performance.now();cats.forEach(c=>{if(!c.air&&!['angel','bubble'].includes(c.mode)){leave(c,t);if(!chooseFavorite(c,t))sleepNow(c,t);}});$('status').textContent='각자 좋아하는 폭신한 자리로 가요.';};
   $('wingsBtn').onclick=()=>{if(reduceMotion){$('status').textContent='움직임을 켜면 로이와 동글이가 날개를 펼쳐요.';return;}const t=performance.now();cats.filter(c=>['로이','동글이'].includes(c.name)).forEach(c=>{c.angelAfter=0;c.restUntil=0;if(!c.air)startAngelFlight(c,t);});};
@@ -1508,14 +1554,14 @@ function renderCats() {
   });
 }
 
-let catFramePending=false,catNextFrame=0;
+let catFramePending=false,catNextFrame=0,catFps=60;   // 경량 모드에서는 30fps
 function queueCatFrame(){
  if(catFramePending||(typeof desktopSuspended!=='undefined'&&desktopSuspended))return;
  catFramePending=true;
  requestAnimationFrame(t=>{
   catFramePending=false;
   if(typeof desktopSuspended!=='undefined'&&desktopSuspended)return;
-  const interval=1000/60;
+  const interval=1000/catFps;
   if(t+.5<catNextFrame){queueCatFrame();return;}
   // Carry the fractional remainder: irregular refreshes must not turn 60 into
   // 30 fps, nor build up a backlog to replay after a long stall.
@@ -1763,7 +1809,7 @@ function tickCats(t) {
 
 
     if (['watch','pawWrap'].includes(c.mode) && mouseOn && Math.abs(mouse.x - cx) < 130 && Math.random() < dt * .4) setMode(c, 'kiss', t, 2800);
-    const cls = 'cat ' + c.lookCls + (c.earUntil > t ? ' airplane-ears' + (c.earDir < 0 ? ' ear-left' : ' ear-right') : '') + (c.name === '보리' ? ' tiger-walk' : '') + (c.cozy && c.mode === c.favorite ? ' at-cozy' : '') + ' ' + (c.mode === 'sit' && !c.air ? '' : pose) + (t - (c.landT || -1e9) < 200 && !c.air ? ' land' : '') + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
+    const cls = 'cat ' + c.lookCls + (['sleep', 'chin', 'house-low', 'house-top', 'hammock', 'sofa', 'bed', 'loaf', 'purr'].includes(c.mode) ? ' resting' : '') + (c.earUntil > t ? ' airplane-ears' + (c.earDir < 0 ? ' ear-left' : ' ear-right') : '') + (c.name === '보리' ? ' tiger-walk' : '') + (c.cozy && c.mode === c.favorite ? ' at-cozy' : '') + ' ' + (c.mode === 'sit' && !c.air ? '' : pose) + (t - (c.landT || -1e9) < 200 && !c.air ? ' land' : '') + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
     if (cls !== c.cls) { c.cls = cls; c.el.className = cls; }
     renderCatPosition(c);
   }

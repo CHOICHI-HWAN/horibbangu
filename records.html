@@ -114,7 +114,10 @@
   .cat .tailp { stroke: var(--tail); }
   .cat .tailst { stroke: var(--stripe); }
   .cat .leg { fill: var(--leg); }
-  .cat .l1, .cat .l2 { filter: brightness(.92); }
+  .cat .l1 path, .cat .l2 path { fill: color-mix(in srgb, var(--leg) 91%, #000); }   /* 필터 없이 뒷다리를 살짝 어둡게 */
+  .cat.resting .tail { animation-play-state: paused; }                                    /* 쉬는 아이의 꼬리는 멈춰 자원을 아낀다 */
+  html[data-lite="1"] .cat .head { animation: none; }
+  html[data-lite="1"] .cat:not(.walking) .tail { animation-play-state: paused; }
   .cat .bori-triangle, .cat .nose-patch { display: none; }
   .cat.bori .bori-triangle, .cat.geonppang .nose-patch { display: inline; }
   .cat .calico, .cat .ruff, .cat .coat-fluff { display: none; }
@@ -225,6 +228,7 @@
   .cat.angel .wing-right { animation-direction: reverse; }
   @keyframes angel-flap { 0%, 100% { transform: rotate(-10deg) scaleX(.85); } 50% { transform: rotate(10deg) scaleX(1.1); } }
   #cats.motion-paused .cat * { animation: none !important; }
+  .tm { color: var(--muted); font-size: 12px; margin-left: 4px; }
   .empty { text-align: center; color: var(--muted); padding: 50px 0; }
   .tablewrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
@@ -303,9 +307,10 @@
   <form method="dialog" id="recForm">
     <h2 id="recTitle">기록 추가</h2>
     <div class="field"><label for="fDate">날짜</label><input type="date" id="fDate" required></div>
+    <div class="field"><label for="fTime">시간</label><input type="time" id="fTime"></div>
     <div id="fWeights"></div>
     <div class="field"><label for="fNote">비고</label><input type="text" id="fNote" placeholder="병원, 증상 등"></div>
-    <p class="hint">체중은 kg 단위, 측정 안 한 아이는 비워두세요. 숫자 뒤에 ?를 붙이면 불확실한 값으로 표시됩니다.</p>
+    <p class="hint">하루에 여러 번 기록할 수 있어요. 시간은 비워도 되고, 같은 날 기록은 시간 순으로 정렬됩니다. 체중은 kg 단위, 측정 안 한 아이는 비워두세요. 숫자 뒤에 ?를 붙이면 불확실한 값으로 표시됩니다.</p>
     <div class="dlgbtns">
       <button type="button" class="danger" id="fDelete">삭제</button>
       <span>
@@ -336,7 +341,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.3.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.6.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -421,8 +426,12 @@ function save() {
 const fmtDate = d => d.replace(/-/g, '.');
 const dayNum = d => Date.parse(d + 'T00:00:00Z') / 864e5;
 const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
-const sorted = () => [...state.records].sort((a, b) => a.date.localeCompare(b.date));
-const petSeries = id => sorted().filter(r => r.w[id] != null).map(r => ({ date: r.date, v: r.w[id], q: !!r.q?.[id], note: r.note, rid: r.id }));
+// 하루에 여러 번 잰 기록은 시간(HH:MM)으로 구분한다. 시간이 없는 예전 기록은 그날의 맨 앞(00:00)으로 본다.
+const nowTime = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+const tNum = (date, time) => { const m = /^(\d{1,2}):(\d{2})$/.exec(time || ''); return dayNum(date) + (m ? (+m[1] * 60 + +m[2]) / 1440 : 0); };
+const stamp = (date, time) => fmtDate(date) + (time ? ` <span class="tm">${esc(time)}</span>` : '');
+const sorted = () => [...state.records].sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
+const petSeries = id => sorted().filter(r => r.w[id] != null).map(r => ({ date: r.date, time: r.time || '', tn: tNum(r.date, r.time), v: r.w[id], q: !!r.q?.[id], note: r.note, rid: r.id }));
 
 // ---------- 요약 카드 ----------
 let sel = null;
@@ -522,7 +531,7 @@ function renderChart() {
     return;
   }
   const all = series.flatMap(s => s.pts);
-  let x0 = Math.min(...all.map(p => dayNum(p.date))), x1 = Math.max(...all.map(p => dayNum(p.date)));
+  let x0 = Math.min(...all.map(p => p.tn)), x1 = Math.max(...all.map(p => p.tn));
   if (rangeDays) { x0 = Math.min(x0, cutoff); x1 = Math.max(x1, dayNum(today())); }
   if (x1 === x0) { x0 -= 7; x1 += 7; }
   let lo = Math.min(...all.map(p => p.v)), hi = Math.max(...all.map(p => p.v));
@@ -558,16 +567,16 @@ function renderChart() {
     // Trailing five measurements, computed from full history before range clipping.
     const history = petSeries(p.id);
     const moving = pts.map(pt => {
-      const i = history.findIndex(h => h.date === pt.date);
+      const i = history.findIndex(h => h.rid === pt.rid);
       const window = history.slice(Math.max(0, i - 4), i + 1);
-      return { date: pt.date, v: window.reduce((sum, h) => sum + h.v, 0) / window.length };
+      return { tn: pt.tn, v: window.reduce((sum, h) => sum + h.v, 0) / window.length };
     });
-    const ma = moving.map((pt, i) => `${i ? 'L' : 'M'}${X(dayNum(pt.date)).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
+    const ma = moving.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
     out += `<path class="moving-average" aria-label="${esc(p.name)} 최근 5회 이동평균" d="${ma}" fill="none" stroke="${p.color}" stroke-width="3" stroke-dasharray="3 5" opacity=".9"/>`;
-    const d = pts.map((pt, i) => `${i ? 'L' : 'M'}${X(dayNum(pt.date)).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
+    const d = pts.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
     out += `<path d="${d}" fill="none" stroke="${p.color}" stroke-width="2" stroke-linejoin="round" opacity=".85"/>`;
     pts.forEach(pt => {
-      const x = X(dayNum(pt.date)), y = Y(pt.v);
+      const x = X(pt.tn), y = Y(pt.v);
       const bad = st.isOut(pt.v);
       chartPoints.push({ x, y, p, pt, bad, mean: st.mean });
       if (bad) out += `<circle cx="${x}" cy="${y}" r="8" fill="none" stroke="#d9534f" stroke-width="2"/>`;
@@ -590,7 +599,7 @@ $('chart').addEventListener('pointermove', e => {
   const h = $('hover');
   if (!best || bd > 40 * 40) { tip.style.display = 'none'; h.style.display = 'none'; return; }
   h.setAttribute('cx', best.x); h.setAttribute('cy', best.y); h.style.display = '';
-  tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}`;
+  tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.time ? ' ' + esc(best.pt.time) : ''}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}`;
   tip.style.left = best.x / sx + 'px'; tip.style.top = best.y / sx + 'px'; tip.style.display = 'block';
 });
 $('chart').addEventListener('pointerleave', () => { tip.style.display = 'none'; const h = $('hover'); if (h) h.style.display = 'none'; });
@@ -615,7 +624,7 @@ function renderTable() {
         const dc = d == null ? '' : d > 0.004 ? 'up' : d < -0.004 ? 'down' : '';
         const ds = d == null ? '–' : (d > 0 ? '+' : '') + d.toFixed(2);
         const dm = pt.v - st.mean, bad = st.isOut(pt.v);
-        return `<tr class="${bad ? 'outrow' : ''}"><td>${fmtDate(pt.date)}</td><td class="${pt.q ? 'q' : ''}"><b>${pt.v}${pt.q ? '?' : ''}</b></td><td class="${dc}">${ds}</td><td class="${bad ? 'out' : ''}">${bad ? '⚠ ' : ''}${dm > 0 ? '+' : ''}${dm.toFixed(2)}</td><td class="note">${esc(pt.note)}</td><td><button class="small" data-edit="${pt.rid}">수정</button></td></tr>`;
+        return `<tr class="${bad ? 'outrow' : ''}"><td>${stamp(pt.date, pt.time)}</td><td class="${pt.q ? 'q' : ''}"><b>${pt.v}${pt.q ? '?' : ''}</b></td><td class="${dc}">${ds}</td><td class="${bad ? 'out' : ''}">${bad ? '⚠ ' : ''}${dm > 0 ? '+' : ''}${dm.toFixed(2)}</td><td class="note">${esc(pt.note)}</td><td><button class="small" data-edit="${pt.rid}">수정</button></td></tr>`;
       }).reverse().join('');
     return;
   }
@@ -627,7 +636,7 @@ function renderTable() {
       const bad = v != null && petStats(p.id).isOut(v);
       return v == null ? `<td class="none">–</td>` : `<td class="${r.q?.[p.id] ? 'q' : ''} ${bad ? 'out' : ''}">${bad ? '⚠' : ''}${v}${r.q?.[p.id] ? '?' : ''}</td>`;
     }).join('');
-    return `<tr><td>${fmtDate(r.date)}</td>${cells}<td class="note">${esc(r.note)}</td><td><button class="small" data-edit="${r.id}">수정</button></td></tr>`;
+    return `<tr><td>${stamp(r.date, r.time)}</td>${cells}<td class="note">${esc(r.note)}</td><td><button class="small" data-edit="${r.id}">수정</button></td></tr>`;
   }).join('');
   $('table').innerHTML = head + rows;
 }
@@ -639,6 +648,7 @@ function openRecord(id) {
   editing = id ? state.records.find(r => r.id === id) : null;
   $('recTitle').textContent = editing ? '기록 수정' : '기록 추가';
   $('fDate').value = editing ? editing.date : today();
+  $('fTime').value = editing ? (editing.time || '') : nowTime();
   $('fNote').value = editing ? editing.note : '';
   $('fDelete').style.display = editing ? '' : 'none';
   $('fWeights').innerHTML = state.pets.map(p => {
@@ -662,12 +672,12 @@ $('recForm').onsubmit = e => {
     if (s.includes('?')) q[inp.dataset.pet] = true;
   });
   if (!Object.keys(w).length) { e.preventDefault(); alert('체중을 한 마리 이상 입력해주세요.'); return; }
-  const rec = { id: editing?.id || uid(), date: $('fDate').value, w, q, note: $('fNote').value.trim() };
+  const rec = { id: editing?.id || uid(), date: $('fDate').value, time: $('fTime').value || '', w, q, note: $('fNote').value.trim() };
   if (editing) state.records[state.records.indexOf(editing)] = rec; else state.records.push(rec);
   save(); renderAll();
 };
 $('fDelete').onclick = () => {
-  if (editing && confirm(fmtDate(editing.date) + ' 기록을 삭제할까요?')) {
+  if (editing && confirm(fmtDate(editing.date) + (editing.time ? ' ' + editing.time : '') + ' 기록을 삭제할까요?')) {
     state.records = state.records.filter(r => r !== editing);
     save(); renderAll(); $('recDlg').close();
   }
@@ -717,8 +727,8 @@ $('exportBtn').onclick = () => {
     download(`weights-${stamp}.json`, JSON.stringify(state, null, 2), 'application/json');
   } else {
     const q = s => `"${String(s).replace(/"/g, '""')}"`;
-    const lines = [['날짜', ...state.pets.map(p => p.name), '비고'].map(q).join(',')];
-    sorted().forEach(r => lines.push([fmtDate(r.date),
+    const lines = [['날짜', '시간', ...state.pets.map(p => p.name), '비고'].map(q).join(',')];
+    sorted().forEach(r => lines.push([fmtDate(r.date), r.time || '',
       ...state.pets.map(p => r.w[p.id] == null ? '' : r.w[p.id] + (r.q?.[p.id] ? '?' : '')), r.note].map(q).join(',')));
     download(`weights-${stamp}.csv`, '﻿' + lines.join('\n'), 'text/csv');
   }
@@ -744,17 +754,32 @@ $('importFile').onchange = async e => {
 };
 
 // ---------- 빠른 입력: "호야, 4.40" ----------
+// 같은 날 같은 아이의 두 번째 이후 체중은 새 기록(시간 포함)으로 쌓는다.
+// 아직 값이 없는 아이들만 입력하는 경우에는 그날의 기존 기록에 합쳐 표가 깔끔하게 유지된다.
+function addWeights(date, found, time) {
+  const open = [...state.records].filter(r => r.date === date && (!time || !r.time || r.time === time) && found.every(f => r.w[f.pet.id] == null)).sort((a, b) => (b.time || '').localeCompare(a.time || ''))[0];
+  let rec = open;
+  if (!rec) { rec = { id: uid(), date, time: time || (date === today() ? nowTime() : ''), w: {}, q: {}, note: '' }; state.records.push(rec); }
+  else if (time && !rec.time) rec.time = time;
+  rec.q = rec.q || {};
+  found.forEach(({ pet, v, q }) => { rec.w[pet.id] = v; if (q) rec.q[pet.id] = true; else delete rec.q[pet.id]; });
+  return rec;
+}
+const countOn = (petId, date) => state.records.filter(r => r.date === date && r.w[petId] != null).length;
+
 $('quickForm').onsubmit = e => {
   e.preventDefault();
   const msg = $('quickMsg');
   let text = $('quick').value.trim();
   if (!text) return;
-  let date = today();
+  let date = today(), time = '';
   const dm = text.match(/^(\d{4})[.\-/]\s*(\d{1,2})[.\-/]\s*(\d{1,2})\.?[\s,]*/);
   if (dm) {
     date = `${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`;
     text = text.slice(dm[0].length);
   }
+  const tm = text.match(/^(\d{1,2}):(\d{2})[\s,]*/);   // 선택: 시간(예: 21:30 호야 4.4)
+  if (tm && +tm[1] < 24 && +tm[2] < 60) { time = tm[1].padStart(2, '0') + ':' + tm[2]; text = text.slice(tm[0].length); }
   const found = [], unknown = [];
   for (const m of text.matchAll(/([^\d\s,:;]+)[\s,:]+(\d+(?:\.\d+)?)(\?)?/g)) {
     const pet = state.pets.find(p => p.name === m[1]);
@@ -765,40 +790,36 @@ $('quickForm').onsubmit = e => {
     msg.textContent = unknown.length ? `등록되지 않은 이름: ${unknown.join(', ')}` : '"호야, 4.40" 형식으로 입력해주세요.';
     return;
   }
-  let rec = state.records.find(r => r.date === date);
-  if (!rec) { rec = { id: uid(), date, w: {}, q: {}, note: '' }; state.records.push(rec); }
-  rec.q = rec.q || {};
-  found.forEach(({ pet, v, q }) => { rec.w[pet.id] = v; if (q) rec.q[pet.id] = true; else delete rec.q[pet.id]; });
+  const rec = addWeights(date, found, time);
   save(); renderAll();
   $('quick').value = '';
   msg.style.color = 'var(--muted)';
-  msg.textContent = `✔ ${fmtDate(date)} ` + found.map(f => `${f.pet.name} ${f.v}kg`).join(', ') + ' 저장됨';
+  const times = found.map(f => countOn(f.pet.id, date)).filter(n => n > 1);
+  msg.textContent = `✔ ${fmtDate(date)}${rec.time ? ' ' + rec.time : ''} ` + found.map(f => `${f.pet.name} ${f.v}kg`).join(', ') + ' 저장됨' + (times.length ? ` (그날 ${Math.max(...times)}번째 기록)` : '');
 };
 
 // ---------- 선택한 아이: 오늘 체중 입력 ----------
-function renderToday(focus) {
+function renderToday(focus, note) {
   const box = $('todayBox');
   if (!sel || !focus) { box.hidden = true; return; }
   const p = state.pets.find(x => x.id === sel), t = today();
-  const rec = state.records.find(r => r.date === t), cur = rec?.w[sel];
+  const mine = sorted().filter(r => r.date === t && r.w[sel] != null);
+  const list = mine.map(r => `${r.w[sel]}kg${r.q?.[sel] ? '?' : ''}${r.time ? ` <span class="tm">${esc(r.time)}</span>` : ''}`).join(' · ');
   box.hidden = false;
   box.style.setProperty('--c', p.color);
   box.innerHTML = `<b>${esc(p.name)}</b> 오늘(${fmtDate(t)}) 체중
-    <input type="text" inputmode="decimal" id="todayVal" placeholder="예) 4.40" value="${cur == null ? '' : cur + (rec.q?.[sel] ? '?' : '')}">kg
-    <button type="submit" class="primary">${cur == null ? '기록' : '수정'}</button>`;
-  if (focus) $('todayVal').focus({ preventScroll: true });
+    <input type="text" inputmode="decimal" id="todayVal" placeholder="예) 4.40">kg
+    <button type="submit" class="primary">기록</button>
+    <span class="hint" style="flex-basis:100%;margin:0">${note ? esc(note) + ' · ' : ''}${mine.length ? `오늘 ${mine.length}번 기록: ${list}` : '하루에 여러 번 기록할 수 있어요'}</span>`;
+  $('todayVal').focus({ preventScroll: true });
 }
 $('todayBox').onsubmit = e => {
   e.preventDefault();
   const s = $('todayVal').value.trim(), n = parseFloat(s.replace(/[^\d.]/g, ''));
   if (isNaN(n)) { $('todayVal').focus(); return; }
-  const t = today();
-  let rec = state.records.find(r => r.date === t);
-  if (!rec) { rec = { id: uid(), date: t, w: {}, q: {}, note: '' }; state.records.push(rec); }
-  rec.q = rec.q || {};
-  rec.w[sel] = n;
-  if (s.includes('?')) rec.q[sel] = true; else delete rec.q[sel];
-  save(); renderAll();
+  const t = today(), pet = state.pets.find(x => x.id === sel);
+  addWeights(t, [{ pet, v: n, q: s.includes('?') }], '');
+  save(); renderAll(); renderToday(true, `✔ ${n}kg 저장됨`);
 };
 
 $('ver').textContent = 'v' + VERSION;
@@ -1489,14 +1510,14 @@ function renderCats() {
   });
 }
 
-let catFramePending=false,catNextFrame=0;
+let catFramePending=false,catNextFrame=0,catFps=60;   // 경량 모드에서는 30fps
 function queueCatFrame(){
  if(catFramePending||(typeof desktopSuspended!=='undefined'&&desktopSuspended))return;
  catFramePending=true;
  requestAnimationFrame(t=>{
   catFramePending=false;
   if(typeof desktopSuspended!=='undefined'&&desktopSuspended)return;
-  const interval=1000/60;
+  const interval=1000/catFps;
   if(t+.5<catNextFrame){queueCatFrame();return;}
   // Carry the fractional remainder: irregular refreshes must not turn 60 into
   // 30 fps, nor build up a backlog to replay after a long stall.
@@ -1744,7 +1765,7 @@ function tickCats(t) {
 
 
     if (['watch','pawWrap'].includes(c.mode) && mouseOn && Math.abs(mouse.x - cx) < 130 && Math.random() < dt * .4) setMode(c, 'kiss', t, 2800);
-    const cls = 'cat ' + c.lookCls + (c.earUntil > t ? ' airplane-ears' + (c.earDir < 0 ? ' ear-left' : ' ear-right') : '') + (c.name === '보리' ? ' tiger-walk' : '') + (c.cozy && c.mode === c.favorite ? ' at-cozy' : '') + ' ' + (c.mode === 'sit' && !c.air ? '' : pose) + (t - (c.landT || -1e9) < 200 && !c.air ? ' land' : '') + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
+    const cls = 'cat ' + c.lookCls + (['sleep', 'chin', 'house-low', 'house-top', 'hammock', 'sofa', 'bed', 'loaf', 'purr'].includes(c.mode) ? ' resting' : '') + (c.earUntil > t ? ' airplane-ears' + (c.earDir < 0 ? ' ear-left' : ' ear-right') : '') + (c.name === '보리' ? ' tiger-walk' : '') + (c.cozy && c.mode === c.favorite ? ' at-cozy' : '') + ' ' + (c.mode === 'sit' && !c.air ? '' : pose) + (t - (c.landT || -1e9) < 200 && !c.air ? ' land' : '') + (pose.includes('crouch') || c.mode === 'freeze' ? ' crouch' : '');
     if (cls !== c.cls) { c.cls = cls; c.el.className = cls; }
     renderCatPosition(c);
   }
@@ -1768,7 +1789,7 @@ const CFG = window.APP_CONFIG || {};
 const cloud = CFG.apiKey && CFG.projectId && window.firebase ? firebase.initializeApp(CFG) : null;
 const auth = cloud && firebase.auth(), db = cloud && firebase.firestore();
 const petRow = (p, i) => ({ id: p.id, name: p.name, color: p.color, sort: i });
-const recRow = r => ({ id: r.id, date: r.date, w: r.w, q: r.q || {}, note: r.note || '' });
+const recRow = r => ({ id: r.id, date: r.date, time: r.time || '', w: r.w, q: r.q || {}, note: r.note || '' });
 let snap = { pets: {}, records: {} };   // 서버에 마지막으로 반영된 JSON
 let pushTimer = null, pushing = false, synced = false, unsubs = [];
 let petsSnap = null, recsSnap = null, uploaded = false;

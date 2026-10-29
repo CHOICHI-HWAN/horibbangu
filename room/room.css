@@ -3,7 +3,7 @@
 body { margin:0; height:100dvh; overflow:hidden; color:var(--ink); font:14px/1.5 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--wall); }
 button,a,select { -webkit-tap-highlight-color:transparent; }
 button,.login-link,.download-link,select { font:inherit; color:inherit; }
-button,.login-link,.download-link { border:1px solid #a98f6c44; background:#fffaf0b8; cursor:pointer; border-radius:99px; padding:8px 13px; backdrop-filter:blur(12px); text-decoration:none; }
+button,.login-link,.download-link { border:1px solid #a98f6c44; background:#fffaf0b8; cursor:pointer; border-radius:99px; padding:8px 13px; text-decoration:none; }
 button:hover,.login-link:hover,.download-link:hover { background:#fffdf6; }
 button:focus-visible,a:focus-visible,select:focus-visible { outline:2px solid #56818e; outline-offset:3px; }
 .room { position:fixed; inset:0; isolation:isolate; background:linear-gradient(90deg,#bdac9412,transparent 22%,transparent 78%,#bdac9412),var(--wall); }
@@ -16,7 +16,7 @@ button:focus-visible,a:focus-visible,select:focus-visible { outline:2px solid #5
 .window-cross { position:absolute; inset:0; pointer-events:none; border-radius:inherit; box-shadow:inset 0 0 18px #65859a18; }
 .window-cross::before { content:''; position:absolute; left:49.3%; width:1.4%; top:0; bottom:0; background:#fdf8e9; box-shadow:2px 0 4px #59829b33; }
 .window-cross::after { content:''; position:absolute; top:65%; height:7px; left:0; right:0; background:#fdf8e9; }
-.shimmer { position:absolute; left:calc(var(--reflection-x,65%) - 20%); top:35%; width:40%; height:43%; background:repeating-linear-gradient(175deg,transparent 0 10px,#fff6c59a 12px,transparent 14px); clip-path:polygon(48% 0,58% 0,100% 100%,0 100%); opacity:.65; animation:sea-sparkle 5s ease-in-out infinite; mix-blend-mode:screen; }
+.shimmer { position:absolute; left:calc(var(--reflection-x,65%) - 20%); top:35%; width:40%; height:43%; background:repeating-linear-gradient(175deg,transparent 0 10px,#fff6c59a 12px,transparent 14px); clip-path:polygon(48% 0,58% 0,100% 100%,0 100%); opacity:.65; animation:sea-sparkle 5s ease-in-out infinite; }
 @keyframes sea-sparkle { 50% { transform:translateX(9px) scaleX(.8); opacity:.3; } }
 #moon { position:absolute; width:30px; height:30px; top:12%; left:65%; border-radius:50%; background:#fff2b2; box-shadow:0 0 25px #fff0ac99; transition:left 1s,top 1s; }
 #moon { width:23px; height:23px; background:#fff4d3; box-shadow:inset -7px -2px #aabed3,0 0 16px #eaf4ff88; }
@@ -100,14 +100,13 @@ body[data-time="night"]>.cat-wall-clock { filter:brightness(.78) drop-shadow(0 5
 .room:focus-visible {outline:2px solid #a2ad87;outline-offset:-5px;}
 .room {--wall:#f3ebd9;background:radial-gradient(ellipse at 62% 37%,#fff8e499,transparent 60%),linear-gradient(95deg,#d7d3b21a,transparent 27%,transparent 75%,#d4b98c18),var(--wall);}
 .floor {background:repeating-linear-gradient(91deg,transparent 0 17%,#947c4f26 17.08% 17.2%),linear-gradient(#b6a580,#d6c39c 7%,#e7d4b0);border-top-color:#e8ddbe;}
-.sunbeam {background:linear-gradient(110deg,#fff6c965,#f8c56a00 77%);filter:blur(7px);}
+.sunbeam {background:linear-gradient(110deg,#fff6c965,#f8c56a00 77%);}
 .painting {background:linear-gradient(125deg,#98805b,#d6bf8b 45%,#a28b5e);box-shadow:1px 3px 7px #64563c24;}
 .room-page .room-furniture svg,.room-page .cozy svg {filter:drop-shadow(0 1px 1px #6d62441a);}
-.room-page .cat> .flip >svg {filter:drop-shadow(0 1.2px .7px #5b563519);}
 button,.login-link,.download-link,.weather-control select {background:#fff9e8de;border-color:#a99a704c;color:#58644c;box-shadow:0 1px 0 #fffbe6;}
 @media(prefers-reduced-motion:reduce){.room-header,.login-link,.scene-label,.weather-control{transition:none;}}
 
-.room::before {content:"";position:absolute;inset:0;z-index:8;pointer-events:none;opacity:.18;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.7%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%22.15%22%2F%3E%3C%2Fsvg%3E");}
+.room::before {content:"";position:absolute;inset:0;z-index:8;pointer-events:none;opacity:.1;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.7%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%22.15%22%2F%3E%3C%2Fsvg%3E");}
 
 /* A gentle camera breath and independently rippling painted water. */
 .landscape-motion {position:absolute;inset:0;transform-origin:50% 0;animation:landscape-breathe 32s ease-in-out infinite;}
@@ -157,3 +156,8 @@ button,.login-link,.download-link,.weather-control select {background:#fff9e8de;
 .about-dialog form {margin:24px 0 0;text-align:right;}
 .about-dialog button {color:#53634f;background:#edf0e3;border-color:#c9d1b6;}
 @media(max-width:420px){.about-dialog{padding:22px;font-size:13px;}}
+
+/* 경량 모드: 부드러운 움직임은 유지하고 비싼 그리기 효과만 줄인다. */
+html[data-lite="1"] .room-page .room-furniture svg,html[data-lite="1"] .room-page .cozy svg,html[data-lite="1"] .cat-wall-clock,html[data-lite="1"] .sky-cloud {filter:none;}
+html[data-lite="1"] .room::before,html[data-lite="1"] .shimmer {display:none;}
+html[data-lite="1"] .landscape-motion {animation:none;}
