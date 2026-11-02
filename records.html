@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>호리빵구 체중기록</title>
+<title>호리빵구 체중·투약 기록</title>
 <link rel="stylesheet" href="room/cats-extra.css">
 <style>
   :root {
@@ -255,12 +255,30 @@
   .wrap>header h1 {font-family:Georgia,'Apple SD Gothic Neo',serif;font-weight:500;}
   button,.btn {border-color:var(--line);}
   @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#212b28;--card:#2a3530;--ink:#eee8d7;--muted:#b1b4a1;--line:#475145;--accent:#a8b08a;--accent-ink:#202a24;--grid:#3d473d;}}
+
+  .medication-card {position:relative;z-index:6;}
+  .medication-heading {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .medication-heading h2,.medication-heading p {margin:0;}
+  #medToday {font-weight:600;}
+  .medication-week {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin:14px 0;}
+  .med-day {display:flex;flex-direction:column;gap:6px;align-items:center;padding:10px 3px;min-height:70px;border-radius:12px;}
+  .med-day small {font-size:11px;color:var(--muted);}
+  .med-day.planned {border-color:var(--accent);}
+  .med-day.given {background:#dbe9ce;color:#324929;}
+  .med-day.skipped {background:#f2e7cf;color:#705323;}
+  .med-day.is-today {outline:2px solid var(--accent);outline-offset:2px;}
+  .med-day:disabled {opacity:.65;cursor:default;}
+  #medHistory summary {cursor:pointer;padding:6px 0;}
+  .med-note {white-space:pre-wrap;min-width:120px;max-width:280px;overflow-wrap:anywhere;}
+  #medForm textarea,#medForm select {width:100%;font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:8px;}
+  #medMsg {color:var(--danger);}
+  @media(max-width:520px){.medication-week {gap:4px;}.med-day {font-size:12px;}.med-day small {font-size:10px;}.medication-card {padding:12px;}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <a class="btn" href="index.html" style="font-size:12px;text-decoration:none">← 고양이 방</a><h1>🐾 호리빵구 체중기록 <small id="count"></small> <small id="syncStatus"></small></h1>
+    <a class="btn" href="index.html" style="font-size:12px;text-decoration:none">← 고양이 방</a><h1>🐾 호리빵구 체중·투약 기록 <small id="count"></small> <small id="syncStatus"></small></h1>
     <div class="btns">
       <button class="primary" id="addBtn">+ 기록 추가</button>
       <button id="petsBtn">아이들 관리</button>
@@ -279,6 +297,18 @@
   </form>
 
   <div class="pets" id="summary"></div>
+
+  <section class="card medication-card" id="medicationCard" aria-labelledby="medHeading">
+    <div class="medication-heading"><div><h2 id="medHeading">호야 투약 기록</h2><p class="hint">항암제 · 매주 월·수·금</p></div><button type="button" class="primary" id="medAddBtn">+ 투약 기록</button></div>
+    <p id="medToday" role="status"></p>
+    <div class="medication-week" id="medWeek" aria-label="이번 주 투약 일정"></div>
+    <p class="hint">예정일과 실제 투약 기록을 구분해요. 약명과 용량은 처방받은 내용을 그대로 적어주세요.</p>
+    <details id="medHistory"><summary>투약 내역 <span id="medCount"></span></summary>
+      <p class="hint">날짜를 누르면 수정할 수 있어요. 표는 옆으로 밀어 볼 수 있어요.</p>
+      <div class="tablewrap"><table id="medTable"></table></div>
+      <button type="button" class="small" id="medExportBtn">투약 CSV 내보내기</button>
+    </details>
+  </section>
 
   <div class="card" id="chartCard">
     <div class="controls">
@@ -301,7 +331,7 @@
 </div>
 
 <div id="cats" aria-hidden="true"><div id="props"></div></div>
-<footer style="text-align:center;color:var(--muted);font-size:12px;padding:0 0 30px">호리빵구 체중기록 <span id="ver"></span></footer>
+<footer style="text-align:center;color:var(--muted);font-size:12px;padding:0 0 30px">호리빵구 체중·투약 기록 <span id="ver"></span></footer>
 
 <dialog id="recDlg">
   <form method="dialog" id="recForm">
@@ -318,6 +348,22 @@
         <button type="submit" class="primary">저장</button>
       </span>
     </div>
+  </form>
+</dialog>
+
+<dialog id="medDlg" aria-labelledby="medTitle">
+  <form id="medForm">
+    <h2 id="medTitle">호야 투약 기록</h2>
+    <div class="field"><label for="mDate">날짜</label><input type="date" id="mDate" required></div>
+    <div class="field"><label for="mTime">시간</label><input type="time" id="mTime"></div>
+    <div class="field"><label for="mOutcome">투약 여부</label><select id="mOutcome"><option value="given">먹였어요</option><option value="skipped">먹이지 않았어요</option></select></div>
+    <div class="field"><label for="mMedicine">약명</label><input type="text" id="mMedicine" maxlength="100" placeholder="항암제 이름" required></div>
+    <div class="field"><label for="mDose">처방 용량</label><input type="text" id="mDose" maxlength="100" placeholder="처방받은 용량 그대로 (선택)"></div>
+    <div class="field"><label for="mNote">메모</label><textarea id="mNote" rows="3" maxlength="1000" placeholder="먹이지 않은 이유, 관찰한 상태 등 (선택)"></textarea></div>
+    <p class="hint" id="medDateHint"></p>
+    <p class="hint">호야의 항암제 기록은 날짜별로 한 건씩 저장해요. 이미 기록한 날은 기존 내용을 수정합니다. 예정일만으로 투약 완료를 표시하지 않아요.</p>
+    <p id="medMsg" role="alert"></p>
+    <div class="dlgbtns"><button type="button" class="danger" id="mDelete">삭제</button><span><button type="button" id="mCancel">취소</button> <button type="submit" class="primary">저장</button></span></div>
   </form>
 </dialog>
 
@@ -341,7 +387,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.6.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.7.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -413,6 +459,7 @@ function seedState() {
 let state;
 try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
 if (!state || !state.pets || !state.records) state = seedState();
+if (!Array.isArray(state.medications)) state.medications = [];
 let rangeDays = 365;
 try { rangeDays = +localStorage.getItem(KEY + ':range') || 365; } catch (e) {}
 $('range').value = String(rangeDays);
@@ -742,8 +789,14 @@ $('importFile').onchange = async e => {
     if (f.name.endsWith('.json')) {
       const d = JSON.parse(text);
       if (!d.pets || !d.records) throw 0;
-      if (!confirm('현재 데이터를 가져온 데이터로 교체할까요?')) return;
-      state = d;
+      if(d.medications!==undefined&&(!Array.isArray(d.medications)||d.medications.some(r=>!validMedication(r))||new Set(d.medications.map(r=>r.id)).size!==d.medications.length))throw 0;
+      if (!confirm(d.medications===undefined?'체중 데이터를 교체할까요? 투약 기록은 유지합니다.':'체중·투약 기록을 백업 데이터로 교체할까요?')) return;
+      const medications=d.medications===undefined?state.medications:d.medications;
+      if(d.medications!==undefined){
+        state.medications.filter(r=>!medications.some(m=>m.id===r.id)).forEach(r=>queueMedication(null,r.id));
+        medications.forEach(r=>queueMedication(r));
+      }
+      state = {...d,medications};
     } else {
       throw new Error('csv');
     }
@@ -823,6 +876,95 @@ $('todayBox').onsubmit = e => {
 };
 
 $('ver').textContent = 'v' + VERSION;
+
+// ---------- 호야 투약: 보호자가 정한 월·수·금 일정과 실제 기록 ----------
+const MED_DAYS = [1,3,5], MED_WEEKDAYS = ['일','월','화','수','목','금','토'];
+let medicationPending = {};
+try { medicationPending = JSON.parse(localStorage.getItem(KEY+':med-pending')) || {}; } catch(e) {}
+// Recover an edit even if the tab closed between saving its outbox and state.
+const recoveredMedications=new Map(state.medications.map(r=>[r.id,r]));
+for(const [id,row] of Object.entries(medicationPending)){if(row)recoveredMedications.set(id,row);else recoveredMedications.delete(id);}
+state.medications=[...recoveredMedications.values()];
+const medPet = () => state.pets.find(p=>p.name==='호야') || state.pets.find(p=>state.medications.some(r=>r.petId===p.id&&r.petName==='호야'));
+const medId = (petId,date) => 'chemo-'+encodeURIComponent(petId)+'-'+date;
+const medDay = date => new Date(date+'T12:00:00Z').getUTCDay();
+const medAddDays = (date,n) => new Date((dayNum(date)+n)*864e5).toISOString().slice(0,10);
+function medicationRows(){const pet=medPet();return state.medications.filter(r=>r.petId===pet?.id).sort((a,b)=>b.date.localeCompare(a.date)||(b.time||'').localeCompare(a.time||''));}
+function persistMedicationPending(){try{localStorage.setItem(KEY+':med-pending',JSON.stringify(medicationPending));}catch(e){}}
+function queueMedication(row,id=row?.id){medicationPending[id]=row?{...row}:null;persistMedicationPending();}
+function validMedication(row){
+ return row&&typeof row.petId==='string'&&row.petId.length>0&&row.id===medId(row.petId,row.date)
+  &&typeof row.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(row.date)&&Number.isFinite(dayNum(row.date))&&new Date(dayNum(row.date)*864e5).toISOString().slice(0,10)===row.date
+  &&typeof row.time==='string'&&(!row.time||/^([01]\d|2[0-3]):[0-5]\d$/.test(row.time))
+  &&['given','skipped'].includes(row.outcome)&&typeof row.medicine==='string'&&row.medicine.trim().length>0&&row.medicine.length<=100
+  &&typeof row.dose==='string'&&row.dose.length<=100&&typeof row.note==='string'&&row.note.length<=1000;
+}
+function nextMedicationDate(date,rows){
+ for(let n=0;n<14;n++){const d=medAddDays(date,n);if(MED_DAYS.includes(medDay(d))&&!rows.some(r=>r.date===d))return d;}
+ return '';
+}
+function renderMedications(){
+ const pet=medPet();$('medicationCard').hidden=!pet;if(!pet)return;
+ const date=today(),rows=medicationRows(),entry=rows.find(r=>r.date===date),next=nextMedicationDate(date,rows);
+ $('medToday').textContent=entry?(entry.outcome==='given'?'오늘 먹였어요':'오늘은 먹이지 않았어요')+(entry.time?' · '+entry.time:'')+' · '+entry.medicine+(entry.dose?' · '+entry.dose:'')
+  :MED_DAYS.includes(medDay(date))?'오늘은 투약 예정일이에요 · 아직 기록이 없어요':'다음 예정일은 '+fmtDate(next)+' ('+MED_WEEKDAYS[medDay(next)]+')이에요';
+ const monday=medAddDays(date,-((medDay(date)+6)%7));
+ $('medWeek').innerHTML=Array.from({length:7},(_,i)=>{
+  const d=medAddDays(monday,i),r=rows.find(r=>r.date===d),planned=MED_DAYS.includes(medDay(d));
+  const status=r?(r.outcome==='given'?'먹였어요':'미투약 기록'):planned?(d<date?'기록 없음':'투약 예정'):'예정 없음';
+  const label=r?(r.outcome==='given'?'완료':'미투약'):planned?(d<date?'미기록':'예정'):'—';
+  return `<button type="button" class="med-day ${d===date?'is-today ':''}${r?r.outcome:planned?'planned':''}" data-med-date="${d}" ${d>date?'disabled':''} aria-label="${fmtDate(d)} ${MED_WEEKDAYS[medDay(d)]}요일 ${status}" ${d===date?'aria-current="date"':''}><span>${MED_WEEKDAYS[medDay(d)]} ${+d.slice(8)}</span><small>${label}</small></button>`;
+ }).join('');
+ $('medCount').textContent=rows.length+'건';
+ $('medTable').innerHTML=rows.length?'<thead><tr><th>날짜·시간</th><th>투약 여부</th><th>약명·용량</th><th>메모</th></tr></thead><tbody>'+rows.map(r=>`<tr><td><button type="button" class="small" data-med-edit="${esc(r.id)}" aria-label="${esc(r.date)} 투약 기록 수정">${stamp(r.date,r.time)}</button></td><td>${r.outcome==='given'?'먹였어요':'먹이지 않았어요'}</td><td>${esc(r.medicine)}${r.dose?'<br>'+esc(r.dose):''}</td><td class="med-note">${esc(r.note)}</td></tr>`).join('')+'</tbody>':'<tbody><tr><td>아직 투약 기록이 없어요.</td></tr></tbody>';
+}
+let editingMedication=null;
+function medicationDateHint(){
+ const d=$('mDate').value;
+ $('medDateHint').textContent=d?(MED_DAYS.includes(medDay(d))?'월·수·금 투약 예정일이에요.':'정해둔 투약 요일 밖의 날짜예요. 실제 투약 내용을 기록하세요.'):'날짜를 선택해 주세요.';
+}
+function openMedication(date=today(),id=null){
+ const pet=medPet();if(!pet||date>today())return;
+ editingMedication=id?state.medications.find(r=>r.id===id):medicationRows().find(r=>r.date===date);
+ const r=editingMedication,latest=medicationRows()[0];
+ $('medTitle').textContent=r?'호야 투약 기록 수정':'호야 투약 기록';
+ $('mDate').max=today();$('mDate').value=r?.date||date;
+ $('mTime').value=r?r.time:(date===today()?nowTime():'');
+ $('mOutcome').value=r?.outcome||'given';$('mMedicine').value=r?.medicine||latest?.medicine||'항암제';
+ // Do not silently carry a dose forward from an earlier prescription.
+ $('mDose').value=r?.dose||'';$('mNote').value=r?.note||'';
+ $('mDelete').hidden=!r;$('medMsg').textContent='';medicationDateHint();$('medDlg').showModal();
+}
+$('medAddBtn').onclick=()=>openMedication();
+$('medWeek').onclick=e=>{const b=e.target.closest('[data-med-date]');if(b&&!b.disabled)openMedication(b.dataset.medDate);};
+$('medTable').onclick=e=>{const b=e.target.closest('[data-med-edit]');if(b)openMedication(today(),b.dataset.medEdit);};
+$('mDate').onchange=()=>{medicationDateHint();if($('mDate').value!==today()&&!editingMedication)$('mTime').value='';};
+$('mCancel').onclick=()=>$('medDlg').close();
+$('medForm').onsubmit=e=>{
+ e.preventDefault();const pet=medPet();if(!pet)return;
+ const row={id:medId(pet.id,$('mDate').value),petId:pet.id,petName:'호야',date:$('mDate').value,time:$('mTime').value,outcome:$('mOutcome').value,medicine:$('mMedicine').value.trim(),dose:$('mDose').value.trim(),note:$('mNote').value.trim()};
+ if(!validMedication(row)||row.date>today()){$('medMsg').textContent='날짜·시간·약명을 확인해 주세요. 미래 날짜는 완료 기록을 남길 수 없어요.';return;}
+ const existing=state.medications.find(r=>r.id===row.id);
+ if(existing&&existing.id!==editingMedication?.id&&!confirm('이 날짜에 이미 투약 기록이 있어요. 기존 기록을 수정할까요?'))return;
+ if(editingMedication&&editingMedication.id!==row.id){state.medications=state.medications.filter(r=>r.id!==editingMedication.id);queueMedication(null,editingMedication.id);}
+ state.medications=state.medications.filter(r=>r.id!==row.id);state.medications.push(row);queueMedication(row);
+ save();renderMedications();$('medHistory').open=true;$('medDlg').close();
+};
+$('mDelete').onclick=()=>{
+ if(!editingMedication||!confirm('이 투약 기록을 삭제할까요?'))return;
+ state.medications=state.medications.filter(r=>r.id!==editingMedication.id);queueMedication(null,editingMedication.id);
+ save();renderMedications();$('medDlg').close();
+};
+$('medExportBtn').onclick=()=>{
+ const q=s=>'"'+String(s??'').replaceAll('"','""')+'"';
+ const rows=[['아이','날짜','시간','투약 여부','약명','처방 용량','메모'],...medicationRows().slice().reverse().map(r=>['호야',r.date,r.time,r.outcome==='given'?'먹였어요':'먹이지 않았어요',r.medicine,r.dose,r.note])];
+ download('hoya-medications-'+today()+'.csv','\uFEFF'+rows.map(r=>r.map(q).join(',')).join('\n'),'text/csv');
+};
+// Date boundaries use the device's local date, including when a sleeping tab resumes.
+let medicationRenderedDate=today();
+setInterval(()=>{if(today()!==medicationRenderedDate){medicationRenderedDate=today();renderMedications();}},30000);
+addEventListener('focus',()=>renderMedications());
+addEventListener('online',()=>{if(Object.keys(medicationPending).length)schedulePush();});
 
 // ---------- 돌아다니는 고양이 ----------
 // 상태: sleep 잠 / alert 귀 쫑긋 / walk 산책 / sit / loaf 식빵 / purr 골골송 / groom 그루밍
@@ -1781,7 +1923,7 @@ addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(l
 layoutProps();
 queueCatFrame();
 
-function renderAll() { renderSummary(); renderChips(); renderChart(); renderTable(); renderToday(); renderCats(); }
+function renderAll() { renderSummary(); renderChips(); renderChart(); renderTable(); renderToday(); renderCats(); renderMedications(); }
 renderAll();
 
 // ---------- 클라우드 동기화 (Firebase) ----------
@@ -1792,7 +1934,7 @@ const petRow = (p, i) => ({ id: p.id, name: p.name, color: p.color, sort: i });
 const recRow = r => ({ id: r.id, date: r.date, time: r.time || '', w: r.w, q: r.q || {}, note: r.note || '' });
 let snap = { pets: {}, records: {} };   // 서버에 마지막으로 반영된 JSON
 let pushTimer = null, pushing = false, synced = false, unsubs = [];
-let petsSnap = null, recsSnap = null, uploaded = false;
+let petsSnap = null, recsSnap = null, medicationsSnap = null, uploaded = false;
 
 function setStatus(t, bad) {
   const el = $('syncStatus');
@@ -1816,6 +1958,7 @@ async function push() {
   try {
     const batch = db.batch();
     const sent = JSON.parse(JSON.stringify({ pets: state.pets.map(petRow), records: state.records.map(recRow) }));
+    const sentMedications = JSON.parse(JSON.stringify(medicationPending));
     const sentSnap = { pets: {}, records: {} };
     for (const col of ['pets','records']) for (const row of sent[col]) sentSnap[col][row.id] = JSON.stringify(row);
     let ops = 0;
@@ -1826,8 +1969,18 @@ async function push() {
       const alive = new Set(rows.map(r => r.id));
       Object.keys(old).filter(id => !alive.has(id)).forEach(id => { batch.delete(db.collection(col).doc(id)); ops++; });
     }
+    // Only explicit local medication edits are written. An older client or a
+    // stale snapshot must never delete another caregiver's medication records.
+    for(const [id,row] of Object.entries(sentMedications)){
+      if(row){const {id:ignored,...data}=row;batch.set(db.collection('medications').doc(id),data);}
+      else batch.delete(db.collection('medications').doc(id));
+      ops++;
+    }
     if (ops) await batch.commit();
     snap = sentSnap;
+    for(const [id,row] of Object.entries(sentMedications))
+      if(JSON.stringify(medicationPending[id])===JSON.stringify(row))delete medicationPending[id];
+    persistMedicationPending();
     setStatus('☁ 동기화됨');
   } catch (err) {
     console.error(err);
@@ -1852,6 +2005,16 @@ function applyRemote() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
   renderAll();
   setStatus('☁ 동기화됨');
+  if(Object.keys(medicationPending).length)schedulePush();
+}
+function applyMedicationRemote(){
+  if(!medicationsSnap)return;
+  const rows=new Map(medicationsSnap.docs.map(d=>[d.id,{...d.data(),id:d.id}]));
+  for(const [id,row] of Object.entries(medicationPending)){if(row)rows.set(id,row);else rows.delete(id);}
+  state.medications=[...rows.values()];
+  try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
+  renderMedications();
+  if(synced&&Object.keys(medicationPending).length)schedulePush();
 }
 function startSync() {
   $('logoutBtn').hidden = false;
@@ -1859,11 +2022,13 @@ function startSync() {
   const fail = err => { console.error(err); setStatus('⚠ 서버 연결 실패 — 이 기기의 데이터만 보입니다', true); };
   unsubs.push(
     db.collection('pets').onSnapshot({ includeMetadataChanges: true }, s => { petsSnap = s; applyRemote(); }, fail),
-    db.collection('records').onSnapshot({ includeMetadataChanges: true }, s => { recsSnap = s; applyRemote(); }, fail));
+    db.collection('records').onSnapshot({ includeMetadataChanges: true }, s => { recsSnap = s; applyRemote(); }, fail),
+    db.collection('medications').onSnapshot({ includeMetadataChanges: true }, s => { medicationsSnap = s; applyMedicationRemote(); }, fail));
 }
 function stopSync() {
   unsubs.forEach(u => u()); unsubs = [];
-  petsSnap = recsSnap = null; synced = false; uploaded = false;
+  clearTimeout(pushTimer);pushTimer=null;
+  petsSnap = recsSnap = medicationsSnap = null; synced = false; uploaded = false;
 }
 function showLogin() {
   stopSync(); $('logoutBtn').hidden = true;

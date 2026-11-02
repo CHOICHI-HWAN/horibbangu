@@ -4,7 +4,7 @@ const source=fs.readFileSync(require('node:path').join(__dirname,'../records.htm
 let releaseFirst;const writes=[];let commits=0;
 const context={
  state:{pets:[],records:[{id:'r',date:'2026-10-22',w:{p:5}}]},snap:{pets:{},records:{}},pushing:false,pushTimer:null,
- cloud:true,synced:true,setStatus:()=>{},console,setTimeout:()=>1,clearTimeout:()=>{},
+ medicationPending:{},persistMedicationPending:()=>{},cloud:true,synced:true,setStatus:()=>{},console,setTimeout:()=>1,clearTimeout:()=>{},
  db:{collection:()=>({doc:id=>id}),batch:()=>({set:(ref,data)=>writes.push(JSON.parse(JSON.stringify(data))),delete:()=>{},commit:()=>++commits===1?new Promise(r=>releaseFirst=r):Promise.resolve()})}
 };
 vm.createContext(context);

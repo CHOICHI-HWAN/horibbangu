@@ -1,0 +1,81 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+(async()=>{
+ const browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{})});
+ try{
+  const page=await browser.newPage({viewport:{width:390,height:844},timezoneId:'Asia/Seoul'}),errors=[];
+  await page.addInitScript(()=>{
+   const OriginalDate=Date;window.Date=class extends OriginalDate{constructor(...args){super(...(args.length?args:['2026-11-02T10:15:00+09:00']));}static now(){return new OriginalDate('2026-11-02T10:15:00+09:00').getTime();}};
+  });
+  const root=process.env.HORI_SITE_DIR||path.join(__dirname,'..');
+  await page.route('**/*',route=>{
+   const url=new URL(route.request().url());if(url.hostname!=='hori.test')return route.abort();
+   if(url.pathname==='/config.js')return route.fulfill({body:'window.APP_CONFIG={};',contentType:'application/javascript'});
+   const file=path.join(root,url.pathname.slice(1));return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.css')?'text/css':file.endsWith('.js')?'application/javascript':'text/html'});
+  });
+  page.on('pageerror',e=>errors.push(e.message));await page.goto('https://hori.test/records.html');
+  const weights=await page.evaluate(()=>state.records.length);
+  assert.equal(await page.locator('.med-day.planned').count(),3);
+  assert((await page.locator('#medToday').textContent()).includes('아직 기록이 없어요'));
+  assert.deepEqual(await page.evaluate(()=>[1,2,3,4,5,6,7].map(n=>MED_DAYS.includes(medDay('2026-11-0'+n)))),[false,true,false,true,false,true,false]);
+  await page.locator('#medAddBtn').click();assert.equal(await page.locator('#mTime').inputValue(),'10:15');
+  await page.locator('#mMedicine').fill('처방약 A');await page.locator('#mDose').fill('처방전 기재량');
+  await page.locator('#mNote').fill('<img src=x onerror="window.injected=true">\n상태 메모');
+  await page.locator('#medForm button[type=submit]').click();
+  assert.equal(await page.evaluate(()=>state.medications.length),1);
+  assert((await page.locator('#medToday').textContent()).includes('먹였어요 · 10:15'));
+  assert.equal(await page.locator('#medTable img').count(),0);
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem(KEY)).medications[0]);
+  await page.reload();assert.equal(await page.evaluate(()=>state.medications.length),1);
+  assert.equal(await page.evaluate(()=>Object.keys(medicationPending).length),1);
+  await page.locator('#medAddBtn').click();assert.equal(await page.locator('#medTitle').textContent(),'호야 투약 기록 수정');
+  await page.locator('#mOutcome').selectOption('skipped');await page.locator('#mTime').fill('');await page.locator('#medForm button[type=submit]').click();
+  assert.equal(await page.evaluate(()=>state.medications.length),1);
+  assert((await page.locator('#medToday').textContent()).includes('먹이지 않았어요'));
+  await page.locator('#medAddBtn').click();assert.equal(await page.locator('#mTime').inputValue(),'');
+  await page.locator('#mDate').fill('2026-11-04');
+  await page.evaluate(()=>$('medForm').onsubmit({preventDefault(){}}));
+  assert((await page.locator('#medMsg').textContent()).includes('미래 날짜'));
+  assert.equal(await page.evaluate(()=>state.medications.length),1);
+  await page.locator('#mCancel').click();
+  await page.evaluate(()=>openMedication('2026-10-30'));assert.equal(await page.locator('#mTime').inputValue(),'');
+  assert.equal(await page.locator('#mDose').inputValue(),'','Never copy a previous prescription dose into a new date');
+  await page.locator('#mNote').fill('지난 금요일 기록');await page.locator('#medForm button[type=submit]').click();
+  assert.equal(await page.evaluate(()=>state.medications.length),2);
+  // Dates are calendar dates: a Sunday night in UTC is already Monday in Seoul.
+  assert.equal(await page.evaluate(()=>today()),'2026-11-02');
+  assert.equal(await page.evaluate(()=>nextMedicationDate('2026-11-03',[])),'2026-11-04');
+  assert.equal(await page.evaluate(()=>nextMedicationDate('2026-11-06',[{date:'2026-11-06',outcome:'skipped'}])),'2026-11-09');
+  const oldBackup=await page.evaluate(()=>({pets:state.pets,records:state.records}));
+  page.once('dialog',d=>d.accept());
+  await page.locator('#importFile').setInputFiles({name:'old-weights.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(oldBackup))});
+  assert.equal(await page.evaluate(()=>state.medications.length),2,'Old weight-only backups must preserve medication history');
+  // JSON backups include medication history; medication CSV is separate from weight CSV.
+  page.once('dialog',d=>d.accept('json'));const jsonDownload=page.waitForEvent('download');await page.locator('#exportBtn').click();
+  const jd=await jsonDownload;const backup=JSON.parse(fs.readFileSync(await jd.path(),'utf8'));assert.equal(backup.medications.length,2);
+  page.once('dialog',d=>d.accept());await page.locator('#importFile').setInputFiles({name:'full-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({...backup,medications:[saved]}))});
+  await page.waitForFunction(()=>state.medications.length===1&&state.medications[0].outcome==='given');
+  assert.equal(await page.evaluate(()=>state.medications.length),1);assert.equal(await page.evaluate(()=>state.medications[0].outcome),'given');
+  page.once('dialog',d=>d.accept());await page.locator('#importFile').setInputFiles({name:'full-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(backup))});
+  await page.waitForFunction(()=>state.medications.length===2);
+  assert.equal(await page.evaluate(()=>state.medications.length),2);
+  const csvDownload=page.waitForEvent('download');await page.locator('#medExportBtn').click();const cd=await csvDownload;
+  const csv=fs.readFileSync(await cd.path(),'utf8');assert(csv.includes('처방약 A')&&csv.includes('먹이지 않았어요')&&csv.includes('처방 용량'));
+  await page.evaluate(()=>openMedication('2026-10-30'));page.once('dialog',d=>d.dismiss());await page.locator('#mDelete').click();
+  assert.equal(await page.evaluate(()=>state.medications.length),2);
+  page.once('dialog',d=>d.accept());await page.locator('#mDelete').click();assert.equal(await page.evaluate(()=>state.medications.length),1);
+  assert(await page.evaluate(()=>Object.values(medicationPending).includes(null)));
+  await page.reload();assert.equal(await page.evaluate(()=>state.medications.length),1);
+  assert.equal(await page.evaluate(()=>state.records.length),weights,'Medication editing must not touch weights');
+  const box=await page.locator('#medicationCard').boundingBox();assert(box.x>=0&&box.x+box.width<=391,'Mobile card overflows');
+  await page.locator('#medHistory').evaluate(el=>el.open=true);
+  await page.locator('#medicationCard').screenshot({path:path.join(__dirname,'../build/medications-mobile.png')});
+  await page.setViewportSize({width:1440,height:1000});await page.locator('#medicationCard').screenshot({path:path.join(__dirname,'../build/medications-desktop.png')});
+  assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>window.injected),undefined);
+  for(const value of ['2026.11.02 10:00 호야 4.40','2026.11.02 20:00 호야 4.45']){await page.locator('#quick').fill(value);await page.locator('#quickForm button[type=submit]').click();}
+  assert.deepEqual(await page.evaluate(()=>state.records.filter(r=>r.date==='2026-11-02').map(r=>[r.time,r.w.p1])),[['10:00',4.4],['20:00',4.45]],'Multiple daily weight records must remain intact');
+  assert.equal(await page.evaluate(()=>state.medications.length),1);
+  assert(!fs.readFileSync(path.join(root,'index.html'),'utf8').includes('medicationPending'),'Public room must not contain medical data logic');
+  console.log('Mon/Wed/Fri schedule, actual given/skipped records, safe edits/deletes, reload/outbox, old/new backup, CSV, local dates, mobile layout and public-room privacy passed.');
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});
