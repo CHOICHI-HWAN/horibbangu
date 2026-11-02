@@ -125,3 +125,29 @@ svg.wheel.spin .ring {animation-duration:.75s;}
 .cat.airplane-ears.ear-left .ear-r {transform:rotate(8deg);}
 .cat.airplane-ears.ear-right .ear-l {transform:rotate(-8deg);}
 .cat.airplane-ears.ear-right .ear-r {transform:rotate(30deg);}
+
+/* Seated washing: keep the rump and supporting front paw on the surface. */
+.cat .groom-limb,.cat .groom-tongue {display:none;}
+.cat.groom svg .all {transform:translateX(2px);}
+.cat.groom .groom-torso {transform-box:view-box;transform-origin:26px 41px;transform:translateX(4px) scale(.86,1.06);}
+.cat.groom .tail {animation-play-state:paused;transform:rotate(-20deg);}
+.cat.groom .head {transform-box:view-box;transform-origin:47px 28px;animation:none;transform:translate(-5px,-2px) rotate(8deg);}
+.cat.groom .l1,.cat.groom .l3 {transform:translateX(5px) scaleY(.65);}
+.cat.groom .l2 {transform:translateX(6px);}
+.cat.groom .l4 {animation:none;transform:translateX(-1px);}
+.cat.groom-front .l4,.cat.groom-hind .l3 {visibility:hidden;}
+.cat.groom-front .groom-front-arm,.cat.groom-hind .groom-hind-leg {display:inline;}
+.cat.groom .groom-limb {fill:var(--leg);stroke:#776658;stroke-opacity:.45;stroke-width:.7;transform-box:view-box;}
+.cat.groom-front .groom-front-arm {transform-origin:35px 36px;animation:wash-front-paw 1.15s ease-in-out infinite;}
+.cat.groom-hind .groom-hind-leg {transform-origin:23px 38px;animation:wash-hind-paw 1.3s ease-in-out infinite;}
+.cat.groom-front .head {animation:wash-front-head 1.15s ease-in-out infinite;}
+.cat.groom-hind .head {animation:wash-hind-head 1.3s ease-in-out infinite;}
+.cat.groom-front .groom-tongue,.cat.groom-hind .groom-tongue {display:inline;transform-box:view-box;transform-origin:47px 29px;animation:wash-tongue 1.15s ease-in-out infinite;}
+.cat.groom-hind .groom-tongue {animation-duration:1.3s;}
+.cat.groom-front .eyes,.cat.groom-hind .eyes {transform:scaleY(.65);animation:none;}
+.cat.groom-front .blink-lid,.cat.groom-hind .blink-lid {visibility:hidden;}
+@keyframes wash-front-head {0%,65%,100%{transform:translate(-5px,-2px) rotate(8deg);}28%,42%{transform:translate(-5px,.4px) rotate(13deg);}}
+@keyframes wash-front-paw {0%,65%,100%{transform:rotate(-4deg);}28%,42%{transform:rotate(3deg);}}
+@keyframes wash-hind-head {0%,65%,100%{transform:translate(-12px,-1px) rotate(26deg);}28%,42%{transform:translate(-13px,1px) rotate(32deg);}}
+@keyframes wash-hind-paw {0%,65%,100%{transform:rotate(-3deg);}28%,42%{transform:rotate(3deg);}}
+@keyframes wash-tongue {0%,15%,62%,100%{transform:scaleY(.05);opacity:0;}28%,42%{transform:scaleY(1);opacity:1;}}

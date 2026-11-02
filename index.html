@@ -189,13 +189,9 @@ html[data-lite="1"] .landscape-motion {animation:none;}
   .tower { position: absolute; bottom: 0; width: 130px; opacity: .94; }
   .bridges { position: absolute; left: 0; bottom: 0; }
   .cat .head { transform-box: fill-box; transform-origin: 40% 100%; transition: transform .2s; }
-  .cat.groom .head { transform: rotate(32deg); animation: lick .5s ease-in-out infinite; }
-  .cat.groom .l4 { transform: rotate(-68deg); animation: lickleg .5s ease-in-out infinite; }
   .cat.knead .l3 { animation: press .55s ease-in-out infinite; }
   .cat.knead .l4 { animation: press .55s ease-in-out infinite reverse; }
   .cat.knead svg { animation: bob .55s ease-in-out infinite; }
-  @keyframes lick { 0%, 100% { transform: rotate(28deg); } 50% { transform: rotate(40deg); } }
-  @keyframes lickleg { 0%, 100% { transform: rotate(-72deg); } 50% { transform: rotate(-58deg); } }
   @keyframes press { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-2px) scaleY(.55); } }
   @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1.5px); } }
   .cat.scratch svg .all { transform-origin: 25% 100%; transform: rotate(-58deg); }
@@ -457,6 +453,32 @@ svg.wheel.spin .ring {animation-duration:.75s;}
 .cat.airplane-ears.ear-left .ear-r {transform:rotate(8deg);}
 .cat.airplane-ears.ear-right .ear-l {transform:rotate(-8deg);}
 .cat.airplane-ears.ear-right .ear-r {transform:rotate(30deg);}
+
+/* Seated washing: keep the rump and supporting front paw on the surface. */
+.cat .groom-limb,.cat .groom-tongue {display:none;}
+.cat.groom svg .all {transform:translateX(2px);}
+.cat.groom .groom-torso {transform-box:view-box;transform-origin:26px 41px;transform:translateX(4px) scale(.86,1.06);}
+.cat.groom .tail {animation-play-state:paused;transform:rotate(-20deg);}
+.cat.groom .head {transform-box:view-box;transform-origin:47px 28px;animation:none;transform:translate(-5px,-2px) rotate(8deg);}
+.cat.groom .l1,.cat.groom .l3 {transform:translateX(5px) scaleY(.65);}
+.cat.groom .l2 {transform:translateX(6px);}
+.cat.groom .l4 {animation:none;transform:translateX(-1px);}
+.cat.groom-front .l4,.cat.groom-hind .l3 {visibility:hidden;}
+.cat.groom-front .groom-front-arm,.cat.groom-hind .groom-hind-leg {display:inline;}
+.cat.groom .groom-limb {fill:var(--leg);stroke:#776658;stroke-opacity:.45;stroke-width:.7;transform-box:view-box;}
+.cat.groom-front .groom-front-arm {transform-origin:35px 36px;animation:wash-front-paw 1.15s ease-in-out infinite;}
+.cat.groom-hind .groom-hind-leg {transform-origin:23px 38px;animation:wash-hind-paw 1.3s ease-in-out infinite;}
+.cat.groom-front .head {animation:wash-front-head 1.15s ease-in-out infinite;}
+.cat.groom-hind .head {animation:wash-hind-head 1.3s ease-in-out infinite;}
+.cat.groom-front .groom-tongue,.cat.groom-hind .groom-tongue {display:inline;transform-box:view-box;transform-origin:47px 29px;animation:wash-tongue 1.15s ease-in-out infinite;}
+.cat.groom-hind .groom-tongue {animation-duration:1.3s;}
+.cat.groom-front .eyes,.cat.groom-hind .eyes {transform:scaleY(.65);animation:none;}
+.cat.groom-front .blink-lid,.cat.groom-hind .blink-lid {visibility:hidden;}
+@keyframes wash-front-head {0%,65%,100%{transform:translate(-5px,-2px) rotate(8deg);}28%,42%{transform:translate(-5px,.4px) rotate(13deg);}}
+@keyframes wash-front-paw {0%,65%,100%{transform:rotate(-4deg);}28%,42%{transform:rotate(3deg);}}
+@keyframes wash-hind-head {0%,65%,100%{transform:translate(-12px,-1px) rotate(26deg);}28%,42%{transform:translate(-13px,1px) rotate(32deg);}}
+@keyframes wash-hind-paw {0%,65%,100%{transform:rotate(-3deg);}28%,42%{transform:rotate(3deg);}}
+@keyframes wash-tongue {0%,15%,62%,100%{transform:scaleY(.05);opacity:0;}28%,42%{transform:scaleY(1);opacity:1;}}
 </style></head><body class="room-page"><main id="roomScene" class="room" tabindex="0" aria-expanded="false" aria-controls="roomControls" aria-label="할슈타트 호수를 바라보는 발코니 고양이 방">
 <div class="floor"></div><div class="sunbeam"></div>
 <div class="window-frame balcony-opening"><div class="window-view">
@@ -895,6 +917,7 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
     <path class="tailst" d="M12 29 C1 27 1 17 5 11 C7 8 9 9 8 12" fill="none" stroke-width="5.9" stroke-dasharray="2 4"/></g>
   <g class="leg l1"><path d="M14 35V38Q14 42 19 41H21V35" fill="var(--leg)" stroke="#54483e" stroke-opacity=".3" stroke-width=".7"/></g>
   <g class="leg l2"><path d="M28 35V38Q28 42 33 41H35V35" fill="var(--leg)" stroke="#54483e" stroke-opacity=".3" stroke-width=".7"/></g>
+  <g class="groom-torso">
   <path class="coat-fluff" d="M13 21 8 22 9 25 5 28 8 30 5 33 10 34 9 36 18 37Z" fill="var(--body)"/>
   <ellipse class="body" cx="26" cy="28" rx="19.5" ry="13" stroke="#54483e" stroke-opacity=".28" stroke-width=".7"/>
   <g clip-path="url(#__CAT__-body)">
@@ -908,6 +931,7 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
   <path class="norwegian-ruff" d="M33 20Q25 21 28 26L24 29 28 31 25 35 31 36 30 40 35 39 39 43 44 39 49 40 47 34 50 30 46 23Z" fill="#faf5e9"/>
   <path class="salgu-ruff" d="M31 20Q24 20 26 25Q20 27 25 30L22 33Q24 36 28 35L27 39 32 38Q34 44 38 40Q42 44 44 38L49 39 47 34Q52 31 47 28L47 22Z" fill="#fffaf1" stroke="#d6c8b7" stroke-opacity=".4" stroke-width=".5"/>
   <path class="ruff" d="M31 21Q24 24 28 28Q22 32 29 34Q25 38 34 38Q39 43 46 34L45 23Z" fill="var(--muzzle)"/>
+  </g>
   <g class="leg l3"><path d="M12 36L11 38Q10 42 16 42H19Q21 41 20 38L21 36" fill="var(--leg)" stroke="#54483e" stroke-opacity=".32" stroke-width=".7"/><path d="M14 40v1m3-1v1" stroke="#54483e" stroke-opacity=".25" stroke-width=".6"/></g>
   <g class="leg l4"><path d="M36 35L35 38Q34 42 40 42H43Q45 41 44 38V35" fill="var(--leg)" stroke="#54483e" stroke-opacity=".32" stroke-width=".7"/><path d="M38 40v1m3-1v1" stroke="#54483e" stroke-opacity=".25" stroke-width=".6"/></g>
   <g class="head">
@@ -940,6 +964,7 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
     <path class="flat-nose" d="M44.8 23.3Q46.5 22.5 48.3 23.3Q48.5 24.3 46.6 24.8Q44.6 24.4 44.8 23.3Z" fill="#dda5a7"/>
     <path class="nose" d="M45.2 25Q47 24.2 48.8 25L47 27Z"/>
     <path class="mouth" d="M47 27v1m0 0q-1.4 1.5-2.7.1m2.7-.1q1.4 1.5 2.7.1" fill="none" stroke="#775e55" stroke-width=".65"/>
+    <path class="groom-tongue" d="M45.8 28.7Q47 28.2 48.2 28.7L48 31Q47 32.4 46 31Z" fill="#e9a2a6" stroke="#b77b81" stroke-width=".35"/>
     <g class="yawn-mouth">
       <ellipse cx="47" cy="30.7" rx="3.4" ry="4.4" fill="#765451" stroke="#88615c" stroke-width=".65"/>
       <path d="M44.7 32.7Q47 30.8 49.3 32.7Q49 34.4 47 34.5Q45 34.4 44.7 32.7Z" fill="#e6a6aa"/>
@@ -947,6 +972,8 @@ const CAT_SVG = `<svg viewBox="0 0 64 44" aria-hidden="true"><defs>
     </g>
     <path d="m37 27-6-1m6 3-5 1m24-3 6-1m-6 3 5 1" fill="none" stroke="#84756a" stroke-width=".55" opacity=".65"/>
   </g>
+  <g class="groom-limb groom-front-arm"><path d="M34 36Q33 34 36 32L40 31Q44 30 44 33Q44 35 40 35L38 37Z"/><path d="M40 32l.3 1.5m-2-1.2.3 1.5" fill="none" stroke-width=".5"/></g>
+  <g class="groom-limb groom-hind-leg"><path d="M20 39Q15 35 20 30L26 26Q29 25 31 28L34 30Q37 33 33 35L29 34 26 40Z"/><path d="M32 31l1 1.5m-3-.5 1 1.5" fill="none" stroke-width=".5"/></g>
   <g class="tail-scarf" fill="none" stroke-linecap="round"><path d="M14 30C4 42 28 45 47 39Q55 35 46 35" stroke="#54483e" stroke-opacity=".25" stroke-width="8"/><path d="M14 30C4 42 28 45 47 39Q55 35 46 35" stroke="var(--tail)" stroke-width="6.5"/><path d="M27 41l-1-4m9 4-1-4" stroke="var(--stripe)" stroke-opacity=".35" stroke-width="2"/></g>
 </g>
 <g class="scenery-back" stroke-linecap="round" stroke-linejoin="round">
@@ -1267,7 +1294,20 @@ const onTower = c => c.stand?.kind === 'tower';
 const grounded = c => !c.air && !c.stand;
 
 function sleepNow(c, t) { c.noteAt = 0; if (c.name === '호야') { setMode(c, 'chin', t, rnd(7000, 13000)); return; } setMode(c, 'sleep', t, rnd(6000, 14000)); }
-function groomNow(c, t) { setMode(c, 'groom', t, rnd(3000, 5500)); }
+function groomNow(c, t) {
+  if(c.air)return false;
+  c.groomStart=t;c.groomFrontMs=rnd(4600,5750);c.groomHindMs=rnd(5200,6500);
+  const duration=c.groomFrontMs+1000+c.groomHindMs+1400;
+  c.groomAfter=t+duration+rnd(30000,60000);
+  setMode(c,'groom',t,duration);return true;
+}
+function tryGroom(c,t){return !c.air&&t>=(c.groomAfter||0)&&Math.random()<.18&&groomNow(c,t);}
+function groomingPose(c,t){
+  const elapsed=t-(c.groomStart??t),front=c.groomFrontMs||5000,hind=c.groomHindMs||5500;
+  if(elapsed<front)return 'groom groom-front';
+  if(elapsed<front+1000)return 'groom groom-pause';
+  return elapsed<front+1000+hind?'groom groom-hind':'groom groom-pause';
+}
 function yawnNow(c, t, stretch = true) {
   c.stretchAfterYawn = stretch;
   c.gestureAfter = t + rnd(45000, 90000);
@@ -1386,6 +1426,7 @@ function pickIdle(c, t) {
   if (idleGesture(c, t)) return;
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (isHigh(c) && c.stand.kind !== 'ramp') return pickPerch(c, t);
+  if (tryGroom(c,t)) return;
   if (typeof chooseRoomScenery === 'function' && Math.random() < .24 && chooseRoomScenery(c,t)) return;
   if (Math.random() < .55 && chooseFavorite(c, t)) return;
   const r = Math.random();
@@ -1398,7 +1439,6 @@ function pickIdle(c, t) {
   else if (r < .30) setMode(c, Math.random()<.45?'pawWrap':'watch', t, rnd(6000, 11000));
   else if (r < .33) { c.willPurr = Math.random() < .6; setMode(c, 'loaf', t, rnd(2500, 5000)); }
   else if (r < .35) { c.noteAt = 0; setMode(c, 'purr', t, rnd(3500, 6000)); say(c, '골골골~ ♪', 1500); }
-  else if (r < .40) groomNow(c, t);
   else if (r < .44 && cushions.length) { const p = cushions[Math.floor(Math.random() * cushions.length)]; c.tx = p.xc; setMode(c, 'goto', t, 14000); }
   else if (r < .49 && spots.length) startZoom(c, t);   // 타워와 다리를 뛰어다니며 놀기
   else if (r < .81 && spots.length) travelTo(c, spots[Math.floor(Math.random() * spots.length)], t);
@@ -1409,12 +1449,13 @@ function pickIdle(c, t) {
 // 높은 곳(타워·다리)에서의 행동
 function pickPerch(c, t) {
   if (idleGesture(c, t)) return;
+  if (tryGroom(c,t)) return;
   if (typeof chooseRoomScenery === 'function' && Math.random() < .28 && chooseRoomScenery(c,t)) return;
   if (Math.random() < .22 && startAngelFlight(c, t)) return;
   if (Math.random() < .45 && chooseFavorite(c, t)) return;
   const r = Math.random(), spots = highSpots();
   if (r < .16) sleepNow(c, t);
-  else if (r < .26) groomNow(c, t);
+  else if (r < .26) setMode(c,'watch',t,rnd(4000,7000));
   else if (r < .32) setMode(c, Math.random()<.45?'pawWrap':'watch', t, rnd(6000, 11000));
   else if (r < .36) { c.willPurr = false; setMode(c, 'loaf', t, rnd(2500, 5000)); }
   else if (r < .41 && spots.length) startZoom(c, t);   // 다른 높은 곳으로 달려가 놀기
@@ -1597,6 +1638,7 @@ function tickCats(t) {
         if (c.stretchAfterYawn) { c.stretchAfterYawn = false; setMode(c, 'stretch', t, 3600); }
         else setMode(c, 'sit', t, rnd(2000, 4000));
       }
+      else if (c.mode === 'groom') setMode(c,'sit',t,rnd(2000,4000));
       else if (c.mode === 'stretch' || c.mode === 'kiss' || c.mode === 'watch' || c.mode === 'scenery') pickIdle(c, t);
       else if (['sleep','chin','house-low','house-top','hammock','sofa','bed'].includes(c.mode)) {
         if (c.restUntil > t) sleepNow(c, t);
@@ -1657,7 +1699,7 @@ function tickCats(t) {
       case 'roll': pose = 'roll'; break;
       case 'guestExit': case 'walk': c.x += c.dir * c.speed * (c.name === '보리' ? .66 : .82) * dt; pose = 'walking'; break;
       case 'loaf': pose = 'loaf'; break;
-      case 'groom': pose = 'groom'; break;
+      case 'groom': pose = groomingPose(c,t); break;
       case 'sleep':
         pose = 'sleep';
         if (t > (c.noteAt || 0)) {
