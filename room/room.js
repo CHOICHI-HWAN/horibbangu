@@ -203,9 +203,18 @@ let lastLakeFrame=-Infinity,lastWeatherFrame=-Infinity,weatherEvery=40;
 let liteChoice='auto',liteOn=false;
 try{liteChoice=localStorage.getItem('horibbangu-lite')||'auto';}catch(e){}
 const LITE_LABEL={auto:'경량 모드 · 자동',on:'경량 모드 · 켬',off:'경량 모드 · 끔'};
+// 프레임 선택: auto(60, 경량 모드에서는 30) / 30 / 60 / 120. 120은 120Hz 이상 화면에서만 차이가 납니다.
+const FPS_CHOICES=['auto','30','60','120'];
+let fpsChoice='auto';
+try{const v=localStorage.getItem('horibbangu-fps');if(FPS_CHOICES.includes(v))fpsChoice=v;}catch(e){}
+const FPS_LABEL={auto:'프레임 · 자동',30:'프레임 · 30',60:'프레임 · 60',120:'프레임 · 120'};
+function applyFps(){
+  catFps=fpsChoice==='auto'?(liteOn?30:60):Number(fpsChoice);
+  if($('fpsBtn'))$('fpsBtn').textContent=FPS_LABEL[fpsChoice]+(fpsChoice==='auto'?' ('+catFps+')':'');
+}
 function applyLite(on){
   liteOn=on;document.documentElement.dataset.lite=on?'1':'0';
-  catFps=on?30:60;weatherEvery=on?100:40;weatherDimensions=null;
+  weatherEvery=on?100:40;weatherDimensions=null;applyFps();
   if($('liteBtn'))$('liteBtn').textContent=LITE_LABEL[liteChoice]+(liteChoice==='auto'&&on?' (적용 중)':'');
 }
 let sceneDimensions=null,weatherDimensions=null,weatherViewport='',lakePaint=null,weatherPaint=null;
@@ -334,6 +343,12 @@ function initRoom(){
     try{localStorage.setItem('horibbangu-lite',liteChoice);}catch(e){}
     applyLite(liteChoice==='on');slowWindows=0;
     $('status').textContent=liteChoice==='on'?'경량 모드를 켰어요. 움직임은 그대로, 자원 사용을 줄여요.':liteChoice==='off'?'경량 모드를 껐어요. 가장 부드러운 화면이에요.':'화면이 무거워지면 자동으로 경량 모드로 바꿔요.';
+  };
+  $('fpsBtn').onclick=()=>{
+    fpsChoice=FPS_CHOICES[(FPS_CHOICES.indexOf(fpsChoice)+1)%FPS_CHOICES.length];
+    try{localStorage.setItem('horibbangu-fps',fpsChoice);}catch(e){}
+    applyFps();
+    $('status').textContent=fpsChoice==='auto'?'프레임을 자동으로 맞춰요. 평소 60, 경량 모드에서는 30이에요.':'고양이 움직임을 초당 '+fpsChoice+'프레임으로 맞췄어요.'+(fpsChoice==='120'?' 화면이 120Hz 이상일 때만 더 부드러워져요.':'');
   };
   applyLite(liteChoice==='on');
   watchFrameRate();
