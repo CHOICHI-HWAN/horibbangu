@@ -260,9 +260,21 @@
   .medication-heading {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
   .medication-heading h2,.medication-heading p {margin:0;}
   #medToday {font-weight:600;}
-  .medication-week {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin:14px 0;}
-  .med-day {display:flex;flex-direction:column;gap:6px;align-items:center;padding:10px 3px;min-height:70px;border-radius:12px;}
+  .med-calendar-nav {display:flex;align-items:center;justify-content:space-between;gap:8px;margin:20px 0 12px;}
+  .med-calendar-nav h3 {margin:0;font-size:18px;}
+  .med-calendar-nav>div {display:flex;gap:5px;}
+  .med-calendar-nav button {min-height:40px;}
+  .medication-calendar {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin:12px 0;}
+  .med-weekday {text-align:center;font-size:12px;color:var(--muted);padding:5px 0;}
+  .med-legend {display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin:14px 0;}
+  .med-legend span {display:flex;align-items:center;gap:5px;}
+  .med-key {width:10px;height:10px;border:1px solid var(--accent);border-radius:3px;}
+  .med-key.given {background:#dbe9ce;}
+  .med-key.skipped {background:#f2e7cf;}
+  .med-day {display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;padding:10px 3px;min-height:82px;min-width:0;border-radius:12px;}
   .med-day small {font-size:11px;color:var(--muted);}
+  .med-day.given small,.med-day.skipped small {color:inherit;}
+  .med-day .med-time {font-variant-numeric:tabular-nums;font-size:10px;}
   .med-day.planned {border-color:var(--accent);}
   .med-day.given {background:#dbe9ce;color:#324929;}
   .med-day.skipped {background:#f2e7cf;color:#705323;}
@@ -272,7 +284,7 @@
   .med-note {white-space:pre-wrap;min-width:120px;max-width:280px;overflow-wrap:anywhere;}
   #medForm textarea,#medForm select {width:100%;font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:8px;}
   #medMsg {color:var(--danger);}
-  @media(max-width:520px){.medication-week {gap:4px;}.med-day {font-size:12px;}.med-day small {font-size:10px;}.medication-card {padding:12px;}}
+  @media(max-width:520px){.medication-calendar {gap:4px;}.med-calendar-nav h3 {font-size:16px;}.med-calendar-nav button {padding:6px 9px;}.med-day {font-size:12px;}.med-day small {font-size:10px;}.medication-card {padding:12px;}}
 </style>
 </head>
 <body>
@@ -301,8 +313,10 @@
   <section class="card medication-card" id="medicationCard" aria-labelledby="medHeading">
     <div class="medication-heading"><div><h2 id="medHeading">호야 투약 기록</h2><p class="hint">항암제 · 매주 월·수·금</p></div><button type="button" class="primary" id="medAddBtn">+ 투약 기록</button></div>
     <p id="medToday" role="status"></p>
-    <div class="medication-week" id="medWeek" aria-label="이번 주 투약 일정"></div>
-    <p class="hint">예정일과 실제 투약 기록을 구분해요. 약명과 용량은 처방받은 내용을 그대로 적어주세요.</p>
+    <div class="med-calendar-nav"><h3 id="medMonthTitle" aria-live="polite"></h3><div><button type="button" id="medPrevMonth" aria-label="이전 달">‹</button><button type="button" id="medThisMonth">이번 달</button><button type="button" id="medNextMonth" aria-label="다음 달">›</button></div></div>
+    <div class="medication-calendar" id="medCalendar" role="group" aria-labelledby="medMonthTitle"></div>
+    <div class="med-legend" aria-label="투약 상태 안내"><span><i class="med-key" aria-hidden="true"></i>월·수·금 예정</span><span><i class="med-key given" aria-hidden="true"></i>✓ 먹였어요</span><span><i class="med-key skipped" aria-hidden="true"></i>– 미투약 기록</span></div>
+    <p class="hint">날짜를 누르면 기록하거나 수정할 수 있어요. 미래 날짜는 예정만 표시하며, 지난 예정일의 ‘미기록’은 투약 여부를 아직 적지 않았다는 뜻이에요.</p>
     <details id="medHistory"><summary>투약 내역 <span id="medCount"></span></summary>
       <p class="hint">날짜를 누르면 수정할 수 있어요. 표는 옆으로 밀어 볼 수 있어요.</p>
       <div class="tablewrap"><table id="medTable"></table></div>
@@ -387,7 +401,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.7.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.7.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -879,6 +893,11 @@ $('ver').textContent = 'v' + VERSION;
 
 // ---------- 호야 투약: 보호자가 정한 월·수·금 일정과 실제 기록 ----------
 const MED_DAYS = [1,3,5], MED_WEEKDAYS = ['일','월','화','수','목','금','토'];
+let medicationMonth=today().slice(0,7);
+function moveMedicationMonth(delta){
+ const first=medicationMonth+'-01';
+ medicationMonth=medAddDays(first,delta<0?-1:32).slice(0,7);renderMedications();
+}
 let medicationPending = {};
 try { medicationPending = JSON.parse(localStorage.getItem(KEY+':med-pending')) || {}; } catch(e) {}
 // Recover an edit even if the tab closed between saving its outbox and state.
@@ -908,12 +927,15 @@ function renderMedications(){
  const date=today(),rows=medicationRows(),entry=rows.find(r=>r.date===date),next=nextMedicationDate(date,rows);
  $('medToday').textContent=entry?(entry.outcome==='given'?'오늘 먹였어요':'오늘은 먹이지 않았어요')+(entry.time?' · '+entry.time:'')+' · '+entry.medicine+(entry.dose?' · '+entry.dose:'')
   :MED_DAYS.includes(medDay(date))?'오늘은 투약 예정일이에요 · 아직 기록이 없어요':'다음 예정일은 '+fmtDate(next)+' ('+MED_WEEKDAYS[medDay(next)]+')이에요';
- const monday=medAddDays(date,-((medDay(date)+6)%7));
- $('medWeek').innerHTML=Array.from({length:7},(_,i)=>{
-  const d=medAddDays(monday,i),r=rows.find(r=>r.date===d),planned=MED_DAYS.includes(medDay(d));
+ const first=medicationMonth+'-01',offset=medDay(first),days=new Date(Date.UTC(+medicationMonth.slice(0,4),+medicationMonth.slice(5),0)).getUTCDate();
+ $('medMonthTitle').textContent=medicationMonth.slice(0,4)+'년 '+Number(medicationMonth.slice(5))+'월';
+ const byDate=new Map(rows.map(r=>[r.date,r]));
+ $('medCalendar').innerHTML=MED_WEEKDAYS.map(d=>`<span class="med-weekday">${d}</span>`).join('')+Array.from({length:Math.ceil((offset+days)/7)*7},(_,i)=>{
+  if(i<offset||i>=offset+days)return '<span aria-hidden="true"></span>';
+  const d=medAddDays(first,i-offset),r=byDate.get(d),planned=MED_DAYS.includes(medDay(d));
   const status=r?(r.outcome==='given'?'먹였어요':'미투약 기록'):planned?(d<date?'기록 없음':'투약 예정'):'예정 없음';
-  const label=r?(r.outcome==='given'?'완료':'미투약'):planned?(d<date?'미기록':'예정'):'—';
-  return `<button type="button" class="med-day ${d===date?'is-today ':''}${r?r.outcome:planned?'planned':''}" data-med-date="${d}" ${d>date?'disabled':''} aria-label="${fmtDate(d)} ${MED_WEEKDAYS[medDay(d)]}요일 ${status}" ${d===date?'aria-current="date"':''}><span>${MED_WEEKDAYS[medDay(d)]} ${+d.slice(8)}</span><small>${label}</small></button>`;
+  const label=r?(r.outcome==='given'?'✓ 완료':'– 미투약'):planned?(d<date?'미기록':'예정'):'—';
+  return `<button type="button" class="med-day ${d===date?'is-today ':''}${r?r.outcome:planned?'planned':''}" data-med-date="${d}" ${d>date?'disabled':''} aria-label="${fmtDate(d)} ${MED_WEEKDAYS[medDay(d)]}요일 ${status}${r?.time?' '+esc(r.time):''}" ${d===date?'aria-current="date"':''}><span>${+d.slice(8)}</span><small>${label}</small>${r?.time?`<small class="med-time">${esc(r.time)}</small>`:''}</button>`;
  }).join('');
  $('medCount').textContent=rows.length+'건';
  $('medTable').innerHTML=rows.length?'<thead><tr><th>날짜·시간</th><th>투약 여부</th><th>약명·용량</th><th>메모</th></tr></thead><tbody>'+rows.map(r=>`<tr><td><button type="button" class="small" data-med-edit="${esc(r.id)}" aria-label="${esc(r.date)} 투약 기록 수정">${stamp(r.date,r.time)}</button></td><td>${r.outcome==='given'?'먹였어요':'먹이지 않았어요'}</td><td>${esc(r.medicine)}${r.dose?'<br>'+esc(r.dose):''}</td><td class="med-note">${esc(r.note)}</td></tr>`).join('')+'</tbody>':'<tbody><tr><td>아직 투약 기록이 없어요.</td></tr></tbody>';
@@ -936,7 +958,10 @@ function openMedication(date=today(),id=null){
  $('mDelete').hidden=!r;$('medMsg').textContent='';medicationDateHint();$('medDlg').showModal();
 }
 $('medAddBtn').onclick=()=>openMedication();
-$('medWeek').onclick=e=>{const b=e.target.closest('[data-med-date]');if(b&&!b.disabled)openMedication(b.dataset.medDate);};
+$('medPrevMonth').onclick=()=>moveMedicationMonth(-1);
+$('medNextMonth').onclick=()=>moveMedicationMonth(1);
+$('medThisMonth').onclick=()=>{medicationMonth=today().slice(0,7);renderMedications();};
+$('medCalendar').onclick=e=>{const b=e.target.closest('[data-med-date]');if(b&&!b.disabled)openMedication(b.dataset.medDate);};
 $('medTable').onclick=e=>{const b=e.target.closest('[data-med-edit]');if(b)openMedication(today(),b.dataset.medEdit);};
 $('mDate').onchange=()=>{medicationDateHint();if($('mDate').value!==today()&&!editingMedication)$('mTime').value='';};
 $('mCancel').onclick=()=>$('medDlg').close();
@@ -948,7 +973,7 @@ $('medForm').onsubmit=e=>{
  if(existing&&existing.id!==editingMedication?.id&&!confirm('이 날짜에 이미 투약 기록이 있어요. 기존 기록을 수정할까요?'))return;
  if(editingMedication&&editingMedication.id!==row.id){state.medications=state.medications.filter(r=>r.id!==editingMedication.id);queueMedication(null,editingMedication.id);}
  state.medications=state.medications.filter(r=>r.id!==row.id);state.medications.push(row);queueMedication(row);
- save();renderMedications();$('medHistory').open=true;$('medDlg').close();
+ medicationMonth=row.date.slice(0,7);save();renderMedications();$('medDlg').close();
 };
 $('mDelete').onclick=()=>{
  if(!editingMedication||!confirm('이 투약 기록을 삭제할까요?'))return;
