@@ -329,6 +329,8 @@
       <div class="chips" id="chips"></div>
       <span class="seg" id="chartMode" role="group" aria-label="그래프 보기 방식"><button type="button" data-m="split">따로 보기</button><button type="button" data-m="overlay">겹쳐 보기</button></span>
       <select id="range">
+        <option value="30">최근 1개월</option>
+        <option value="90">최근 3개월</option>
         <option value="180">최근 6개월</option>
         <option value="365">최근 1년</option>
         <option value="730">최근 2년</option>
@@ -402,7 +404,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.10.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.10.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -640,7 +642,7 @@ function renderChart() {
           out += `<rect x="${m.l}" y="${bt}" width="${W - m.l - m.r}" height="${Math.max(0, bb - bt)}" fill="${p.color}" opacity=".10"/>`;
         }
         out += `<line x1="${m.l}" x2="${W - m.r}" y1="${ym}" y2="${ym}" stroke="${p.color}" stroke-width="1.5" stroke-dasharray="6 4" opacity=".7"/>`;
-        out += `<text x="${W - m.r - 4}" y="${ym - 5}" text-anchor="end" font-size="11" fill="${p.color}" stroke="var(--card)" stroke-width="3" paint-order="stroke">평균 ${st.mean.toFixed(2)}kg</text>`;
+        out += `<text x="${m.l + 4}" y="${ym - 5}" text-anchor="start" font-size="11" fill="${p.color}" stroke="var(--card)" stroke-width="3" paint-order="stroke">평균 ${st.mean.toFixed(2)}kg</text>`;
       }
       if (o.title) {
         const last = ps[ps.length - 1];
@@ -658,15 +660,19 @@ function renderChart() {
         const ma = moving.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
         out += `<path class="moving-average" aria-label="${esc(p.name)} 최근 5회 이동평균" d="${ma}" fill="none" stroke="${p.color}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity=".22"/>`;
       }
-      const d = ps.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
+      // 같은 날 여러 번 잰 기록은 하루 평균을 이어 선을 그려 위아래로 요동치지 않게 하고, 점은 모두 찍는다.
+      const days = new Map();
+      ps.forEach(pt => { const g = days.get(pt.date) || { n: 0, t: 0, v: 0 }; g.n++; g.t += pt.tn; g.v += pt.v; days.set(pt.date, g); });
+      const d = [...days.values()].map((g, i) => `${i ? 'L' : 'M'}${X(g.t / g.n).toFixed(1)},${Y(g.v / g.n).toFixed(1)}`).join('');
       out += `<path d="${d}" fill="none" stroke="${p.color}" stroke-width="2" stroke-linejoin="round" opacity=".9"/>`;
+      const k = (W - m.l - m.r) / Math.max(1, days.size) < 16 ? .72 : 1;   // 기록이 빽빽하면 표시를 줄인다
       ps.forEach(pt => {
-        const x = X(pt.tn), y = Y(pt.v), bad = st.isOut(pt.v);
+        const x = X(pt.tn), y = Y(pt.v), bad = st.isOut(pt.v), dm = 4 * k;
         chartPoints.push({ x, y, p, pt, bad, mean: st.mean });
-        if (bad) out += `<circle cx="${x}" cy="${y}" r="8" fill="none" stroke="#d9534f" stroke-width="2"/>`;
+        if (bad) out += `<circle cx="${x}" cy="${y}" r="${8 * k}" fill="none" stroke="#d9534f" stroke-width="2"/>`;
         out += pt.note
-          ? `<rect x="${x - 4}" y="${y - 4}" width="8" height="8" transform="rotate(45 ${x} ${y})" fill="var(--card)" stroke="${p.color}" stroke-width="2"/>`
-          : `<circle cx="${x}" cy="${y}" r="3.2" fill="${p.color}"/>`;
+          ? `<rect x="${x - dm}" y="${y - dm}" width="${dm * 2}" height="${dm * 2}" transform="rotate(45 ${x} ${y})" fill="var(--card)" stroke="${p.color}" stroke-width="${k < 1 ? 1.5 : 2}"/>`
+          : `<circle cx="${x}" cy="${y}" r="${3.2 * k}" fill="${p.color}"/>`;
       });
     });
     return out;
