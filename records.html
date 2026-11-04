@@ -51,6 +51,10 @@
   .chip.off { opacity: .45; }
   .chip.off i { background: var(--muted); }
   select, input { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg[hidden] { display: none; }
+  .seg button { border: 0; border-radius: 0; padding: 6px 11px; font-size: 13px; background: var(--card); }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
   #chartBox { position: relative; }
   svg { display: block; width: 100%; touch-action: pan-y; }
   #tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); padding: 6px 10px;
@@ -323,6 +327,7 @@
   <div class="card" id="chartCard">
     <div class="controls">
       <div class="chips" id="chips"></div>
+      <span class="seg" id="chartMode" role="group" aria-label="그래프 보기 방식"><button type="button" data-m="split">따로 보기</button><button type="button" data-m="overlay">겹쳐 보기</button></span>
       <select id="range">
         <option value="180">최근 6개월</option>
         <option value="365">최근 1년</option>
@@ -331,7 +336,7 @@
       </select>
     </div>
     <form id="todayBox" autocomplete="off" hidden></form>
-    <p class="hint">카드 한 번: 그래프 · 두 번: 체중 입력 · 실선: 체중 · 점선: 최근 5회 이동평균 · 긴 점선: 전체 평균</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
+    <p class="hint">카드 한 번: 그래프 · 두 번: 체중 입력 · 실선: 체중 · 굵은 연한 선: 최근 5회 이동평균 · 점선: 전체 평균 · ◇: 메모 있음 · 빨간 동그라미: 이상치</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
   </div>
 
   <div class="card">
@@ -397,7 +402,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.9.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.10.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -572,79 +577,118 @@ function niceStep(span, n) {
 }
 
 let chartPoints = [];
+// 겹쳐 보기: 한 축에 모두 / 따로 보기: 아이마다 자기 축 (몸무게가 달라도 변화가 보인다)
+let chartMode = 'split';
+try { chartMode = localStorage.getItem(KEY + ':cmode') === 'overlay' ? 'overlay' : 'split'; } catch (e) {}
 function renderChart() {
   const svg = $('chart');
-  const W = Math.max(300, $('chartBox').clientWidth), H = W < 520 ? 280 : 360;
-  const m = { l: 44, r: 14, t: 12, b: 28 };
+  const W = Math.max(300, $('chartBox').clientWidth), narrow = W < 520;
+  const m = { l: 44, r: 14 };
   const cutoff = rangeDays ? dayNum(today()) - rangeDays : -Infinity;
   const series = state.pets.filter(p => sel ? p.id === sel : p.on !== false).map(p => ({
     p, pts: petSeries(p.id).filter(pt => dayNum(pt.date) >= cutoff)
   })).filter(s => s.pts.length);
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.setAttribute('height', H);
+  const split = !sel && chartMode === 'split' && series.length > 1;
+  $('chartMode').hidden = !!sel || state.pets.filter(p => p.on !== false).length < 2;
+  $('chartMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === chartMode));
+  svg.setAttribute('viewBox', `0 0 ${W} ${narrow ? 280 : 360}`);
+  svg.setAttribute('height', narrow ? 280 : 360);
   chartPoints = [];
   if (!series.length) {
-    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="var(--muted)">표시할 기록이 없어요</text>`;
+    svg.innerHTML = `<text x="${W / 2}" y="${(narrow ? 280 : 360) / 2}" text-anchor="middle" fill="var(--muted)">표시할 기록이 없어요</text>`;
     return;
   }
   const all = series.flatMap(s => s.pts);
   let x0 = Math.min(...all.map(p => p.tn)), x1 = Math.max(...all.map(p => p.tn));
   if (rangeDays) { x0 = Math.min(x0, cutoff); x1 = Math.max(x1, dayNum(today())); }
   if (x1 === x0) { x0 -= 7; x1 += 7; }
-  let lo = Math.min(...all.map(p => p.v)), hi = Math.max(...all.map(p => p.v));
-  if (hi - lo < 0.5) { const c = (hi + lo) / 2; lo = c - 0.25; hi = c + 0.25; }
-  const step = niceStep(hi - lo, 5);
-  const y0 = Math.floor((lo - step * 0.3) / step) * step, y1 = Math.ceil((hi + step * 0.3) / step) * step;
   const X = d => m.l + (d - x0) / (x1 - x0) * (W - m.l - m.r);
-  const Y = v => H - m.b - (v - y0) / (y1 - y0) * (H - m.t - m.b);
+  const axisH = 28, panelH = narrow ? 158 : 182, titleH = 30;
+  const H = split ? series.length * panelH + axisH : (narrow ? 280 : 360);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('height', H);
+
+  // 한 칸(패널)을 그린다. list는 이 칸에 함께 그릴 아이들.
+  function panel(list, top, height, o) {
+    const pts = list.flatMap(s => s.pts), t = top + (o.title ? titleH : 12), bot = top + height - (o.axis ? axisH : 8);
+    let lo = Math.min(...pts.map(q => q.v)), hi = Math.max(...pts.map(q => q.v));
+    if (o.mean) list.forEach(({ p }) => { const st = petStats(p.id); if (o.band) { lo = Math.min(lo, st.mean - st.th); hi = Math.max(hi, st.mean + st.th); } else { lo = Math.min(lo, st.mean); hi = Math.max(hi, st.mean); } });
+    if (hi - lo < 0.5) { const c = (hi + lo) / 2; lo = c - 0.25; hi = c + 0.25; }
+    const step = niceStep(hi - lo, o.ticks);
+    const y0 = Math.floor((lo - step * 0.3) / step) * step, y1 = Math.ceil((hi + step * 0.3) / step) * step;
+    const Y = v => bot - (v - y0) / (y1 - y0) * (bot - t);
+    let out = '';
+    for (let v = y0; v <= y1 + 1e-9; v += step) {
+      out += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/>`;
+      out += `<text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${+v.toFixed(2)}</text>`;
+    }
+    if (o.axis) {
+      const nx = W < 420 ? 3 : narrow ? 4 : 6;
+      for (let i = 0; i <= nx; i++) {
+        const d = x0 + (x1 - x0) * i / nx;
+        const dt = new Date(d * 864e5).toISOString().slice(0, 10);
+        const anchor = i === 0 ? 'start' : i === nx ? 'end' : 'middle';
+        out += `<text x="${X(d)}" y="${top + height - 8}" text-anchor="${anchor}" font-size="11" fill="var(--muted)">${fmtDate(dt).slice(2)}</text>`;
+      }
+    }
+    list.forEach(({ p, pts: ps }) => {
+      const st = petStats(p.id);
+      if (o.mean) {
+        const ym = Y(st.mean);
+        if (o.band) {
+          const bt = Math.max(t, Y(st.mean + st.th)), bb = Math.min(bot, Y(st.mean - st.th));
+          out += `<rect x="${m.l}" y="${bt}" width="${W - m.l - m.r}" height="${Math.max(0, bb - bt)}" fill="${p.color}" opacity=".10"/>`;
+        }
+        out += `<line x1="${m.l}" x2="${W - m.r}" y1="${ym}" y2="${ym}" stroke="${p.color}" stroke-width="1.5" stroke-dasharray="6 4" opacity=".7"/>`;
+        out += `<text x="${W - m.r - 4}" y="${ym - 5}" text-anchor="end" font-size="11" fill="${p.color}" stroke="var(--card)" stroke-width="3" paint-order="stroke">평균 ${st.mean.toFixed(2)}kg</text>`;
+      }
+      if (o.title) {
+        const last = ps[ps.length - 1];
+        out += `<text x="${m.l}" y="${top + 14}" font-size="13" font-weight="700" fill="${p.color}">${esc(p.name)}</text>`;
+        out += `<text x="${m.l + 8 + esc(p.name).length * 13}" y="${top + 14}" font-size="12" fill="var(--muted)">지금 ${last.v}kg${last.q ? '?' : ''} · 기록 ${ps.length}회</text>`;
+      }
+      if (o.ma) {
+        // Trailing five measurements, computed from full history before range clipping.
+        const history = petSeries(p.id);
+        const moving = ps.map(pt => {
+          const i = history.findIndex(h => h.rid === pt.rid);
+          const win = history.slice(Math.max(0, i - 4), i + 1);
+          return { tn: pt.tn, v: win.reduce((sum, h) => sum + h.v, 0) / win.length };
+        });
+        const ma = moving.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
+        out += `<path class="moving-average" aria-label="${esc(p.name)} 최근 5회 이동평균" d="${ma}" fill="none" stroke="${p.color}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity=".22"/>`;
+      }
+      const d = ps.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
+      out += `<path d="${d}" fill="none" stroke="${p.color}" stroke-width="2" stroke-linejoin="round" opacity=".9"/>`;
+      ps.forEach(pt => {
+        const x = X(pt.tn), y = Y(pt.v), bad = st.isOut(pt.v);
+        chartPoints.push({ x, y, p, pt, bad, mean: st.mean });
+        if (bad) out += `<circle cx="${x}" cy="${y}" r="8" fill="none" stroke="#d9534f" stroke-width="2"/>`;
+        out += pt.note
+          ? `<rect x="${x - 4}" y="${y - 4}" width="8" height="8" transform="rotate(45 ${x} ${y})" fill="var(--card)" stroke="${p.color}" stroke-width="2"/>`
+          : `<circle cx="${x}" cy="${y}" r="3.2" fill="${p.color}"/>`;
+      });
+    });
+    return out;
+  }
 
   let out = '';
-  for (let v = y0; v <= y1 + 1e-9; v += step) {
-    out += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/>`;
-    out += `<text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${+v.toFixed(2)}</text>`;
+  if (split) {
+    series.forEach((s, i) => { out += panel([s], i * panelH, panelH, { title: true, mean: true, band: false, ma: true, ticks: 3, axis: i === series.length - 1 }); });
+  } else if (sel) {
+    out = panel(series, 0, H, { mean: true, band: true, ma: true, ticks: 5, axis: true });
+  } else {
+    out = panel(series, 0, H, { mean: false, ma: false, ticks: 5, axis: true });
   }
-  const nx = W < 520 ? 4 : 6;
-  for (let i = 0; i <= nx; i++) {
-    const d = x0 + (x1 - x0) * i / nx;
-    const dt = new Date(d * 864e5).toISOString().slice(0, 10);
-    const anchor = i === 0 ? 'start' : i === nx ? 'end' : 'middle';
-    out += `<text x="${X(d)}" y="${H - 8}" text-anchor="${anchor}" font-size="11" fill="var(--muted)">${fmtDate(dt).slice(2)}</text>`;
-  }
-  series.forEach(({ p }) => {
-    const st = petStats(p.id), ym = Y(st.mean);
-    if (sel) {
-      const top = Math.max(m.t, Y(st.mean + st.th)), bot = Math.min(H - m.b, Y(st.mean - st.th));
-      out += `<rect x="${m.l}" y="${top}" width="${W - m.l - m.r}" height="${bot - top}" fill="${p.color}" opacity=".10"/>`;
-    }
-    out += `<line x1="${m.l}" x2="${W - m.r}" y1="${ym}" y2="${ym}" stroke="${p.color}" stroke-width="1.5" stroke-dasharray="6 4" opacity=".7"/>`;
-    if (sel) out += `<text x="${W - m.r - 4}" y="${ym - 5}" text-anchor="end" font-size="11" fill="${p.color}">평균 ${st.mean.toFixed(2)}kg</text>`;
-  });
-  series.forEach(({ p, pts }) => {
-    const st = petStats(p.id);
-    // Trailing five measurements, computed from full history before range clipping.
-    const history = petSeries(p.id);
-    const moving = pts.map(pt => {
-      const i = history.findIndex(h => h.rid === pt.rid);
-      const window = history.slice(Math.max(0, i - 4), i + 1);
-      return { tn: pt.tn, v: window.reduce((sum, h) => sum + h.v, 0) / window.length };
-    });
-    const ma = moving.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
-    out += `<path class="moving-average" aria-label="${esc(p.name)} 최근 5회 이동평균" d="${ma}" fill="none" stroke="${p.color}" stroke-width="3" stroke-dasharray="3 5" opacity=".9"/>`;
-    const d = pts.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
-    out += `<path d="${d}" fill="none" stroke="${p.color}" stroke-width="2" stroke-linejoin="round" opacity=".85"/>`;
-    pts.forEach(pt => {
-      const x = X(pt.tn), y = Y(pt.v);
-      const bad = st.isOut(pt.v);
-      chartPoints.push({ x, y, p, pt, bad, mean: st.mean });
-      if (bad) out += `<circle cx="${x}" cy="${y}" r="8" fill="none" stroke="#d9534f" stroke-width="2"/>`;
-      out += pt.note
-        ? `<rect x="${x - 4}" y="${y - 4}" width="8" height="8" transform="rotate(45 ${x} ${y})" fill="var(--card)" stroke="${p.color}" stroke-width="2"/>`
-        : `<circle cx="${x}" cy="${y}" r="3.2" fill="${p.color}"/>`;
-    });
-  });
   out += `<circle id="hover" r="6" fill="none" stroke="var(--ink)" stroke-width="2" style="display:none"/>`;
   svg.innerHTML = out;
 }
+$('chartMode').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  chartMode = b.dataset.m;
+  try { localStorage.setItem(KEY + ':cmode', chartMode); } catch (err) {}
+  renderChart();
+};
 
 const tip = $('tip');
 $('chart').addEventListener('pointermove', e => {
