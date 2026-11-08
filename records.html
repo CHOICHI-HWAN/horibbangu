@@ -405,7 +405,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.11.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.11.2';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -869,8 +869,12 @@ $('importFile').onchange = async e => {
 
 // ---------- 기록자: 로그인한 사람이 자동으로 기록된다 ----------
 let who = '';
+// 가족 계정은 정해 둔 이름으로, 그 밖의 계정은 Google 이름(없으면 이메일 앞부분)으로 남긴다.
+const RECORDER_NAMES = [[/^c\.mario8609@gmail\.com$/i, '치치박사'], [/^ssa/i, 'Castle']];
 function setWho(user) {
-  who = user ? String(user.displayName || (user.email || '').split('@')[0] || '').trim().slice(0, 20) : '';
+  const email = user?.email || '';
+  const fixed = RECORDER_NAMES.find(([re]) => re.test(email));
+  who = !user ? '' : fixed ? fixed[1] : String(user.displayName || email.split('@')[0] || '').trim().slice(0, 20);
 }
 const byTag = r => r.by ? ` <span class="by">· ${esc(r.by)}</span>` : '';
 
