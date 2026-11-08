@@ -61,6 +61,9 @@
     border-radius: 8px; font-size: 12.5px; white-space: nowrap; display: none; transform: translate(-50%, -110%); z-index: 2; }
   .quick { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px; }
   .quick input { flex: 1; min-width: 200px; }
+  .who { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); flex-basis: 100%; }
+  .who input { width: 140px; min-width: 0; flex: none; }
+  .by { color: var(--muted); font-size: 11px; white-space: nowrap; }
   .quick .hint { flex-basis: 100%; margin: 0; min-height: 18px; }
   #todayBox { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c) 10%, var(--card)); border: 1px solid var(--c); }
   #todayBox input { width: 100px; }
@@ -305,6 +308,8 @@
   <form class="card quick" id="quickForm" autocomplete="off">
     <input type="text" id="quick" placeholder="예) 호야, 4.40   (여러 마리: 호야 4.4, 보리 6.0 / 날짜 지정: 2026.10.20 호야 4.4)">
     <button type="submit" class="primary">입력</button>
+    <label class="who">기록자 <input type="text" id="who" list="byNames" maxlength="20" placeholder="이름" autocomplete="off"></label>
+    <datalist id="byNames"></datalist>
     <div id="quickMsg" class="hint"></div>
   </form>
 
@@ -356,6 +361,7 @@
     <div class="field"><label for="fDate">날짜</label><input type="date" id="fDate" required></div>
     <div class="field"><label for="fTime">시간</label><input type="time" id="fTime"></div>
     <div id="fWeights"></div>
+    <div class="field"><label for="fBy">기록자</label><input type="text" id="fBy" list="byNames" maxlength="20" placeholder="누가 쟀나요?"></div>
     <div class="field"><label for="fNote">비고</label><input type="text" id="fNote" placeholder="병원, 증상 등"></div>
     <p class="hint">하루에 여러 번 기록할 수 있어요. 시간은 비워도 되고, 같은 날 기록은 시간 순으로 정렬됩니다. 체중은 kg 단위, 측정 안 한 아이는 비워두세요. 숫자 뒤에 ?를 붙이면 불확실한 값으로 표시됩니다.</p>
     <div class="dlgbtns">
@@ -376,6 +382,7 @@
     <div class="field"><label for="mOutcome">투약 여부</label><select id="mOutcome"><option value="given">먹였어요</option><option value="skipped">먹이지 않았어요</option></select></div>
     <div class="field"><label for="mMedicine">약명</label><input type="text" id="mMedicine" maxlength="100" placeholder="항암제 이름" required></div>
     <div class="field"><label for="mDose">처방 용량</label><input type="text" id="mDose" maxlength="100" placeholder="처방받은 용량 그대로 (선택)"></div>
+    <div class="field"><label for="mBy">먹인 사람</label><input type="text" id="mBy" list="byNames" maxlength="20" placeholder="누가 먹였나요?"></div>
     <div class="field"><label for="mNote">메모</label><textarea id="mNote" rows="3" maxlength="1000" placeholder="먹이지 않은 이유, 관찰한 상태 등 (선택)"></textarea></div>
     <p class="hint" id="medDateHint"></p>
     <p class="hint">호야의 항암제 기록은 날짜별로 한 건씩 저장해요. 이미 기록한 날은 기존 내용을 수정합니다. 예정일만으로 투약 완료를 표시하지 않아요.</p>
@@ -404,7 +411,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.10.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.11.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -495,7 +502,7 @@ const nowTime = () => { const d = new Date(); return String(d.getHours()).padSta
 const tNum = (date, time) => { const m = /^(\d{1,2}):(\d{2})$/.exec(time || ''); return dayNum(date) + (m ? (+m[1] * 60 + +m[2]) / 1440 : 0); };
 const stamp = (date, time) => fmtDate(date) + (time ? ` <span class="tm">${esc(time)}</span>` : '');
 const sorted = () => [...state.records].sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
-const petSeries = id => sorted().filter(r => r.w[id] != null).map(r => ({ date: r.date, time: r.time || '', tn: tNum(r.date, r.time), v: r.w[id], q: !!r.q?.[id], note: r.note, rid: r.id }));
+const petSeries = id => sorted().filter(r => r.w[id] != null).map(r => ({ date: r.date, time: r.time || '', tn: tNum(r.date, r.time), v: r.w[id], q: !!r.q?.[id], note: r.note, rid: r.id, by: r.by || '' }));
 
 // ---------- 요약 카드 ----------
 let sel = null;
@@ -706,7 +713,7 @@ $('chart').addEventListener('pointermove', e => {
   const h = $('hover');
   if (!best || bd > 40 * 40) { tip.style.display = 'none'; h.style.display = 'none'; return; }
   h.setAttribute('cx', best.x); h.setAttribute('cy', best.y); h.style.display = '';
-  tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.time ? ' ' + esc(best.pt.time) : ''}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}`;
+  tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.time ? ' ' + esc(best.pt.time) : ''}${best.pt.by ? '<br>기록자 ' + esc(best.pt.by) : ''}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}`;
   tip.style.left = best.x / sx + 'px'; tip.style.top = best.y / sx + 'px'; tip.style.display = 'block';
 });
 $('chart').addEventListener('pointerleave', () => { tip.style.display = 'none'; const h = $('hover'); if (h) h.style.display = 'none'; });
@@ -725,13 +732,13 @@ function renderTable() {
     const p = state.pets.find(x => x.id === sel);
     const s = petSeries(sel), st = petStats(sel);
     $('tableTitle').innerHTML = `${esc(p.name)} 체중 기록 (${s.length}건) · 평균 <b>${st.mean.toFixed(2)}kg</b> · 최저 ${st.min} · 최고 ${st.max} <span class="out">⚠ 평균에서 ±${st.th.toFixed(2)}kg 넘게 벗어나면 이상치</span>`;
-    $('table').innerHTML = `<tr><th>날짜</th><th style="color:${p.color}">체중(kg)</th><th>증감</th><th>평균 대비</th><th style="text-align:left">비고</th><th></th></tr>` +
+    $('table').innerHTML = `<tr><th>날짜</th><th style="color:${p.color}">체중(kg)</th><th>증감</th><th>평균 대비</th><th>기록자</th><th style="text-align:left">비고</th><th></th></tr>` +
       s.map((pt, i) => {
         const d = i ? pt.v - s[i - 1].v : null;
         const dc = d == null ? '' : d > 0.004 ? 'up' : d < -0.004 ? 'down' : '';
         const ds = d == null ? '–' : (d > 0 ? '+' : '') + d.toFixed(2);
         const dm = pt.v - st.mean, bad = st.isOut(pt.v);
-        return `<tr class="${bad ? 'outrow' : ''}"><td>${stamp(pt.date, pt.time)}</td><td class="${pt.q ? 'q' : ''}"><b>${pt.v}${pt.q ? '?' : ''}</b></td><td class="${dc}">${ds}</td><td class="${bad ? 'out' : ''}">${bad ? '⚠ ' : ''}${dm > 0 ? '+' : ''}${dm.toFixed(2)}</td><td class="note">${esc(pt.note)}</td><td><button class="small" data-edit="${pt.rid}">수정</button></td></tr>`;
+        return `<tr class="${bad ? 'outrow' : ''}"><td>${stamp(pt.date, pt.time)}</td><td class="${pt.q ? 'q' : ''}"><b>${pt.v}${pt.q ? '?' : ''}</b></td><td class="${dc}">${ds}</td><td class="${bad ? 'out' : ''}">${bad ? '⚠ ' : ''}${dm > 0 ? '+' : ''}${dm.toFixed(2)}</td><td class="by">${esc(pt.by || '')}</td><td class="note">${esc(pt.note)}</td><td><button class="small" data-edit="${pt.rid}">수정</button></td></tr>`;
       }).reverse().join('');
     return;
   }
@@ -743,7 +750,7 @@ function renderTable() {
       const bad = v != null && petStats(p.id).isOut(v);
       return v == null ? `<td class="none">–</td>` : `<td class="${r.q?.[p.id] ? 'q' : ''} ${bad ? 'out' : ''}">${bad ? '⚠' : ''}${v}${r.q?.[p.id] ? '?' : ''}</td>`;
     }).join('');
-    return `<tr><td>${stamp(r.date, r.time)}</td>${cells}<td class="note">${esc(r.note)}</td><td><button class="small" data-edit="${r.id}">수정</button></td></tr>`;
+    return `<tr><td>${stamp(r.date, r.time)}${byTag(r)}</td>${cells}<td class="note">${esc(r.note)}</td><td><button class="small" data-edit="${r.id}">수정</button></td></tr>`;
   }).join('');
   $('table').innerHTML = head + rows;
 }
@@ -757,6 +764,7 @@ function openRecord(id) {
   $('fDate').value = editing ? editing.date : today();
   $('fTime').value = editing ? (editing.time || '') : nowTime();
   $('fNote').value = editing ? editing.note : '';
+  $('fBy').value = editing ? (editing.by || '') : who;
   $('fDelete').style.display = editing ? '' : 'none';
   $('fWeights').innerHTML = state.pets.map(p => {
     const v = editing?.w[p.id];
@@ -779,7 +787,8 @@ $('recForm').onsubmit = e => {
     if (s.includes('?')) q[inp.dataset.pet] = true;
   });
   if (!Object.keys(w).length) { e.preventDefault(); alert('체중을 한 마리 이상 입력해주세요.'); return; }
-  const rec = { id: editing?.id || uid(), date: $('fDate').value, time: $('fTime').value || '', w, q, note: $('fNote').value.trim() };
+  const rec = { id: editing?.id || uid(), date: $('fDate').value, time: $('fTime').value || '', w, q, note: $('fNote').value.trim(), by: $('fBy').value.trim().slice(0, 20) };
+  if (rec.by && !editing) setWho(rec.by);   // 남의 기록을 고쳐도 내 기본 이름은 바뀌지 않는다
   if (editing) state.records[state.records.indexOf(editing)] = rec; else state.records.push(rec);
   save(); renderAll();
 };
@@ -834,9 +843,9 @@ $('exportBtn').onclick = () => {
     download(`weights-${stamp}.json`, JSON.stringify(state, null, 2), 'application/json');
   } else {
     const q = s => `"${String(s).replace(/"/g, '""')}"`;
-    const lines = [['날짜', '시간', ...state.pets.map(p => p.name), '비고'].map(q).join(',')];
+    const lines = [['날짜', '시간', ...state.pets.map(p => p.name), '비고', '기록자'].map(q).join(',')];
     sorted().forEach(r => lines.push([fmtDate(r.date), r.time || '',
-      ...state.pets.map(p => r.w[p.id] == null ? '' : r.w[p.id] + (r.q?.[p.id] ? '?' : '')), r.note].map(q).join(',')));
+      ...state.pets.map(p => r.w[p.id] == null ? '' : r.w[p.id] + (r.q?.[p.id] ? '?' : '')), r.note, r.by || ''].map(q).join(',')));
     download(`weights-${stamp}.csv`, '﻿' + lines.join('\n'), 'text/csv');
   }
 };
@@ -866,14 +875,30 @@ $('importFile').onchange = async e => {
   }
 };
 
+// ---------- 기록자: 누가 쟀는지/먹였는지 ----------
+let who = '';
+try { who = localStorage.getItem(KEY + ':by') || ''; } catch (e) {}
+function setWho(v) {
+  who = String(v || '').trim().slice(0, 20);
+  try { localStorage.setItem(KEY + ':by', who); } catch (e) {}
+  if ($('who')) $('who').value = who;
+}
+function renderNames() {
+  const names = [...new Set([...state.records, ...state.medications].map(r => r.by).filter(Boolean))];
+  $('byNames').innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
+  if ($('who') && document.activeElement !== $('who')) $('who').value = who;
+}
+$('who').onchange = () => setWho($('who').value);
+const byTag = r => r.by ? ` <span class="by">· ${esc(r.by)}</span>` : '';
+
 // ---------- 빠른 입력: "호야, 4.40" ----------
 // 같은 날 같은 아이의 두 번째 이후 체중은 새 기록(시간 포함)으로 쌓는다.
 // 아직 값이 없는 아이들만 입력하는 경우에는 그날의 기존 기록에 합쳐 표가 깔끔하게 유지된다.
 function addWeights(date, found, time) {
-  const open = [...state.records].filter(r => r.date === date && (!time || !r.time || r.time === time) && found.every(f => r.w[f.pet.id] == null)).sort((a, b) => (b.time || '').localeCompare(a.time || ''))[0];
+  const open = [...state.records].filter(r => r.date === date && (!time || !r.time || r.time === time) && (!r.by || !who || r.by === who) && found.every(f => r.w[f.pet.id] == null)).sort((a, b) => (b.time || '').localeCompare(a.time || ''))[0];
   let rec = open;
-  if (!rec) { rec = { id: uid(), date, time: time || (date === today() ? nowTime() : ''), w: {}, q: {}, note: '' }; state.records.push(rec); }
-  else if (time && !rec.time) rec.time = time;
+  if (!rec) { rec = { id: uid(), date, time: time || (date === today() ? nowTime() : ''), w: {}, q: {}, note: '', by: who }; state.records.push(rec); }
+  else { if (time && !rec.time) rec.time = time; if (!rec.by && who) rec.by = who; }
   rec.q = rec.q || {};
   found.forEach(({ pet, v, q }) => { rec.w[pet.id] = v; if (q) rec.q[pet.id] = true; else delete rec.q[pet.id]; });
   return rec;
@@ -903,12 +928,13 @@ $('quickForm').onsubmit = e => {
     msg.textContent = unknown.length ? `등록되지 않은 이름: ${unknown.join(', ')}` : '"호야, 4.40" 형식으로 입력해주세요.';
     return;
   }
+  setWho($('who').value);
   const rec = addWeights(date, found, time);
   save(); renderAll();
   $('quick').value = '';
   msg.style.color = 'var(--muted)';
   const times = found.map(f => countOn(f.pet.id, date)).filter(n => n > 1);
-  msg.textContent = `✔ ${fmtDate(date)}${rec.time ? ' ' + rec.time : ''} ` + found.map(f => `${f.pet.name} ${f.v}kg`).join(', ') + ' 저장됨' + (times.length ? ` (그날 ${Math.max(...times)}번째 기록)` : '');
+  msg.textContent = `✔ ${fmtDate(date)}${rec.time ? ' ' + rec.time : ''} ` + found.map(f => `${f.pet.name} ${f.v}kg`).join(', ') + ' 저장됨' + (rec.by ? ` · 기록자 ${rec.by}` : '') + (times.length ? ` (그날 ${Math.max(...times)}번째 기록)` : '');
 };
 
 // ---------- 선택한 아이: 오늘 체중 입력 ----------
@@ -917,7 +943,7 @@ function renderToday(focus, note) {
   if (!sel || !focus) { box.hidden = true; return; }
   const p = state.pets.find(x => x.id === sel), t = today();
   const mine = sorted().filter(r => r.date === t && r.w[sel] != null);
-  const list = mine.map(r => `${r.w[sel]}kg${r.q?.[sel] ? '?' : ''}${r.time ? ` <span class="tm">${esc(r.time)}</span>` : ''}`).join(' · ');
+  const list = mine.map(r => `${r.w[sel]}kg${r.q?.[sel] ? '?' : ''}${r.time ? ` <span class="tm">${esc(r.time)}</span>` : ''}${r.by ? ` <span class="by">${esc(r.by)}</span>` : ''}`).join(' · ');
   box.hidden = false;
   box.style.setProperty('--c', p.color);
   box.innerHTML = `<b>${esc(p.name)}</b> 오늘(${fmtDate(t)}) 체중
@@ -931,6 +957,7 @@ $('todayBox').onsubmit = e => {
   const s = $('todayVal').value.trim(), n = parseFloat(s.replace(/[^\d.]/g, ''));
   if (isNaN(n)) { $('todayVal').focus(); return; }
   const t = today(), pet = state.pets.find(x => x.id === sel);
+  setWho($('who').value);
   addWeights(t, [{ pet, v: n, q: s.includes('?') }], '');
   save(); renderAll(); renderToday(true, `✔ ${n}kg 저장됨`);
 };
@@ -962,7 +989,7 @@ function validMedication(row){
   &&typeof row.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(row.date)&&Number.isFinite(dayNum(row.date))&&new Date(dayNum(row.date)*864e5).toISOString().slice(0,10)===row.date
   &&typeof row.time==='string'&&(!row.time||/^([01]\d|2[0-3]):[0-5]\d$/.test(row.time))
   &&['given','skipped'].includes(row.outcome)&&typeof row.medicine==='string'&&row.medicine.trim().length>0&&row.medicine.length<=100
-  &&typeof row.dose==='string'&&row.dose.length<=100&&typeof row.note==='string'&&row.note.length<=1000;
+  &&(row.by===undefined||(typeof row.by==='string'&&row.by.length<=20))&&typeof row.dose==='string'&&row.dose.length<=100&&typeof row.note==='string'&&row.note.length<=1000;
 }
 function nextMedicationDate(date,rows){
  for(let n=0;n<14;n++){const d=medAddDays(date,n);if(MED_DAYS.includes(medDay(d))&&!rows.some(r=>r.date===d))return d;}
@@ -971,7 +998,7 @@ function nextMedicationDate(date,rows){
 function renderMedications(){
  const pet=medPet();$('medicationCard').hidden=!pet;if(!pet)return;
  const date=today(),rows=medicationRows(),entry=rows.find(r=>r.date===date),next=nextMedicationDate(date,rows);
- $('medToday').textContent=entry?(entry.outcome==='given'?'오늘 먹였어요':'오늘은 먹이지 않았어요')+(entry.time?' · '+entry.time:'')+' · '+entry.medicine+(entry.dose?' · '+entry.dose:'')
+ $('medToday').textContent=entry?(entry.outcome==='given'?'오늘 먹였어요':'오늘은 먹이지 않았어요')+(entry.time?' · '+entry.time:'')+(entry.by?' · '+entry.by:'')+' · '+entry.medicine+(entry.dose?' · '+entry.dose:'')
   :MED_DAYS.includes(medDay(date))?'오늘은 투약 예정일이에요 · 아직 기록이 없어요':'다음 예정일은 '+fmtDate(next)+' ('+MED_WEEKDAYS[medDay(next)]+')이에요';
  const first=medicationMonth+'-01',offset=medDay(first),days=new Date(Date.UTC(+medicationMonth.slice(0,4),+medicationMonth.slice(5),0)).getUTCDate();
  $('medMonthTitle').textContent=medicationMonth.slice(0,4)+'년 '+Number(medicationMonth.slice(5))+'월';
@@ -981,10 +1008,10 @@ function renderMedications(){
   const d=medAddDays(first,i-offset),r=byDate.get(d),planned=MED_DAYS.includes(medDay(d));
   const status=r?(r.outcome==='given'?'먹였어요':'미투약 기록'):planned?(d<date?'기록 없음':'투약 예정'):'예정 없음';
   const label=r?(r.outcome==='given'?'✓ 완료':'– 미투약'):planned?(d<date?'미기록':'예정'):'—';
-  return `<button type="button" class="med-day ${d===date?'is-today ':''}${r?r.outcome:planned?'planned':''}" data-med-date="${d}" ${d>date?'disabled':''} aria-label="${fmtDate(d)} ${MED_WEEKDAYS[medDay(d)]}요일 ${status}${r?.time?' '+esc(r.time):''}" ${d===date?'aria-current="date"':''}><span>${+d.slice(8)}</span><small>${label}</small>${r?.time?`<small class="med-time">${esc(r.time)}</small>`:''}</button>`;
+  return `<button type="button" class="med-day ${d===date?'is-today ':''}${r?r.outcome:planned?'planned':''}" data-med-date="${d}" ${d>date?'disabled':''} aria-label="${fmtDate(d)} ${MED_WEEKDAYS[medDay(d)]}요일 ${status}${r?.time?' '+esc(r.time):''}${r?.by?' '+esc(r.by):''}" ${d===date?'aria-current="date"':''}><span>${+d.slice(8)}</span><small>${label}</small>${r?.time?`<small class="med-time">${esc(r.time)}</small>`:''}</button>`;
  }).join('');
  $('medCount').textContent=rows.length+'건';
- $('medTable').innerHTML=rows.length?'<thead><tr><th>날짜·시간</th><th>투약 여부</th><th>약명·용량</th><th>메모</th></tr></thead><tbody>'+rows.map(r=>`<tr><td><button type="button" class="small" data-med-edit="${esc(r.id)}" aria-label="${esc(r.date)} 투약 기록 수정">${stamp(r.date,r.time)}</button></td><td>${r.outcome==='given'?'먹였어요':'먹이지 않았어요'}</td><td>${esc(r.medicine)}${r.dose?'<br>'+esc(r.dose):''}</td><td class="med-note">${esc(r.note)}</td></tr>`).join('')+'</tbody>':'<tbody><tr><td>아직 투약 기록이 없어요.</td></tr></tbody>';
+ $('medTable').innerHTML=rows.length?'<thead><tr><th>날짜·시간</th><th>투약 여부</th><th>약명·용량</th><th>먹인 사람</th><th>메모</th></tr></thead><tbody>'+rows.map(r=>`<tr><td><button type="button" class="small" data-med-edit="${esc(r.id)}" aria-label="${esc(r.date)} 투약 기록 수정">${stamp(r.date,r.time)}</button></td><td>${r.outcome==='given'?'먹였어요':'먹이지 않았어요'}</td><td>${esc(r.medicine)}${r.dose?'<br>'+esc(r.dose):''}</td><td class="by">${esc(r.by||'')}</td><td class="med-note">${esc(r.note)}</td></tr>`).join('')+'</tbody>':'<tbody><tr><td>아직 투약 기록이 없어요.</td></tr></tbody>';
 }
 let editingMedication=null;
 function medicationDateHint(){
@@ -1000,7 +1027,7 @@ function openMedication(date=today(),id=null){
  $('mTime').value=r?r.time:(date===today()?nowTime():'');
  $('mOutcome').value=r?.outcome||'given';$('mMedicine').value=r?.medicine||latest?.medicine||'항암제';
  // Do not silently carry a dose forward from an earlier prescription.
- $('mDose').value=r?.dose||'';$('mNote').value=r?.note||'';
+ $('mDose').value=r?.dose||'';$('mNote').value=r?.note||'';$('mBy').value=r?r.by||'':who;
  $('mDelete').hidden=!r;$('medMsg').textContent='';medicationDateHint();$('medDlg').showModal();
 }
 $('medAddBtn').onclick=()=>openMedication();
@@ -1013,7 +1040,8 @@ $('mDate').onchange=()=>{medicationDateHint();if($('mDate').value!==today()&&!ed
 $('mCancel').onclick=()=>$('medDlg').close();
 $('medForm').onsubmit=e=>{
  e.preventDefault();const pet=medPet();if(!pet)return;
- const row={id:medId(pet.id,$('mDate').value),petId:pet.id,petName:'호야',date:$('mDate').value,time:$('mTime').value,outcome:$('mOutcome').value,medicine:$('mMedicine').value.trim(),dose:$('mDose').value.trim(),note:$('mNote').value.trim()};
+ const row={id:medId(pet.id,$('mDate').value),petId:pet.id,petName:'호야',date:$('mDate').value,time:$('mTime').value,outcome:$('mOutcome').value,medicine:$('mMedicine').value.trim(),dose:$('mDose').value.trim(),note:$('mNote').value.trim(),by:$('mBy').value.trim().slice(0,20)};
+ if(row.by&&!editingMedication)setWho(row.by);
  if(!validMedication(row)||row.date>today()){$('medMsg').textContent='날짜·시간·약명을 확인해 주세요. 미래 날짜는 완료 기록을 남길 수 없어요.';return;}
  const existing=state.medications.find(r=>r.id===row.id);
  if(existing&&existing.id!==editingMedication?.id&&!confirm('이 날짜에 이미 투약 기록이 있어요. 기존 기록을 수정할까요?'))return;
@@ -1028,7 +1056,7 @@ $('mDelete').onclick=()=>{
 };
 $('medExportBtn').onclick=()=>{
  const q=s=>'"'+String(s??'').replaceAll('"','""')+'"';
- const rows=[['아이','날짜','시간','투약 여부','약명','처방 용량','메모'],...medicationRows().slice().reverse().map(r=>['호야',r.date,r.time,r.outcome==='given'?'먹였어요':'먹이지 않았어요',r.medicine,r.dose,r.note])];
+ const rows=[['아이','날짜','시간','투약 여부','약명','처방 용량','먹인 사람','메모'],...medicationRows().slice().reverse().map(r=>['호야',r.date,r.time,r.outcome==='given'?'먹였어요':'먹이지 않았어요',r.medicine,r.dose,r.by||'',r.note])];
  download('hoya-medications-'+today()+'.csv','\uFEFF'+rows.map(r=>r.map(q).join(',')).join('\n'),'text/csv');
 };
 // Date boundaries use the device's local date, including when a sleeping tab resumes.
@@ -2014,7 +2042,7 @@ addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(l
 layoutProps();
 queueCatFrame();
 
-function renderAll() { renderSummary(); renderChips(); renderChart(); renderTable(); renderToday(); renderCats(); renderMedications(); }
+function renderAll() { renderNames(); renderSummary(); renderChips(); renderChart(); renderTable(); renderToday(); renderCats(); renderMedications(); }
 renderAll();
 
 // ---------- 클라우드 동기화 (Firebase) ----------
@@ -2022,7 +2050,7 @@ const CFG = window.APP_CONFIG || {};
 const cloud = CFG.apiKey && CFG.projectId && window.firebase ? firebase.initializeApp(CFG) : null;
 const auth = cloud && firebase.auth(), db = cloud && firebase.firestore();
 const petRow = (p, i) => ({ id: p.id, name: p.name, color: p.color, sort: i });
-const recRow = r => ({ id: r.id, date: r.date, time: r.time || '', w: r.w, q: r.q || {}, note: r.note || '' });
+const recRow = r => ({ id: r.id, date: r.date, time: r.time || '', w: r.w, q: r.q || {}, note: r.note || '', by: r.by || '' });
 let snap = { pets: {}, records: {} };   // 서버에 마지막으로 반영된 JSON
 let pushTimer = null, pushing = false, synced = false, unsubs = [];
 let petsSnap = null, recsSnap = null, medicationsSnap = null, uploaded = false;
@@ -2143,7 +2171,7 @@ $('logoutBtn').onclick = () => auth.signOut();
 function initCloud() {
   if (!cloud) return;
   auth.onAuthStateChanged(user => {
-    if (user) { if ($('loginDlg').open) $('loginDlg').close(); stopSync(); startSync(); }
+    if (user) { if ($('loginDlg').open) $('loginDlg').close(); if (!who && user.displayName) setWho(user.displayName.split(/\s+/)[0]); stopSync(); startSync(); }
     else showLogin();
   });
 }
