@@ -16,6 +16,7 @@ for name in ['index.html','records.html']:
     scripts=lambda s:sum(len(x.encode()) for x in re.findall(r'<script\b[^>]*>(.*?)</script>',s,re.S))
     report[name]={'javascriptBefore':scripts(source.read_text()),'javascriptAfter':scripts(target.read_text())}
 shutil.copyfile(root/'config.js',site/'config.js')
+for icon in ['apple-touch-icon.png','icon-512.png']:shutil.copyfile(root/'assets'/icon,site/icon)   # iPhone 홈 화면 아이콘
 (site/'room').mkdir(exist_ok=True);shutil.copyfile(root/'room/cats-extra.css',site/'room/cats-extra.css')
 (site/'releases').mkdir(exist_ok=True)
 for name in download_archives()+['SHA256SUMS.txt']:

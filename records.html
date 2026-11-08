@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="/icon-512.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="호리빵구">
+<meta name="theme-color" content="#f6ecd6">
 <title>호리빵구 체중·투약 기록</title>
 <link rel="stylesheet" href="room/cats-extra.css">
 <style>
@@ -406,7 +410,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.12.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.13.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -997,7 +1001,7 @@ function nextMedicationDate(date,rows){
  return '';
 }
 function renderMedications(){
- const pet=medPet();$('medicationCard').hidden=!pet;if(!pet)return;
+ const pet=medPet();$('medicationCard').hidden=!pet||sel!==pet.id;if(!pet||sel!==pet.id)return;   // 호야를 골랐을 때만 보인다
  const date=today(),rows=medicationRows(),entry=rows.find(r=>r.date===date),next=nextMedicationDate(date,rows);
  $('medToday').textContent=entry?(entry.outcome==='given'?'오늘 먹였어요':'오늘은 먹이지 않았어요')+(entry.time?' · '+entry.time:'')+(entry.by?' · '+entry.by:'')+' · '+entry.medicine+(entry.dose?' · '+entry.dose:'')
   :MED_DAYS.includes(medDay(date))?'오늘은 투약 예정일이에요 · 아직 기록이 없어요':'다음 예정일은 '+fmtDate(next)+' ('+MED_WEEKDAYS[medDay(next)]+')이에요';

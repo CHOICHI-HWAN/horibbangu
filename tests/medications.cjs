@@ -13,7 +13,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
    if(url.pathname==='/config.js')return route.fulfill({body:'window.APP_CONFIG={};',contentType:'application/javascript'});
    const file=path.join(root,url.pathname.slice(1));return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.css')?'text/css':file.endsWith('.js')?'application/javascript':'text/html'});
   });
-  page.on('pageerror',e=>errors.push(e.message));await page.goto('https://hori.test/records.html');
+  page.on('pageerror',e=>errors.push(e.message));await page.goto('https://hori.test/records.html');await page.evaluate(()=>selectPet(state.pets.find(p=>p.name==='호야').id));
   const weights=await page.evaluate(()=>state.records.length);
   assert.equal(await page.locator('.med-day.planned').count(),13);
   assert.equal(await page.locator('#medMonthTitle').textContent(),'2026년 11월');
