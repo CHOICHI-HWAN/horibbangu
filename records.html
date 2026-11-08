@@ -410,7 +410,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.13.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.14.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -996,14 +996,20 @@ function validMedication(row){
   &&['given','skipped'].includes(row.outcome)&&typeof row.medicine==='string'&&row.medicine.trim().length>0&&row.medicine.length<=100
   &&(row.by===undefined||(typeof row.by==='string'&&row.by.length<=20))&&typeof row.dose==='string'&&row.dose.length<=100&&typeof row.note==='string'&&row.note.length<=1000;
 }
+// 회차: 실제로 먹인('given') 기록만 날짜순으로 1부터 센다. 안 먹인 날은 번호가 없다.
+function medicationRounds(){
+ const m=new Map();let n=0;
+ medicationRows().slice().reverse().forEach(r=>{if(r.outcome==='given')m.set(r.id,++n);});
+ return m;
+}
 function nextMedicationDate(date,rows){
  for(let n=0;n<14;n++){const d=medAddDays(date,n);if(MED_DAYS.includes(medDay(d))&&!rows.some(r=>r.date===d))return d;}
  return '';
 }
 function renderMedications(){
  const pet=medPet();$('medicationCard').hidden=!pet||sel!==pet.id;if(!pet||sel!==pet.id)return;   // 호야를 골랐을 때만 보인다
- const date=today(),rows=medicationRows(),entry=rows.find(r=>r.date===date),next=nextMedicationDate(date,rows);
- $('medToday').textContent=entry?(entry.outcome==='given'?'오늘 먹였어요':'오늘은 먹이지 않았어요')+(entry.time?' · '+entry.time:'')+(entry.by?' · '+entry.by:'')+' · '+entry.medicine+(entry.dose?' · '+entry.dose:'')
+ const date=today(),rows=medicationRows(),rounds=medicationRounds(),entry=rows.find(r=>r.date===date),next=nextMedicationDate(date,rows);
+ $('medToday').textContent=entry?(entry.outcome==='given'?'오늘 '+rounds.get(entry.id)+'회차 먹였어요':'오늘은 먹이지 않았어요')+(entry.time?' · '+entry.time:'')+(entry.by?' · '+entry.by:'')+' · '+entry.medicine+(entry.dose?' · '+entry.dose:'')
   :MED_DAYS.includes(medDay(date))?'오늘은 투약 예정일이에요 · 아직 기록이 없어요':'다음 예정일은 '+fmtDate(next)+' ('+MED_WEEKDAYS[medDay(next)]+')이에요';
  const first=medicationMonth+'-01',offset=medDay(first),days=new Date(Date.UTC(+medicationMonth.slice(0,4),+medicationMonth.slice(5),0)).getUTCDate();
  $('medMonthTitle').textContent=medicationMonth.slice(0,4)+'년 '+Number(medicationMonth.slice(5))+'월';
@@ -1012,11 +1018,11 @@ function renderMedications(){
   if(i<offset||i>=offset+days)return '<span aria-hidden="true"></span>';
   const d=medAddDays(first,i-offset),r=byDate.get(d),planned=MED_DAYS.includes(medDay(d));
   const status=r?(r.outcome==='given'?'먹였어요':'미투약 기록'):planned?(d<date?'기록 없음':'투약 예정'):'예정 없음';
-  const label=r?(r.outcome==='given'?'✓ 완료':'– 미투약'):planned?(d<date?'미기록':'예정'):'—';
-  return `<button type="button" class="med-day ${d===date?'is-today ':''}${r?r.outcome:planned?'planned':''}" data-med-date="${d}" ${d>date?'disabled':''} aria-label="${fmtDate(d)} ${MED_WEEKDAYS[medDay(d)]}요일 ${status}${r?.time?' '+esc(r.time):''}${r?.by?' '+esc(r.by):''}" ${d===date?'aria-current="date"':''}><span>${+d.slice(8)}</span><small>${label}</small>${r?.time?`<small class="med-time">${esc(r.time)}</small>`:''}</button>`;
+  const label=r?(r.outcome==='given'?'✓ '+rounds.get(r.id)+'회차':'– 미투약'):planned?(d<date?'미기록':'예정'):'—';
+  return `<button type="button" class="med-day ${d===date?'is-today ':''}${r?r.outcome:planned?'planned':''}" data-med-date="${d}" ${d>date?'disabled':''} aria-label="${fmtDate(d)} ${MED_WEEKDAYS[medDay(d)]}요일 ${status}${r&&rounds.has(r.id)?' '+rounds.get(r.id)+'회차':''}${r?.time?' '+esc(r.time):''}${r?.by?' '+esc(r.by):''}" ${d===date?'aria-current="date"':''}><span>${+d.slice(8)}</span><small>${label}</small>${r?.time?`<small class="med-time">${esc(r.time)}</small>`:''}</button>`;
  }).join('');
- $('medCount').textContent=rows.length+'건';
- $('medTable').innerHTML=rows.length?'<thead><tr><th>날짜·시간</th><th>투약 여부</th><th>약명·용량</th><th>먹인 사람</th><th>메모</th></tr></thead><tbody>'+rows.map(r=>`<tr><td><button type="button" class="small" data-med-edit="${esc(r.id)}" aria-label="${esc(r.date)} 투약 기록 수정">${stamp(r.date,r.time)}</button></td><td>${r.outcome==='given'?'먹였어요':'먹이지 않았어요'}</td><td>${esc(r.medicine)}${r.dose?'<br>'+esc(r.dose):''}</td><td class="by">${esc(r.by||'')}</td><td class="med-note">${esc(r.note)}</td></tr>`).join('')+'</tbody>':'<tbody><tr><td>아직 투약 기록이 없어요.</td></tr></tbody>';
+ $('medCount').textContent=rows.length+'건'+(rounds.size?' · 총 '+rounds.size+'회차':'');
+ $('medTable').innerHTML=rows.length?'<thead><tr><th>날짜·시간</th><th>회차</th><th>투약 여부</th><th>약명·용량</th><th>먹인 사람</th><th>메모</th></tr></thead><tbody>'+rows.map(r=>`<tr><td><button type="button" class="small" data-med-edit="${esc(r.id)}" aria-label="${esc(r.date)} 투약 기록 수정">${stamp(r.date,r.time)}</button></td><td>${rounds.has(r.id)?rounds.get(r.id)+'회차':'-'}</td><td>${r.outcome==='given'?'먹였어요':'먹이지 않았어요'}</td><td>${esc(r.medicine)}${r.dose?'<br>'+esc(r.dose):''}</td><td class="by">${esc(r.by||'')}</td><td class="med-note">${esc(r.note)}</td></tr>`).join('')+'</tbody>':'<tbody><tr><td>아직 투약 기록이 없어요.</td></tr></tbody>';
 }
 let editingMedication=null;
 function medicationDateHint(){
@@ -1060,7 +1066,7 @@ $('mDelete').onclick=()=>{
 };
 $('medExportBtn').onclick=()=>{
  const q=s=>'"'+String(s??'').replaceAll('"','""')+'"';
- const rows=[['아이','날짜','시간','투약 여부','약명','처방 용량','먹인 사람','메모'],...medicationRows().slice().reverse().map(r=>['호야',r.date,r.time,r.outcome==='given'?'먹였어요':'먹이지 않았어요',r.medicine,r.dose,r.by||'',r.note])];
+ const rounds=medicationRounds(),rows=[['아이','날짜','시간','회차','투약 여부','약명','처방 용량','먹인 사람','메모'],...medicationRows().slice().reverse().map(r=>['호야',r.date,r.time,rounds.get(r.id)||'',r.outcome==='given'?'먹였어요':'먹이지 않았어요',r.medicine,r.dose,r.by||'',r.note])];
  download('hoya-medications-'+today()+'.csv','\uFEFF'+rows.map(r=>r.map(q).join(',')).join('\n'),'text/csv');
 };
 // Date boundaries use the device's local date, including when a sleeping tab resumes.
