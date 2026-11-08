@@ -310,6 +310,7 @@
   </form>
 
   <div class="pets" id="summary"></div>
+  <div id="hiddenBar" hidden style="margin:-4px 0 12px"><button type="button" class="small" id="hiddenBtn"></button></div>
 
   <section class="card medication-card" id="medicationCard" aria-labelledby="medHeading">
     <div class="medication-heading"><div><h2 id="medHeading">호야 투약 기록</h2><p class="hint">항암제 · 매주 월·수·금</p></div><button type="button" class="primary" id="medAddBtn">+ 투약 기록</button></div>
@@ -405,7 +406,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.11.2';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.12.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -413,6 +414,12 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 // ---------- 초기 데이터 ----------
+// 입양 간 친구·무지개다리를 건넌 친구는 기본으로 숨긴다 (기록은 그대로 보관, '숨긴 친구 보기'로 다시 볼 수 있다).
+const HIDDEN_PETS = { '삼식': '입양 간 친구', '삼순': '입양 간 친구', '로이': '무지개다리를 건넌 친구', '동글이': '무지개다리를 건넌 친구' };
+let showHidden = false;
+try { showHidden = localStorage.getItem('horibbangu-show-hidden') === '1'; } catch (e) {}
+const shownPets = () => state.pets.filter(p => showHidden || !HIDDEN_PETS[p.name]);
+const hiddenCount = () => state.pets.filter(p => HIDDEN_PETS[p.name]).length;
 const SEED_PETS = ['호야', '보리', '건빵', '살구', '로이', '삼식', '삼순'];
 const SEED = `2022-09-02|4.45,5.81,8.86,3.63,-,2.7,2.3|
 2022-09-09|4.45,-,-,3.45,-,-,-|
@@ -531,7 +538,10 @@ function petStats(id) {
 
 function renderSummary() {
   $('count').textContent = state.records.length + '건의 기록';
-  $('summary').innerHTML = state.pets.map(p => {
+  if (!showHidden && sel && HIDDEN_PETS[state.pets.find(x => x.id === sel)?.name]) sel = null;
+  $('hiddenBar').hidden = !hiddenCount();
+  $('hiddenBtn').textContent = showHidden ? '숨긴 친구 감추기' : `숨긴 친구 ${hiddenCount()}마리 보기 (입양·무지개다리)`;
+  $('summary').innerHTML = shownPets().map(p => {
     const s = petSeries(p.id), st = petStats(p.id);
     const cls = 'pet' + (sel === p.id ? ' sel' : '');
     if (!s.length) return `<div class="${cls}" data-id="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)} 그래프 보기, 두 번 누르면 체중 입력" style="--c:${p.color}"><div class="name">${esc(p.name)}</div><div class="meta">기록 없음</div></div>`;
@@ -559,7 +569,7 @@ function renderChips() {
     $('chips').innerHTML = `<button class="chip" style="--c:${p.color}" data-back="1"><i></i>${esc(p.name)} · ✕ 전체 보기</button>`;
     return;
   }
-  $('chips').innerHTML =state.pets.map(p =>
+  $('chips').innerHTML =shownPets().map(p =>
     `<button class="chip ${p.on === false ? 'off' : ''}" style="--c:${p.color}" data-id="${p.id}"><i></i>${esc(p.name)}</button>`).join('');
 }
 $('chips').onclick = e => {
@@ -567,6 +577,11 @@ $('chips').onclick = e => {
   if (b.dataset.back) { selectPet(sel); return; }
   const p = state.pets.find(x => x.id === b.dataset.id);
   p.on = p.on === false; save(); renderChips(); renderChart();
+};
+$('hiddenBtn').onclick = () => {
+  showHidden = !showHidden;
+  try { localStorage.setItem('horibbangu-show-hidden', showHidden ? '1' : '0'); } catch (e) {}
+  renderAll();
 };
 $('range').onchange = () => {
   rangeDays = +$('range').value;
@@ -588,11 +603,11 @@ function renderChart() {
   const W = Math.max(300, $('chartBox').clientWidth), narrow = W < 520;
   const m = { l: 44, r: 14 };
   const cutoff = rangeDays ? dayNum(today()) - rangeDays : -Infinity;
-  const series = state.pets.filter(p => sel ? p.id === sel : p.on !== false).map(p => ({
+  const series = shownPets().filter(p => sel ? p.id === sel : p.on !== false).map(p => ({
     p, pts: petSeries(p.id).filter(pt => dayNum(pt.date) >= cutoff)
   })).filter(s => s.pts.length);
   const split = !sel && chartMode === 'split' && series.length > 1;
-  $('chartMode').hidden = !!sel || state.pets.filter(p => p.on !== false).length < 2;
+  $('chartMode').hidden = !!sel || shownPets().filter(p => p.on !== false).length < 2;
   $('chartMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === chartMode));
   svg.setAttribute('viewBox', `0 0 ${W} ${narrow ? 280 : 360}`);
   svg.setAttribute('height', narrow ? 280 : 360);
@@ -737,9 +752,9 @@ function renderTable() {
     return;
   }
   $('tableTitle').textContent = '전체 기록';
-  const head = `<tr><th>날짜</th>${state.pets.map(p => `<th style="color:${p.color}">${esc(p.name)}</th>`).join('')}<th style="text-align:left">비고</th><th></th></tr>`;
-  const rows = sorted().reverse().map(r => {
-    const cells = state.pets.map(p => {
+  const head = `<tr><th>날짜</th>${shownPets().map(p => `<th style="color:${p.color}">${esc(p.name)}</th>`).join('')}<th style="text-align:left">비고</th><th></th></tr>`;
+  const rows = sorted().reverse().filter(r => shownPets().some(p => r.w[p.id] != null)).map(r => {
+    const cells = shownPets().map(p => {
       const v = r.w[p.id];
       const bad = v != null && petStats(p.id).isOut(v);
       return v == null ? `<td class="none">–</td>` : `<td class="${r.q?.[p.id] ? 'q' : ''} ${bad ? 'out' : ''}">${bad ? '⚠' : ''}${v}${r.q?.[p.id] ? '?' : ''}</td>`;
@@ -759,7 +774,7 @@ function openRecord(id) {
   $('fTime').value = editing ? (editing.time || '') : nowTime();
   $('fNote').value = editing ? editing.note : '';
   $('fDelete').style.display = editing ? '' : 'none';
-  $('fWeights').innerHTML = state.pets.map(p => {
+  $('fWeights').innerHTML = shownPets().map(p => {
     const v = editing?.w[p.id];
     const val = v == null ? '' : v + (editing.q?.[p.id] ? '?' : '');
     return `<div class="field" style="--c:${p.color}"><label><span class="dot"></span>${esc(p.name)}</label>
@@ -779,6 +794,7 @@ $('recForm').onsubmit = e => {
     w[inp.dataset.pet] = n;
     if (s.includes('?')) q[inp.dataset.pet] = true;
   });
+  if (editing) state.pets.filter(p => !shownPets().includes(p) && editing.w[p.id] != null).forEach(p => { w[p.id] = editing.w[p.id]; if (editing.q?.[p.id]) q[p.id] = true; });
   if (!Object.keys(w).length) { e.preventDefault(); alert('체중을 한 마리 이상 입력해주세요.'); return; }
   const rec = { id: editing?.id || uid(), date: $('fDate').value, time: $('fTime').value || '', w, q, note: $('fNote').value.trim(), by: editing ? (editing.by || '') : who };   // 기록자는 로그인한 사람, 수정해도 처음 기록자를 유지
   if (editing) state.records[state.records.indexOf(editing)] = rec; else state.records.push(rec);
@@ -907,12 +923,12 @@ $('quickForm').onsubmit = e => {
   if (tm && +tm[1] < 24 && +tm[2] < 60) { time = tm[1].padStart(2, '0') + ':' + tm[2]; text = text.slice(tm[0].length); }
   const found = [], unknown = [];
   for (const m of text.matchAll(/([^\d\s,:;]+)[\s,:]+(\d+(?:\.\d+)?)(\?)?/g)) {
-    const pet = state.pets.find(p => p.name === m[1]);
+    const pet = shownPets().find(p => p.name === m[1]);
     if (pet) found.push({ pet, v: parseFloat(m[2]), q: !!m[3] }); else unknown.push(m[1]);
   }
   if (unknown.length || !found.length) {
     msg.style.color = 'var(--danger)';
-    msg.textContent = unknown.length ? `등록되지 않은 이름: ${unknown.join(', ')}` : '"호야, 4.40" 형식으로 입력해주세요.';
+    msg.textContent = unknown.length ? (unknown.every(n => HIDDEN_PETS[n]) ? `${unknown.join(', ')}은(는) ${HIDDEN_PETS[unknown[0]]}라 숨겨져 있어요` : `등록되지 않은 이름: ${unknown.join(', ')}`) : '"호야, 4.40" 형식으로 입력해주세요.';
     return;
   }
   const rec = addWeights(date, found, time);
@@ -2109,6 +2125,7 @@ function applyRemote() {
   renderAll();
   setStatus('☁ 동기화됨');
   if(Object.keys(medicationPending).length)schedulePush();
+  backfillRecorder();
 }
 function applyMedicationRemote(){
   if(!medicationsSnap)return;
@@ -2118,6 +2135,18 @@ function applyMedicationRemote(){
   try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
   renderMedications();
   if(synced&&Object.keys(medicationPending).length)schedulePush();
+  backfillRecorder();
+}
+// 기록자 기능 이전에 입력된 기존 기록은 모두 Castle로 남긴다 (한 번만, 기록자가 비어 있는 것만).
+function backfillRecorder() {
+  if (!synced || !cloud) return;
+  try { if (localStorage.getItem(KEY + ':by-backfill-v1')) return; } catch (e) {}
+  if (!petsSnap || !recsSnap || !medicationsSnap || petsSnap.metadata.fromCache && recsSnap.metadata.fromCache) return;
+  let n = 0;
+  state.records.forEach(r => { if (!r.by) { r.by = 'Castle'; n++; } });
+  state.medications = state.medications.map(r => { if (r.by) return r; n++; const row = { ...r, by: 'Castle' }; queueMedication(row); return row; });
+  try { localStorage.setItem(KEY + ':by-backfill-v1', '1'); } catch (e) {}
+  if (n) { save(); renderAll(); setStatus('기존 기록 ' + n + '건의 기록자를 Castle로 채웠어요'); }
 }
 function startSync() {
   $('logoutBtn').hidden = false;
