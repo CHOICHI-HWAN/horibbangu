@@ -248,6 +248,7 @@
   dialog::backdrop { background: rgba(0,0,0,.4); }
   .field { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; margin-bottom: 8px; }
   .field input { width: 100%; }
+  .field .wn { display: grid; gap: 6px; }
   .field .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--c); }
   .dlgbtns { display: flex; justify-content: space-between; margin-top: 14px; gap: 8px; }
   .hint { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
@@ -362,7 +363,6 @@
     <div class="field"><label for="fDate">날짜</label><input type="date" id="fDate" required></div>
     <div class="field"><label for="fTime">시간</label><input type="time" id="fTime"></div>
     <div id="fWeights"></div>
-    <div class="field"><label for="fNote">비고</label><input type="text" id="fNote" placeholder="병원, 증상 등"></div>
     <p class="hint">하루에 여러 번 기록할 수 있어요. 시간은 비워도 되고, 같은 날 기록은 시간 순으로 정렬됩니다. 체중은 kg 단위, 측정 안 한 아이는 비워두세요. 숫자 뒤에 ?를 붙이면 불확실한 값으로 표시됩니다.</p>
     <div class="dlgbtns">
       <button type="button" class="danger" id="fDelete">삭제</button>
@@ -410,7 +410,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.14.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.15.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -480,7 +480,7 @@ function seedState() {
       w[pets[i].id] = parseFloat(v);
       if (v.endsWith('?')) q[pets[i].id] = true;
     });
-    return { id: uid(), date, w, q, note: note || '' };
+    return { id: uid(), date, w, q, note: '', notes: note ? Object.fromEntries(Object.keys(w).map(id => [id, note])) : {} };
   });
   return { pets, records };
 }
@@ -489,6 +489,7 @@ let state;
 try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
 if (!state || !state.pets || !state.records) state = seedState();
 if (!Array.isArray(state.medications)) state.medications = [];
+migrateNotes();
 let rangeDays = 365;
 try { rangeDays = +localStorage.getItem(KEY + ':range') || 365; } catch (e) {}
 $('range').value = String(rangeDays);
@@ -507,7 +508,25 @@ const nowTime = () => { const d = new Date(); return String(d.getHours()).padSta
 const tNum = (date, time) => { const m = /^(\d{1,2}):(\d{2})$/.exec(time || ''); return dayNum(date) + (m ? (+m[1] * 60 + +m[2]) / 1440 : 0); };
 const stamp = (date, time) => fmtDate(date) + (time ? ` <span class="tm">${esc(time)}</span>` : '');
 const sorted = () => [...state.records].sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
-const petSeries = id => sorted().filter(r => r.w[id] != null).map(r => ({ date: r.date, time: r.time || '', tn: tNum(r.date, r.time), v: r.w[id], q: !!r.q?.[id], note: r.note, rid: r.id, by: r.by || '' }));
+// 비고는 고양이마다 따로 둔다: record.notes = { 고양이id: 글 }. 예전 기록의 note(기록 전체 비고)는 migrateNotes()가 체중이 있는 모든 아이에게 복사한다.
+const noteOf = (r, id) => r.notes ? (r.notes[id] || '') : (r.w[id] != null ? (r.note || '') : '');
+function migrateNotes() {
+  let n = 0;
+  state.records.forEach(r => {
+    if (r.notes) return;
+    r.notes = {}; n++;
+    if (r.note) Object.keys(r.w).forEach(id => { r.notes[id] = r.note; });
+    r.note = '';
+  });
+  return n;
+}
+// 같은 글이면 이름을 묶어서 한 줄로: [{t:'병원', ps:[호야, 보리]}]
+function noteGroups(r, list) {
+  const g = new Map();
+  list.forEach(p => { const t = noteOf(r, p.id); if (!t) return; if (!g.has(t)) g.set(t, []); g.get(t).push(p); });
+  return [...g].map(([t, ps]) => ({ t, ps }));
+}
+const petSeries = id => sorted().filter(r => r.w[id] != null).map(r => ({ date: r.date, time: r.time || '', tn: tNum(r.date, r.time), v: r.w[id], q: !!r.q?.[id], note: noteOf(r, id), rid: r.id, by: r.by || '' }));
 
 // ---------- 요약 카드 ----------
 let sel = null;
@@ -763,7 +782,7 @@ function renderTable() {
       const bad = v != null && petStats(p.id).isOut(v);
       return v == null ? `<td class="none">–</td>` : `<td class="${r.q?.[p.id] ? 'q' : ''} ${bad ? 'out' : ''}">${bad ? '⚠' : ''}${v}${r.q?.[p.id] ? '?' : ''}</td>`;
     }).join('');
-    return `<tr><td>${stamp(r.date, r.time)}${byTag(r)}</td>${cells}<td class="note">${esc(r.note)}</td><td><button class="small" data-edit="${r.id}">수정</button></td></tr>`;
+    return `<tr><td>${stamp(r.date, r.time)}${byTag(r)}</td>${cells}<td class="note">${noteGroups(r, shownPets()).map(({ t, ps }) => `<div><b style="color:${ps[0].color}">${ps.map(x => esc(x.name)).join('·')}</b> ${esc(t)}</div>`).join('')}</td><td><button class="small" data-edit="${r.id}">수정</button></td></tr>`;
   }).join('');
   $('table').innerHTML = head + rows;
 }
@@ -776,13 +795,12 @@ function openRecord(id) {
   $('recTitle').textContent = editing ? '기록 수정' : '기록 추가';
   $('fDate').value = editing ? editing.date : today();
   $('fTime').value = editing ? (editing.time || '') : nowTime();
-  $('fNote').value = editing ? editing.note : '';
   $('fDelete').style.display = editing ? '' : 'none';
   $('fWeights').innerHTML = shownPets().map(p => {
     const v = editing?.w[p.id];
     const val = v == null ? '' : v + (editing.q?.[p.id] ? '?' : '');
     return `<div class="field" style="--c:${p.color}"><label><span class="dot"></span>${esc(p.name)}</label>
-      <input type="text" inputmode="decimal" data-pet="${p.id}" value="${val}" placeholder="kg"></div>`;
+      <div class="wn"><input type="text" inputmode="decimal" data-pet="${p.id}" value="${val}" placeholder="kg"><input type="text" data-note="${p.id}" value="${esc(editing ? noteOf(editing, p.id) : '')}" placeholder="비고 (병원, 증상 등)"></div></div>`;
   }).join('');
   $('recDlg').showModal();
 }
@@ -790,7 +808,7 @@ $('addBtn').onclick = () => openRecord(null);
 $('fCancel').onclick = () => $('recDlg').close();
 $('recForm').onsubmit = e => {
   const w = {}, q = {};
-  document.querySelectorAll('#fWeights input').forEach(inp => {
+  document.querySelectorAll('#fWeights input[data-pet]').forEach(inp => {
     const s = inp.value.trim();
     if (!s) return;
     const n = parseFloat(s.replace(/[^\d.]/g, ''));
@@ -798,9 +816,11 @@ $('recForm').onsubmit = e => {
     w[inp.dataset.pet] = n;
     if (s.includes('?')) q[inp.dataset.pet] = true;
   });
-  if (editing) state.pets.filter(p => !shownPets().includes(p) && editing.w[p.id] != null).forEach(p => { w[p.id] = editing.w[p.id]; if (editing.q?.[p.id]) q[p.id] = true; });
+  const notes = {};
+  document.querySelectorAll('#fWeights input[data-note]').forEach(inp => { const t = inp.value.trim(); if (t && w[inp.dataset.note] != null) notes[inp.dataset.note] = t; });
+  if (editing) state.pets.filter(p => !shownPets().includes(p) && editing.w[p.id] != null).forEach(p => { w[p.id] = editing.w[p.id]; if (editing.q?.[p.id]) q[p.id] = true; const t = noteOf(editing, p.id); if (t) notes[p.id] = t; });
   if (!Object.keys(w).length) { e.preventDefault(); alert('체중을 한 마리 이상 입력해주세요.'); return; }
-  const rec = { id: editing?.id || uid(), date: $('fDate').value, time: $('fTime').value || '', w, q, note: $('fNote').value.trim(), by: editing ? (editing.by || '') : who };   // 기록자는 로그인한 사람, 수정해도 처음 기록자를 유지
+  const rec = { id: editing?.id || uid(), date: $('fDate').value, time: $('fTime').value || '', w, q, note: '', notes, by: editing ? (editing.by || '') : who };   // 기록자는 로그인한 사람, 수정해도 처음 기록자를 유지
   if (editing) state.records[state.records.indexOf(editing)] = rec; else state.records.push(rec);
   save(); renderAll();
 };
@@ -857,7 +877,7 @@ $('exportBtn').onclick = () => {
     const q = s => `"${String(s).replace(/"/g, '""')}"`;
     const lines = [['날짜', '시간', ...state.pets.map(p => p.name), '비고', '기록자'].map(q).join(',')];
     sorted().forEach(r => lines.push([fmtDate(r.date), r.time || '',
-      ...state.pets.map(p => r.w[p.id] == null ? '' : r.w[p.id] + (r.q?.[p.id] ? '?' : '')), r.note, r.by || ''].map(q).join(',')));
+      ...state.pets.map(p => r.w[p.id] == null ? '' : r.w[p.id] + (r.q?.[p.id] ? '?' : '')), noteGroups(r, state.pets).map(({ t, ps }) => ps.map(x => x.name).join('·') + ': ' + t).join(' / '), r.by || ''].map(q).join(',')));
     download(`weights-${stamp}.csv`, '﻿' + lines.join('\n'), 'text/csv');
   }
 };
@@ -904,7 +924,7 @@ const byTag = r => r.by ? ` <span class="by">· ${esc(r.by)}</span>` : '';
 function addWeights(date, found, time) {
   const open = [...state.records].filter(r => r.date === date && (!time || !r.time || r.time === time) && (!r.by || !who || r.by === who) && found.every(f => r.w[f.pet.id] == null)).sort((a, b) => (b.time || '').localeCompare(a.time || ''))[0];
   let rec = open;
-  if (!rec) { rec = { id: uid(), date, time: time || (date === today() ? nowTime() : ''), w: {}, q: {}, note: '', by: who }; state.records.push(rec); }
+  if (!rec) { rec = { id: uid(), date, time: time || (date === today() ? nowTime() : ''), w: {}, q: {}, note: '', notes: {}, by: who }; state.records.push(rec); }
   else { if (time && !rec.time) rec.time = time; if (!rec.by && who) rec.by = who; }
   rec.q = rec.q || {};
   found.forEach(({ pet, v, q }) => { rec.w[pet.id] = v; if (q) rec.q[pet.id] = true; else delete rec.q[pet.id]; });
@@ -2060,7 +2080,7 @@ const CFG = window.APP_CONFIG || {};
 const cloud = CFG.apiKey && CFG.projectId && window.firebase ? firebase.initializeApp(CFG) : null;
 const auth = cloud && firebase.auth(), db = cloud && firebase.firestore();
 const petRow = (p, i) => ({ id: p.id, name: p.name, color: p.color, sort: i });
-const recRow = r => ({ id: r.id, date: r.date, time: r.time || '', w: r.w, q: r.q || {}, note: r.note || '', by: r.by || '' });
+const recRow = r => ({ id: r.id, date: r.date, time: r.time || '', w: r.w, q: r.q || {}, note: r.notes ? '' : (r.note || ''), notes: r.notes || {}, by: r.by || '' });
 let snap = { pets: {}, records: {} };   // 서버에 마지막으로 반영된 JSON
 let pushTimer = null, pushing = false, synced = false, unsubs = [];
 let petsSnap = null, recsSnap = null, medicationsSnap = null, uploaded = false;
@@ -2136,6 +2156,7 @@ function applyRemote() {
   setStatus('☁ 동기화됨');
   if(Object.keys(medicationPending).length)schedulePush();
   backfillRecorder();
+  if (migrateNotes()) { save(); renderAll(); }   // 예전 기록의 비고를 아이별 비고로 옮긴다
 }
 function applyMedicationRemote(){
   if(!medicationsSnap)return;
