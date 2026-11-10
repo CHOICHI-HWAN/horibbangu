@@ -263,6 +263,8 @@
   @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#212b28;--card:#2a3530;--ink:#eee8d7;--muted:#b1b4a1;--line:#475145;--accent:#a8b08a;--accent-ink:#202a24;--grid:#3d473d;}}
 
   .medication-card {position:relative;z-index:6;}
+  .vomit-card .tablewrap {margin-top:8px;}
+  .vom-note {white-space:pre-wrap;min-width:120px;max-width:280px;overflow-wrap:anywhere;}
   .medication-heading {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
   .medication-heading h2,.medication-heading p {margin:0;}
   #medToday {font-weight:600;}
@@ -331,6 +333,14 @@
     </details>
   </section>
 
+  <section class="card vomit-card" id="vomitCard" aria-labelledby="vomHeading" hidden>
+    <div class="medication-heading"><div><h2 id="vomHeading">토 기록</h2><p class="hint" id="vomSummary"></p></div><button type="button" class="primary" id="vomAddBtn">+ 토 기록</button></div>
+    <details open id="vomHistory"><summary>토 내역 <span id="vomCount"></span></summary>
+      <p class="hint">날짜를 누르면 수정할 수 있어요. 그래프에는 토한 날이 빨간 ▲로 표시돼요.</p>
+      <div class="tablewrap"><table id="vomTable"></table></div>
+    </details>
+  </section>
+
   <div class="card" id="chartCard">
     <div class="controls">
       <div class="chips" id="chips"></div>
@@ -345,7 +355,7 @@
       </select>
     </div>
     <form id="todayBox" autocomplete="off" hidden></form>
-    <p class="hint">카드 한 번: 그래프 · 두 번: 체중 입력 · 실선: 체중 · 굵은 연한 선: 최근 5회 이동평균 · 점선: 전체 평균 · ◇: 메모 있음 · 빨간 동그라미: 이상치</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
+    <p class="hint">카드 한 번: 그래프 · 두 번: 체중 입력 · 실선: 체중 · 빨간 ▲: 토 · 굵은 연한 선: 최근 5회 이동평균 · 점선: 전체 평균 · ◇: 메모 있음 · 빨간 동그라미: 이상치</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
   </div>
 
   <div class="card">
@@ -390,6 +400,20 @@
   </form>
 </dialog>
 
+<dialog id="vomDlg" aria-labelledby="vomTitle">
+  <form id="vomForm">
+    <h2 id="vomTitle">토 기록</h2>
+    <div class="field"><label for="vDate">날짜</label><input type="date" id="vDate" required></div>
+    <div class="field"><label for="vTime">시간</label><input type="time" id="vTime"></div>
+    <div class="field"><label for="vCount">횟수</label><input type="number" id="vCount" min="1" max="20" step="1" value="1" inputmode="numeric" required></div>
+    <div class="field"><label for="vKind">내용</label><select id="vKind"><option>사료</option><option>음식물</option><option>거품·노란 액체</option><option>털뭉치</option><option>기타</option></select></div>
+    <div class="field"><label for="vNote">메모</label><textarea id="vNote" rows="3" maxlength="1000" placeholder="먹은 시간, 컨디션, 피 섞임 등 (선택)"></textarea></div>
+    <p class="hint">같은 날에도 여러 번 기록할 수 있어요. 한 번에 여러 번 토했다면 횟수를 늘려 주세요.</p>
+    <p id="vomMsg" role="alert"></p>
+    <div class="dlgbtns"><button type="button" class="danger" id="vDelete">삭제</button><span><button type="button" id="vCancel">취소</button> <button type="submit" class="primary">저장</button></span></div>
+  </form>
+</dialog>
+
 <dialog id="loginDlg">
   <h2>🐾 호리빵구 로그인</h2>
   <p class="hint">허용된 Google 계정으로 로그인할 수 있어요.</p>
@@ -410,7 +434,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.15.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.16.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -489,6 +513,7 @@ let state;
 try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
 if (!state || !state.pets || !state.records) state = seedState();
 if (!Array.isArray(state.medications)) state.medications = [];
+if (!Array.isArray(state.vomits)) state.vomits = [];
 migrateNotes();
 let rangeDays = 365;
 try { rangeDays = +localStorage.getItem(KEY + ':range') || 365; } catch (e) {}
@@ -714,6 +739,12 @@ function renderChart() {
           : `<circle cx="${x}" cy="${y}" r="${3.2 * k}" fill="${p.color}"/>`;
       });
     });
+    // 토한 날: 패널 바닥에 빨간 ▲ (아이 색 테두리)
+    list.forEach(({ p }) => state.vomits.filter(v => v.petId === p.id).forEach(v => {
+      const dn = dayNum(v.date); if (dn > x1 || dn + 1 < x0) return;   // 범위 밖 날짜는 건너뛰고, 오늘처럼 끝점을 살짝 넘는 시간은 끝점에 붙인다
+      const x = X(Math.min(x1, Math.max(x0, tNum(v.date, v.time)))), by = bot - 1;
+      out += `<path d="M${(x - 4.5).toFixed(1)},${by} L${(x + 4.5).toFixed(1)},${by} L${x.toFixed(1)},${by - 9} Z" fill="#d9534f" stroke="${p.color}" stroke-width="1" opacity=".9"><title>${esc(p.name)} 토 ${v.count}회 · ${fmtDate(v.date)}${v.time ? ' ' + esc(v.time) : ''} · ${esc(v.kind)}</title></path>`;
+    }));
     return out;
   }
 
@@ -897,7 +928,7 @@ $('importFile').onchange = async e => {
         state.medications.filter(r=>!medications.some(m=>m.id===r.id)).forEach(r=>queueMedication(null,r.id));
         medications.forEach(r=>queueMedication(r));
       }
-      state = {...d,medications};
+      state = {...d,medications,vomits:state.vomits};
     } else {
       throw new Error('csv');
     }
@@ -1088,6 +1119,65 @@ $('medExportBtn').onclick=()=>{
  const q=s=>'"'+String(s??'').replaceAll('"','""')+'"';
  const rounds=medicationRounds(),rows=[['아이','날짜','시간','#','투약 여부','약명','처방 용량','먹인 사람','메모'],...medicationRows().slice().reverse().map(r=>['호야',r.date,r.time,rounds.get(r.id)||'',r.outcome==='given'?'먹였어요':'먹이지 않았어요',r.medicine,r.dose,r.by||'',r.note])];
  download('hoya-medications-'+today()+'.csv','\uFEFF'+rows.map(r=>r.map(q).join(',')).join('\n'),'text/csv');
+};
+// ---------- 토 기록 (아이마다 · 하루에 여러 번) ----------
+let vomitPending = {};
+try { vomitPending = JSON.parse(localStorage.getItem(KEY + ':vom-pending')) || {}; } catch (e) {}
+{ const m = new Map(state.vomits.map(r => [r.id, r])); for (const [id, row] of Object.entries(vomitPending)) { if (row) m.set(id, row); else m.delete(id); } state.vomits = [...m.values()]; }
+function persistVomitPending() { try { localStorage.setItem(KEY + ':vom-pending', JSON.stringify(vomitPending)); } catch (e) {} }
+function queueVomit(row, id = row?.id) { vomitPending[id] = row ? { ...row } : null; persistVomitPending(); }
+function validVomit(r) {
+  return r && typeof r.id === 'string' && r.id.length > 0 && typeof r.petId === 'string' && r.petId.length > 0
+    && /^\d{4}-\d{2}-\d{2}$/.test(r.date || '') && typeof r.time === 'string' && (!r.time || /^([01]\d|2[0-3]):[0-5]\d$/.test(r.time))
+    && Number.isInteger(r.count) && r.count >= 1 && r.count <= 20 && typeof r.kind === 'string' && r.kind.length <= 30
+    && typeof r.note === 'string' && r.note.length <= 1000 && (r.by === undefined || (typeof r.by === 'string' && r.by.length <= 20));
+}
+const vomitsOf = id => state.vomits.filter(r => r.petId === id).sort((a, b) => b.date.localeCompare(a.date) || (b.time || '').localeCompare(a.time || ''));
+function renderVomits() {
+  const pet = state.pets.find(p => p.id === sel);
+  $('vomitCard').hidden = !pet;
+  if (!pet) return;
+  const rows = vomitsOf(pet.id), t = today();
+  const within = n => rows.filter(r => r.date <= t && dayNum(r.date) > dayNum(t) - n).reduce((s, r) => s + r.count, 0);
+  $('vomHeading').textContent = pet.name + ' 토 기록';
+  $('vomSummary').textContent = rows.length ? `최근 7일 ${within(7)}회 · 최근 30일 ${within(30)}회 · 마지막 ${fmtDate(rows[0].date)}${rows[0].time ? ' ' + rows[0].time : ''}` : '아직 토 기록이 없어요';
+  $('vomCount').textContent = rows.length + '건';
+  $('vomTable').innerHTML = rows.length
+    ? '<thead><tr><th>날짜·시간</th><th>횟수</th><th>내용</th><th>기록자</th><th>메모</th></tr></thead><tbody>' + rows.map(r => `<tr><td><button type="button" class="small" data-vom-edit="${esc(r.id)}" aria-label="${esc(r.date)} 토 기록 수정">${stamp(r.date, r.time)}</button></td><td>${r.count}회</td><td>${esc(r.kind)}</td><td class="by">${esc(r.by || '')}</td><td class="vom-note">${esc(r.note)}</td></tr>`).join('') + '</tbody>'
+    : '<tbody><tr><td>아직 토 기록이 없어요.</td></tr></tbody>';
+}
+let editingVomit = null;
+function openVomit(id = null) {
+  const pet = state.pets.find(p => p.id === sel); if (!pet) return;
+  editingVomit = id ? state.vomits.find(r => r.id === id) : null;
+  const r = editingVomit;
+  $('vomTitle').textContent = pet.name + (r ? ' 토 기록 수정' : ' 토 기록');
+  $('vDate').max = today(); $('vDate').value = r?.date || today();
+  $('vTime').value = r ? r.time : nowTime();
+  $('vCount').value = r?.count || 1;
+  const kind = r?.kind || VOMIT_KINDS[0];
+  $('vKind').value = VOMIT_KINDS.includes(kind) ? kind : '기타';
+  $('vNote').value = r?.note || '';
+  $('vDelete').hidden = !r; $('vomMsg').textContent = '';
+  $('vomDlg').showModal();
+}
+const VOMIT_KINDS = ['사료', '음식물', '거품·노란 액체', '털뭉치', '기타'];
+$('vomAddBtn').onclick = () => openVomit();
+$('vomTable').onclick = e => { const b = e.target.closest('[data-vom-edit]'); if (b) openVomit(b.dataset.vomEdit); };
+$('vCancel').onclick = () => $('vomDlg').close();
+$('vomForm').onsubmit = e => {
+  e.preventDefault();
+  const pet = editingVomit ? state.pets.find(p => p.id === editingVomit.petId) : state.pets.find(p => p.id === sel);
+  if (!pet) return;
+  const row = { id: editingVomit?.id || 'vom-' + Date.now().toString(36) + uid(), petId: pet.id, petName: pet.name, date: $('vDate').value, time: $('vTime').value, count: parseInt($('vCount').value, 10), kind: $('vKind').value, note: $('vNote').value.trim(), by: editingVomit ? (editingVomit.by || '') : who };
+  if (!validVomit(row) || row.date > today()) { $('vomMsg').textContent = '날짜·시간·횟수(1~20)를 확인해 주세요. 미래 날짜는 기록할 수 없어요.'; return; }
+  state.vomits = state.vomits.filter(r => r.id !== row.id); state.vomits.push(row); queueVomit(row);
+  save(); renderAll(); $('vomDlg').close();
+};
+$('vDelete').onclick = () => {
+  if (!editingVomit || !confirm('이 토 기록을 삭제할까요?')) return;
+  state.vomits = state.vomits.filter(r => r.id !== editingVomit.id); queueVomit(null, editingVomit.id);
+  save(); renderAll(); $('vomDlg').close();
 };
 // Date boundaries use the device's local date, including when a sleeping tab resumes.
 let medicationRenderedDate=today();
@@ -2072,7 +2162,7 @@ addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(l
 layoutProps();
 queueCatFrame();
 
-function renderAll() { renderSummary(); renderChips(); renderChart(); renderTable(); renderToday(); renderCats(); renderMedications(); }
+function renderAll() { renderSummary(); renderChips(); renderChart(); renderTable(); renderToday(); renderCats(); renderMedications(); renderVomits(); }
 renderAll();
 
 // ---------- 클라우드 동기화 (Firebase) ----------
@@ -2083,7 +2173,7 @@ const petRow = (p, i) => ({ id: p.id, name: p.name, color: p.color, sort: i });
 const recRow = r => ({ id: r.id, date: r.date, time: r.time || '', w: r.w, q: r.q || {}, note: r.notes ? '' : (r.note || ''), notes: r.notes || {}, by: r.by || '' });
 let snap = { pets: {}, records: {} };   // 서버에 마지막으로 반영된 JSON
 let pushTimer = null, pushing = false, synced = false, unsubs = [];
-let petsSnap = null, recsSnap = null, medicationsSnap = null, uploaded = false;
+let petsSnap = null, recsSnap = null, medicationsSnap = null, vomitsSnap = null, uploaded = false;
 
 function setStatus(t, bad) {
   const el = $('syncStatus');
@@ -2108,6 +2198,7 @@ async function push() {
     const batch = db.batch();
     const sent = JSON.parse(JSON.stringify({ pets: state.pets.map(petRow), records: state.records.map(recRow) }));
     const sentMedications = JSON.parse(JSON.stringify(medicationPending));
+    const sentVomits = JSON.parse(JSON.stringify(vomitPending));
     const sentSnap = { pets: {}, records: {} };
     for (const col of ['pets','records']) for (const row of sent[col]) sentSnap[col][row.id] = JSON.stringify(row);
     let ops = 0;
@@ -2125,11 +2216,18 @@ async function push() {
       else batch.delete(db.collection('medications').doc(id));
       ops++;
     }
+    for (const [id, row] of Object.entries(sentVomits)) {
+      if (row) { const { id: ignored, ...data } = row; batch.set(db.collection('vomits').doc(id), data); }
+      else batch.delete(db.collection('vomits').doc(id));
+      ops++;
+    }
     if (ops) await batch.commit();
     snap = sentSnap;
     for(const [id,row] of Object.entries(sentMedications))
       if(JSON.stringify(medicationPending[id])===JSON.stringify(row))delete medicationPending[id];
     persistMedicationPending();
+    for (const [id, row] of Object.entries(sentVomits)) if (JSON.stringify(vomitPending[id]) === JSON.stringify(row)) delete vomitPending[id];
+    persistVomitPending();
     setStatus('☁ 동기화됨');
   } catch (err) {
     console.error(err);
@@ -2154,9 +2252,18 @@ function applyRemote() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
   renderAll();
   setStatus('☁ 동기화됨');
-  if(Object.keys(medicationPending).length)schedulePush();
+  if(Object.keys(medicationPending).length||Object.keys(vomitPending).length)schedulePush();
   backfillRecorder();
   if (migrateNotes()) { save(); renderAll(); }   // 예전 기록의 비고를 아이별 비고로 옮긴다
+}
+function applyVomitRemote() {
+  if (!vomitsSnap) return;
+  const rows = new Map(vomitsSnap.docs.map(d => [d.id, { ...d.data(), id: d.id }]));
+  for (const [id, row] of Object.entries(vomitPending)) { if (row) rows.set(id, row); else rows.delete(id); }
+  state.vomits = [...rows.values()];
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  renderAll();
+  if (synced && Object.keys(vomitPending).length) schedulePush();
 }
 function applyMedicationRemote(){
   if(!medicationsSnap)return;
@@ -2186,12 +2293,13 @@ function startSync() {
   unsubs.push(
     db.collection('pets').onSnapshot({ includeMetadataChanges: true }, s => { petsSnap = s; applyRemote(); }, fail),
     db.collection('records').onSnapshot({ includeMetadataChanges: true }, s => { recsSnap = s; applyRemote(); }, fail),
-    db.collection('medications').onSnapshot({ includeMetadataChanges: true }, s => { medicationsSnap = s; applyMedicationRemote(); }, fail));
+    db.collection('medications').onSnapshot({ includeMetadataChanges: true }, s => { medicationsSnap = s; applyMedicationRemote(); }, fail),
+    db.collection('vomits').onSnapshot({ includeMetadataChanges: true }, s => { vomitsSnap = s; applyVomitRemote(); }, fail));
 }
 function stopSync() {
   unsubs.forEach(u => u()); unsubs = [];
   clearTimeout(pushTimer);pushTimer=null;
-  petsSnap = recsSnap = medicationsSnap = null; synced = false; uploaded = false;
+  petsSnap = recsSnap = medicationsSnap = vomitsSnap = null; synced = false; uploaded = false;
 }
 function showLogin() {
   stopSync(); $('logoutBtn').hidden = true;
