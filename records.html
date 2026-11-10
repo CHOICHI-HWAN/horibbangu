@@ -444,6 +444,7 @@
     <div class="controls">
       <div class="chips" id="chips"></div>
       <span class="seg" id="chartMode" role="group" aria-label="그래프 보기 방식"><button type="button" data-m="split">따로 보기</button><button type="button" data-m="overlay">겹쳐 보기</button></span>
+      <select id="chartType" aria-label="그래프 종류" title="선 그래프 또는 기간별 박스플롯(상자그림)"><option value="line">선 그래프</option><option value="box">박스플롯</option></select>
       <select id="grpMode" aria-label="묶어 보기" title="같은 날 여러 번 잰 체중은 평균으로, 기록이 많으면 주별·월별 평균으로 묶어서 보여줘요"><option value="auto">묶기 · 자동</option><option value="raw">기록별 그대로</option><option value="day">일별 평균</option><option value="week">주별 평균</option><option value="month">월별 평균</option></select>
       <select id="range">
         <option value="30">최근 1개월</option>
@@ -454,7 +455,7 @@
         <option value="0">전체</option>
       </select>
     </div>
-    <p class="hint">카드 한 번: 그래프 · 카드 안 버튼: 체중·구토·병원·투약 열기/접기 · 실선: 체중 · 빨간 ▲: 구토 · 파란 ✚: 병원 · 굵은 연한 선: 최근 5회 이동평균 · 점선: 전체 평균 · ◇: 메모 있음 · 빨간 동그라미: 이상치</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
+    <p class="hint">카드 한 번: 그래프 · 카드 안 버튼: 체중·구토·병원·투약 열기/접기 · 실선: 체중 · 빨간 ▲: 구토 · 파란 ✚: 병원 · 굵은 연한 선: 최근 5회 이동평균 · 실선(진하게)·점선: 3개월·5개월 이동평균(월평균 기준) · 박스플롯: 상자=중간 50%, 굵은 가로선=중앙값, ◇=평균, 수염=최저~최고 · 점선: 전체 평균 · ◇: 메모 있음 · 빨간 동그라미: 이상치</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
   </div>
 
   <div class="card">
@@ -590,7 +591,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.23.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.24.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -875,6 +876,33 @@ $('grpMode').onchange = () => {
 };
 const expandedGroups = new Set();
 let chartPoints = [];
+// ---- 박스플롯과 월 이동평균 ----
+let chartType = 'line';
+try { chartType = localStorage.getItem('horibbangu-ctype') === 'box' ? 'box' : 'line'; } catch (e) {}
+$('chartType').value = chartType;
+$('chartType').onchange = () => { chartType = $('chartType').value; try { localStorage.setItem('horibbangu-ctype', chartType); } catch (e) {} renderChart(); };
+const quant = (a, q) => { const i = (a.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return a[lo] + (a[hi] - a[lo]) * (i - lo); };
+const monthMid = k => dayNum(k + '-15');
+function boxSeries(raw, unit) {   // 기간(월·주)별 박스: 최저·Q1·중앙값·Q3·최고, 평균
+  const m = new Map();
+  raw.forEach(q => { const k = groupKeyOf(q.date, unit); if (!m.has(k)) m.set(k, []); m.get(k).push(q); });
+  return [...m.entries()].map(([k, pts]) => {
+    const vs = pts.map(q => q.v).sort((a, b) => a - b), n = vs.length, last = pts[n - 1] && pts[pts.length - 1];
+    const mean = vs.reduce((a, b) => a + b, 0) / n;
+    const lo = unit === 'month' ? dayNum(k + '-01') : dayNum(k), span = unit === 'month' ? 30 : 7;
+    return { box: true, key: k, unit, n, tn: lo + span / 2, span, v: +mean.toFixed(2), min: vs[0], max: vs[n - 1], q1: quant(vs, .25), med: quant(vs, .5), q3: quant(vs, .75),
+      date: pts[0].date, dateEnd: pts[pts.length - 1].date, time: '', rid: pts[0].rid, by: '', note: '', q: false, lastV: last.v, lastQ: last.q, pts };
+  });
+}
+function monthMeans(petId) {   // 전체 기록 기준 월별 평균(범위로 잘리기 전)
+  const m = new Map();
+  petSeries(petId).forEach(q => { const k = q.date.slice(0, 7); const g = m.get(k) || { s: 0, n: 0 }; g.s += q.v; g.n++; m.set(k, g); });
+  return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, g]) => ({ k, v: g.s / g.n }));
+}
+function movingMonths(petId, k) {   // 최근 k개월(기록 있는 달) 월평균의 평균
+  const ms = monthMeans(petId);
+  return ms.map((x, i) => i + 1 < k ? null : { k: x.k, tn: monthMid(x.k), v: ms.slice(i + 1 - k, i + 1).reduce((a, b) => a + b.v, 0) / k }).filter(Boolean);
+}
 // 겹쳐 보기: 한 축에 모두 / 따로 보기: 아이마다 자기 축 (몸무게가 달라도 변화가 보인다)
 let chartMode = 'split';
 try { chartMode = localStorage.getItem(KEY + ':cmode') === 'overlay' ? 'overlay' : 'split'; } catch (e) {}
@@ -885,8 +913,11 @@ function renderChart() {
   const cutoff = rangeDays ? dayNum(today()) - rangeDays : -Infinity;
   const series = shownPets().filter(p => sel ? p.id === sel : p.on !== false).map(p => {
     const raw = petSeries(p.id).filter(pt => dayNum(pt.date) >= cutoff);
-    return { p, pts: groupSeries(raw, resolveUnit(grpMode, raw)), rawN: raw.length };
+    const bunit = rangeDays && rangeDays <= 90 ? 'week' : 'month';
+    return { p, pts: chartType === 'box' ? boxSeries(raw, bunit) : groupSeries(raw, resolveUnit(grpMode, raw)), rawN: raw.length };
   }).filter(s => s.pts.length);
+  const boxMode = chartType === 'box';
+  $('grpMode').hidden = boxMode;
   const split = !sel && chartMode === 'split' && series.length > 1;
   $('chartMode').hidden = !!sel || shownPets().filter(p => p.on !== false).length < 2;
   $('chartMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === chartMode));
@@ -910,7 +941,7 @@ function renderChart() {
   // 한 칸(패널)을 그린다. list는 이 칸에 함께 그릴 아이들.
   function panel(list, top, height, o) {
     const pts = list.flatMap(s => s.pts), t = top + (o.title ? titleH : 12), bot = top + height - (o.axis ? axisH : 8);
-    let lo = Math.min(...pts.map(q => q.v)), hi = Math.max(...pts.map(q => q.v));
+    let lo = Math.min(...pts.map(q => q.min ?? q.v)), hi = Math.max(...pts.map(q => q.max ?? q.v));
     if (o.mean) list.forEach(({ p }) => { const st = petStats(p.id); if (o.band) { lo = Math.min(lo, st.mean - st.th); hi = Math.max(hi, st.mean + st.th); } else { lo = Math.min(lo, st.mean); hi = Math.max(hi, st.mean); } });
     if (hi - lo < 0.5) { const c = (hi + lo) / 2; lo = c - 0.25; hi = c + 0.25; }
     const step = niceStep(hi - lo, o.ticks);
@@ -944,9 +975,9 @@ function renderChart() {
       if (o.title) {
         const last = ps[ps.length - 1];
         out += `<text x="${m.l}" y="${top + 14}" font-size="13" font-weight="700" fill="${p.color}">${esc(p.name)}</text>`;
-        out += `<text x="${m.l + 8 + esc(p.name).length * 13}" y="${top + 14}" font-size="12" fill="var(--muted)">지금 ${last.lastV}kg${last.lastQ ? '?' : ''} · 기록 ${ps.reduce((a, q) => a + q.n, 0)}회${ps.some(q => q.n > 1) ? ' · ' + UNIT_NAME[ps[0].unit] + ' 평균' : ''}</text>`;
+        out += `<text x="${m.l + 8 + esc(p.name).length * 13}" y="${top + 14}" font-size="12" fill="var(--muted)">지금 ${last.lastV}kg${last.lastQ ? '?' : ''} · 기록 ${ps.reduce((a, q) => a + q.n, 0)}회${boxMode ? ' · ' + UNIT_NAME[ps[0].unit] + ' 박스플롯' : ps.some(q => q.n > 1) ? ' · ' + UNIT_NAME[ps[0].unit] + ' 평균' : ''}</text>`;
       }
-      if (o.ma) {
+      if (o.ma && !boxMode) {
         // Trailing five measurements, computed from full history before range clipping.
         const history = petSeries(p.id);
         const grouped = ps.some(q => q.n > 1);
@@ -958,6 +989,27 @@ function renderChart() {
         const ma = moving.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
         out += `<path class="moving-average" aria-label="${esc(p.name)} 최근 5회 이동평균" d="${ma}" fill="none" stroke="${p.color}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity=".22"/>`;
       }
+      if (boxMode) {
+        const idx = list.findIndex(x => x.p === p), nb = list.length, pxd = (W - m.l - m.r) / (x1 - x0);
+        ps.forEach(b => {
+          const bw = Math.max(6, Math.min(46, b.span * pxd * 0.7)) / nb, cx = X(b.tn) + (idx - (nb - 1) / 2) * bw * 1.1;
+          const yq1 = Y(b.q1), yq3 = Y(b.q3), ym = Y(b.med);
+          out += `<line x1="${cx}" x2="${cx}" y1="${Y(b.max)}" y2="${Y(b.min)}" stroke="${p.color}" stroke-width="1.6"/>`;
+          out += `<line x1="${cx - bw / 3}" x2="${cx + bw / 3}" y1="${Y(b.max)}" y2="${Y(b.max)}" stroke="${p.color}" stroke-width="1.6"/><line x1="${cx - bw / 3}" x2="${cx + bw / 3}" y1="${Y(b.min)}" y2="${Y(b.min)}" stroke="${p.color}" stroke-width="1.6"/>`;
+          if (b.n >= 2) out += `<rect x="${cx - bw / 2}" y="${Math.min(yq1, yq3)}" width="${bw}" height="${Math.max(2, Math.abs(yq1 - yq3))}" fill="${p.color}" fill-opacity=".25" stroke="${p.color}" stroke-width="1.6" rx="2"/><line x1="${cx - bw / 2}" x2="${cx + bw / 2}" y1="${ym}" y2="${ym}" stroke="${p.color}" stroke-width="2.6"/>`;
+          else out += `<circle cx="${cx}" cy="${ym}" r="3.4" fill="${p.color}"/>`;
+          if (b.n >= 2) out += `<path d="M${cx},${Y(b.v) - 4} l4,4 l-4,4 l-4,-4 Z" fill="var(--card)" stroke="${p.color}" stroke-width="1.4"/>`;
+          chartPoints.push({ x: cx, y: ym, p, pt: b, bad: false, mean: st.mean, box: b });
+        });
+      }
+      if (o.ma) {   // 3개월·5개월 이동평균(월평균 기준)
+        [[3, '', 2.4], [5, '7 4', 2.8]].forEach(([k, dash, sw]) => {
+          const mv = movingMonths(p.id, k).filter(q => q.tn >= x0 - 20 && q.tn <= x1 + 20);
+          if (mv.length < 2) return;
+          out += `<path class="moving-average-${k}m" aria-label="${esc(p.name)} ${k}개월 이동평균" d="${mv.map((q, i) => `${i ? 'L' : 'M'}${X(q.tn).toFixed(1)},${Y(q.v).toFixed(1)}`).join('')}" fill="none" stroke="${p.color}" stroke-width="${sw}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-linejoin="round" opacity="${k === 3 ? .95 : .6}" ${k === 5 ? 'style="filter:brightness(.75)"' : ''}/>`;
+        });
+      }
+      if (boxMode) return;
       // 같은 날 여러 번 잰 기록은 하루 평균을 이어 선을 그려 위아래로 요동치지 않게 하고, 점은 모두 찍는다.
       const days = new Map();
       ps.forEach(pt => { const g = days.get(pt.date) || { n: 0, t: 0, v: 0 }; g.n++; g.t += pt.tn; g.v += pt.v; days.set(pt.date, g); });
@@ -1016,6 +1068,7 @@ $('chart').addEventListener('pointermove', e => {
   const h = $('hover');
   if (!best || bd > 40 * 40) { tip.style.display = 'none'; h.style.display = 'none'; return; }
   h.setAttribute('cx', best.x); h.setAttribute('cy', best.y); h.style.display = '';
+  if (best.box) { const b = best.box; tip.innerHTML = `<b>${esc(best.p.name)}</b> ${b.unit === 'month' ? b.key.replace('-', '.') + '월' : fmtDate(b.key) + ' ~ ' + fmtDate(medAddDays(b.key, 6)).slice(5)} · ${b.n}회<br>중앙값 <b>${b.med.toFixed(2)}</b> · 평균 ${b.v.toFixed(2)}kg<br>상자(Q1~Q3) ${b.q1.toFixed(2)}~${b.q3.toFixed(2)} · 최저~최고 ${b.min}~${b.max}`; tip.style.left = best.x / sx + 'px'; tip.style.top = best.y / sx + 'px'; tip.style.display = 'block'; return; }
   tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.time ? ' ' + esc(best.pt.time) : ''}${best.pt.n > 1 ? `<br>${UNIT_NAME[best.pt.unit]} 평균 · ${best.pt.n}회 (${best.pt.min}~${best.pt.max}kg)<br>${fmtDate(best.pt.date)} ~ ${fmtDate(best.pt.dateEnd).slice(5)}` : ''}${best.pt.by ? '<br>기록자 ' + esc(best.pt.by) : ''}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}`;
   tip.style.left = best.x / sx + 'px'; tip.style.top = best.y / sx + 'px'; tip.style.display = 'block';
 });
@@ -1025,7 +1078,7 @@ $('chart').addEventListener('click', e => {
   const mx = (e.clientX - r.left) * sx, my = (e.clientY - r.top) * sx;
   let best = null, bd = Infinity;
   for (const c of chartPoints) { const d = (c.x - mx) ** 2 + (c.y - my) ** 2; if (d < bd) { bd = d; best = c; } }
-  if (best && bd <= 20 * 20 && best.pt.n === 1) openRecord(best.pt.rid);
+  if (best && !best.box && bd <= 20 * 20 && best.pt.n === 1) openRecord(best.pt.rid);
 });
 new ResizeObserver(() => renderChart()).observe($('chartBox'));
 
