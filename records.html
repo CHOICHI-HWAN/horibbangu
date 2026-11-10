@@ -455,7 +455,7 @@
         <option value="0">전체</option>
       </select>
     </div>
-    <p class="hint">카드 한 번: 그래프 · 카드 안 버튼: 체중·구토·병원·투약 열기/접기 · 실선: 체중 · 빨간 ▲: 구토 · 파란 ✚: 병원 · 굵은 연한 선: 최근 5회 이동평균 · 실선(진하게)·점선: 3개월·5개월 이동평균(월평균 기준) · 박스플롯: 상자=중간 50%, 굵은 가로선=중앙값, ◇=평균, 수염=최저~최고 · 점선: 전체 평균 · ◇: 메모 있음 · 빨간 동그라미: 이상치</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
+    <p class="hint">손가락을 그래프에 대고 좌우로 움직이면 표시선이 따라와요(말풍선을 누르면 수정) · 카드 한 번: 그래프 · 카드 안 버튼: 체중·구토·병원·투약 열기/접기 · 실선: 체중 · 빨간 ▲: 구토 · 파란 ✚: 병원 · 굵은 연한 선: 최근 5회 이동평균 · 진한 실선·점선: 3주·5주 이동평균(주평균 기준) · 박스플롯: 상자=중간 50%, 굵은 가로선=중앙값, ◇=평균, 수염=최저~최고 · 점선: 전체 평균 · ◇: 메모 있음 · 빨간 동그라미: 이상치</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
   </div>
 
   <div class="card">
@@ -591,7 +591,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.24.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.24.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -882,7 +882,6 @@ try { chartType = localStorage.getItem('horibbangu-ctype') === 'box' ? 'box' : '
 $('chartType').value = chartType;
 $('chartType').onchange = () => { chartType = $('chartType').value; try { localStorage.setItem('horibbangu-ctype', chartType); } catch (e) {} renderChart(); };
 const quant = (a, q) => { const i = (a.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return a[lo] + (a[hi] - a[lo]) * (i - lo); };
-const monthMid = k => dayNum(k + '-15');
 function boxSeries(raw, unit) {   // 기간(월·주)별 박스: 최저·Q1·중앙값·Q3·최고, 평균
   const m = new Map();
   raw.forEach(q => { const k = groupKeyOf(q.date, unit); if (!m.has(k)) m.set(k, []); m.get(k).push(q); });
@@ -894,14 +893,14 @@ function boxSeries(raw, unit) {   // 기간(월·주)별 박스: 최저·Q1·중
       date: pts[0].date, dateEnd: pts[pts.length - 1].date, time: '', rid: pts[0].rid, by: '', note: '', q: false, lastV: last.v, lastQ: last.q, pts };
   });
 }
-function monthMeans(petId) {   // 전체 기록 기준 월별 평균(범위로 잘리기 전)
+function weekMeans(petId) {   // 전체 기록 기준 주별(월요일 시작) 평균(범위로 잘리기 전)
   const m = new Map();
-  petSeries(petId).forEach(q => { const k = q.date.slice(0, 7); const g = m.get(k) || { s: 0, n: 0 }; g.s += q.v; g.n++; m.set(k, g); });
+  petSeries(petId).forEach(q => { const k = weekStartOf(q.date); const g = m.get(k) || { s: 0, n: 0 }; g.s += q.v; g.n++; m.set(k, g); });
   return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, g]) => ({ k, v: g.s / g.n }));
 }
-function movingMonths(petId, k) {   // 최근 k개월(기록 있는 달) 월평균의 평균
-  const ms = monthMeans(petId);
-  return ms.map((x, i) => i + 1 < k ? null : { k: x.k, tn: monthMid(x.k), v: ms.slice(i + 1 - k, i + 1).reduce((a, b) => a + b.v, 0) / k }).filter(Boolean);
+function movingWeeks(petId, k) {   // 최근 k주(기록 있는 주) 주평균의 평균
+  const ws = weekMeans(petId);
+  return ws.map((x, i) => i + 1 < k ? null : { k: x.k, tn: dayNum(x.k) + 3.5, v: ws.slice(i + 1 - k, i + 1).reduce((a, b) => a + b.v, 0) / k }).filter(Boolean);
 }
 // 겹쳐 보기: 한 축에 모두 / 따로 보기: 아이마다 자기 축 (몸무게가 달라도 변화가 보인다)
 let chartMode = 'split';
@@ -940,6 +939,7 @@ function renderChart() {
 
   // 한 칸(패널)을 그린다. list는 이 칸에 함께 그릴 아이들.
   function panel(list, top, height, o) {
+    const cp0 = chartPoints.length;
     const pts = list.flatMap(s => s.pts), t = top + (o.title ? titleH : 12), bot = top + height - (o.axis ? axisH : 8);
     let lo = Math.min(...pts.map(q => q.min ?? q.v)), hi = Math.max(...pts.map(q => q.max ?? q.v));
     if (o.mean) list.forEach(({ p }) => { const st = petStats(p.id); if (o.band) { lo = Math.min(lo, st.mean - st.th); hi = Math.max(hi, st.mean + st.th); } else { lo = Math.min(lo, st.mean); hi = Math.max(hi, st.mean); } });
@@ -1002,11 +1002,11 @@ function renderChart() {
           chartPoints.push({ x: cx, y: ym, p, pt: b, bad: false, mean: st.mean, box: b });
         });
       }
-      if (o.ma) {   // 3개월·5개월 이동평균(월평균 기준)
+      if (o.ma) {   // 3주·5주 이동평균(주평균 기준)
         [[3, '', 2.4], [5, '7 4', 2.8]].forEach(([k, dash, sw]) => {
-          const mv = movingMonths(p.id, k).filter(q => q.tn >= x0 - 20 && q.tn <= x1 + 20);
+          const mv = movingWeeks(p.id, k).filter(q => q.tn >= x0 - 20 && q.tn <= x1 + 20);
           if (mv.length < 2) return;
-          out += `<path class="moving-average-${k}m" aria-label="${esc(p.name)} ${k}개월 이동평균" d="${mv.map((q, i) => `${i ? 'L' : 'M'}${X(q.tn).toFixed(1)},${Y(q.v).toFixed(1)}`).join('')}" fill="none" stroke="${p.color}" stroke-width="${sw}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-linejoin="round" opacity="${k === 3 ? .95 : .6}" ${k === 5 ? 'style="filter:brightness(.75)"' : ''}/>`;
+          out += `<path class="moving-average-${k}w" aria-label="${esc(p.name)} ${k}주 이동평균" d="${mv.map((q, i) => `${i ? 'L' : 'M'}${X(q.tn).toFixed(1)},${Y(q.v).toFixed(1)}`).join('')}" fill="none" stroke="${p.color}" stroke-width="${sw}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-linejoin="round" opacity="${k === 3 ? .95 : .6}" ${k === 5 ? 'style="filter:brightness(.75)"' : ''}/>`;
         });
       }
       if (boxMode) return;
@@ -1037,6 +1037,7 @@ function renderChart() {
       const x = X(Math.min(x1, Math.max(x0, tNum(v.date, v.time)))), cy = bot - 7;
       out += `<g><circle cx="${x.toFixed(1)}" cy="${cy}" r="6" fill="#3f7fbf" stroke="${p.color}" stroke-width="1.5"/><path d="M${(x - 3).toFixed(1)},${cy} H${(x + 3).toFixed(1)} M${x.toFixed(1)},${cy - 3} V${cy + 3}" stroke="#fff" stroke-width="1.6"/><title>${esc(p.name)} 병원 · ${fmtDate(v.date)}${v.time ? ' ' + esc(v.time) : ''} · ${esc(v.hospital)}${v.reason ? ' · ' + esc(v.reason) : ''}</title></g>`;
     }));
+    for (let i = cp0; i < chartPoints.length; i++) { chartPoints[i].top = top; chartPoints[i].bot = top + height; }
     return out;
   }
 
@@ -1048,6 +1049,7 @@ function renderChart() {
   } else {
     out = panel(series, 0, H, { mean: false, ma: false, ticks: 5, axis: true });
   }
+  out += `<line id="scrub" x1="0" x2="0" y1="0" y2="0" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3" opacity=".55" style="display:none;pointer-events:none"/>`;
   out += `<circle id="hover" r="6" fill="none" stroke="var(--ink)" stroke-width="2" style="display:none"/>`;
   svg.innerHTML = out;
 }
@@ -1059,26 +1061,38 @@ $('chartMode').onclick = e => {
 };
 
 const tip = $('tip');
-$('chart').addEventListener('pointermove', e => {
+// 표시선(스크러버): 손가락(또는 마우스)을 좌우로 움직이면 세로선이 따라다니며 가장 가까운 날의 값을 보여준다.
+let scrubBest = null;
+function hideScrub() { tip.style.display = 'none'; const h = $('hover'), sc = $('scrub'); if (h) h.style.display = 'none'; if (sc) sc.style.display = 'none'; scrubBest = null; }
+function scrubAt(e, touch) {
   if (!chartPoints.length) return;
   const r = $('chart').getBoundingClientRect(), sx = $('chart').viewBox.baseVal.width / r.width;
   const mx = (e.clientX - r.left) * sx, my = (e.clientY - r.top) * sx;
+  let cand = chartPoints.filter(c => my >= c.top && my <= c.bot); if (!cand.length) cand = chartPoints;   // 따로 보기: 손가락이 있는 칸의 점만
   let best = null, bd = Infinity;
-  for (const c of chartPoints) { const d = (c.x - mx) ** 2 + (c.y - my) ** 2; if (d < bd) { bd = d; best = c; } }
-  const h = $('hover');
-  if (!best || bd > 40 * 40) { tip.style.display = 'none'; h.style.display = 'none'; return; }
+  for (const c of cand) { const d = Math.abs(c.x - mx) + Math.abs(c.y - my) * 0.03; if (d < bd) { bd = d; best = c; } }
+  const h = $('hover'), sc = $('scrub');
+  if (!best || (!touch && Math.abs(best.x - mx) > 60)) { hideScrub(); return; }
+  scrubBest = best;
+  sc.setAttribute('x1', best.x); sc.setAttribute('x2', best.x); sc.setAttribute('y1', best.top + 4); sc.setAttribute('y2', best.bot - 4); sc.style.display = '';
   h.setAttribute('cx', best.x); h.setAttribute('cy', best.y); h.style.display = '';
-  if (best.box) { const b = best.box; tip.innerHTML = `<b>${esc(best.p.name)}</b> ${b.unit === 'month' ? b.key.replace('-', '.') + '월' : fmtDate(b.key) + ' ~ ' + fmtDate(medAddDays(b.key, 6)).slice(5)} · ${b.n}회<br>중앙값 <b>${b.med.toFixed(2)}</b> · 평균 ${b.v.toFixed(2)}kg<br>상자(Q1~Q3) ${b.q1.toFixed(2)}~${b.q3.toFixed(2)} · 최저~최고 ${b.min}~${b.max}`; tip.style.left = best.x / sx + 'px'; tip.style.top = best.y / sx + 'px'; tip.style.display = 'block'; return; }
-  tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.time ? ' ' + esc(best.pt.time) : ''}${best.pt.n > 1 ? `<br>${UNIT_NAME[best.pt.unit]} 평균 · ${best.pt.n}회 (${best.pt.min}~${best.pt.max}kg)<br>${fmtDate(best.pt.date)} ~ ${fmtDate(best.pt.dateEnd).slice(5)}` : ''}${best.pt.by ? '<br>기록자 ' + esc(best.pt.by) : ''}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}`;
-  tip.style.left = best.x / sx + 'px'; tip.style.top = best.y / sx + 'px'; tip.style.display = 'block';
-});
-$('chart').addEventListener('pointerleave', () => { tip.style.display = 'none'; const h = $('hover'); if (h) h.style.display = 'none'; });
+  const edit = !best.box && best.pt.n === 1;
+  if (best.box) { const b = best.box; tip.innerHTML = `<b>${esc(best.p.name)}</b> ${b.unit === 'month' ? b.key.replace('-', '.') + '월' : fmtDate(b.key) + ' ~ ' + fmtDate(medAddDays(b.key, 6)).slice(5)} · ${b.n}회<br>중앙값 <b>${b.med.toFixed(2)}</b> · 평균 ${b.v.toFixed(2)}kg<br>상자(Q1~Q3) ${b.q1.toFixed(2)}~${b.q3.toFixed(2)} · 최저~최고 ${b.min}~${b.max}`; }
+  else tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.time ? ' ' + esc(best.pt.time) : ''}${best.pt.n > 1 ? `<br>${UNIT_NAME[best.pt.unit]} 평균 · ${best.pt.n}회 (${best.pt.min}~${best.pt.max}kg)<br>${fmtDate(best.pt.date)} ~ ${fmtDate(best.pt.dateEnd).slice(5)}` : ''}${best.pt.by ? '<br>기록자 ' + esc(best.pt.by) : ''}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}${edit ? '<br><u>✎ 여기를 눌러 수정</u>' : ''}`;
+  tip.style.pointerEvents = edit ? 'auto' : 'none';
+  const boxW = $('chartBox').clientWidth, tx = Math.min(boxW - 90, Math.max(90, best.x / sx));
+  tip.style.left = tx + 'px'; tip.style.top = Math.max(40, best.y / sx) + 'px'; tip.style.display = 'block';
+}
+tip.addEventListener('click', () => { if (scrubBest && !scrubBest.box && scrubBest.pt.n === 1) { const rid = scrubBest.pt.rid; hideScrub(); openRecord(rid); } });
+let scrubbing = false;
+$('chart').addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; scrubbing = true; try { $('chart').setPointerCapture(e.pointerId); } catch (err) {} scrubAt(e, true); });
+$('chart').addEventListener('pointermove', e => { if (e.pointerType === 'mouse') scrubAt(e, false); else if (scrubbing) scrubAt(e, true); });
+['pointerup', 'pointercancel'].forEach(t => $('chart').addEventListener(t, () => { scrubbing = false; }));
+$('chart').addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideScrub(); });
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#chartBox')) hideScrub(); });
 $('chart').addEventListener('click', e => {
-  const r = $('chart').getBoundingClientRect(), sx = $('chart').viewBox.baseVal.width / r.width;
-  const mx = (e.clientX - r.left) * sx, my = (e.clientY - r.top) * sx;
-  let best = null, bd = Infinity;
-  for (const c of chartPoints) { const d = (c.x - mx) ** 2 + (c.y - my) ** 2; if (d < bd) { bd = d; best = c; } }
-  if (best && !best.box && bd <= 20 * 20 && best.pt.n === 1) openRecord(best.pt.rid);
+  if (e.pointerType && e.pointerType !== 'mouse') return;   // 터치는 말풍선을 눌러 수정한다
+  if (scrubBest && !scrubBest.box && scrubBest.pt.n === 1) openRecord(scrubBest.pt.rid);
 });
 new ResizeObserver(() => renderChart()).observe($('chartBox'));
 
