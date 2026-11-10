@@ -463,7 +463,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.18.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.18.2';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -1021,7 +1021,8 @@ $('importFile').onchange = async e => {
     }
     save(); renderAll();
   } catch (err) {
-    alert('JSON 백업 파일(내보내기로 만든 .json)만 가져올 수 있어요.');
+    console.error(err);
+    alert(err instanceof Error && err.message !== 'csv' ? '가져오기에 실패했어요: ' + err.message : 'JSON 백업 파일(내보내기로 만든 .json)만 가져올 수 있어요.');
   }
 };
 
