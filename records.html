@@ -264,6 +264,8 @@
 
   .medication-card {position:relative;z-index:6;}
   .vomit-card .tablewrap {margin-top:8px;}
+  .vis-cost {cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;white-space:nowrap;}
+  .vis-cost.blur {filter:blur(6px);}
   .vis-note {white-space:pre-wrap;min-width:120px;max-width:280px;overflow-wrap:anywhere;}
   .vom-note {white-space:pre-wrap;min-width:120px;max-width:280px;overflow-wrap:anywhere;}
   .medication-heading {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
@@ -345,7 +347,7 @@
   <section class="card vomit-card" id="visitCard" aria-labelledby="visHeading" hidden>
     <div class="medication-heading"><div><h2 id="visHeading">병원 방문 기록</h2><p class="hint" id="visSummary"></p></div><button type="button" class="primary" id="visAddBtn">+ 병원 방문</button></div>
     <details open id="visHistory"><summary>병원 방문 내역 <span id="visCount"></span></summary>
-      <p class="hint">날짜를 누르면 수정할 수 있어요. 그래프에는 방문한 날이 파란 ✚로 표시돼요. 표는 옆으로 밀어 볼 수 있어요.</p>
+      <p class="hint">날짜를 누르면 수정할 수 있어요. 금액은 가려져 있어요. 금액을 두 번 누르면 보이고, 다시 두 번 누르면 가려져요. 그래프에는 방문한 날이 파란 ✚로 표시돼요. 표는 옆으로 밀어 볼 수 있어요.</p>
       <div class="tablewrap"><table id="visTable"></table></div>
     </details>
   </section>
@@ -428,9 +430,10 @@
     <h2 id="visTitle">병원 방문 기록</h2>
     <div class="field"><label for="hDate">날짜</label><input type="date" id="hDate" required></div>
     <div class="field"><label for="hTime">시간</label><input type="time" id="hTime"></div>
-    <div class="field"><label for="hHospital">병원</label><input type="text" id="hHospital" maxlength="100" placeholder="병원 이름" required></div>
+    <div class="field"><label for="hHospital">병원</label><input type="text" id="hHospital" maxlength="100" placeholder="병원 이름 (집에서 한 일이면 비워도 돼요)"></div>
     <div class="field"><label for="hReason">방문 이유</label><input type="text" id="hReason" maxlength="300" placeholder="증상, 정기검진 등"></div>
-    <div class="field"><label for="hResult">진단·처치</label><textarea id="hResult" rows="2" maxlength="500" placeholder="검사 결과, 처방, 수액·주사 등 (선택)"></textarea></div>
+    <div class="field"><label for="hResult">진단·처치</label><textarea id="hResult" rows="4" maxlength="3000" placeholder="진료 내용, 검사 결과, 수액·주사 등 (선택)"></textarea></div>
+    <div class="field"><label for="hRx">처방</label><textarea id="hRx" rows="2" maxlength="1000" placeholder="처방약, 용량 (선택)"></textarea></div>
     <div class="field"><label for="hCost">비용(원)</label><input type="number" id="hCost" min="0" max="100000000" step="1" inputmode="numeric" placeholder="선택"></div>
     <div class="field"><label for="hNext">다음 방문</label><input type="date" id="hNext"></div>
     <div class="field"><label for="hNote">메모</label><textarea id="hNote" rows="3" maxlength="1000" placeholder="의사 설명, 주의사항 등 (선택)"></textarea></div>
@@ -460,7 +463,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.17.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.18.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -945,6 +948,56 @@ $('exportBtn').onclick = () => {
     download(`weights-${stamp}.csv`, '﻿' + lines.join('\n'), 'text/csv');
   }
 };
+// ---------- 진료 기록 합치기 가져오기 (기존 기록은 그대로 두고 더한다) ----------
+// 파일 형식: { format:'horibbangu-merge-v1', visits:[{id,pet,date,...}], weights:[{pet,date,w,q,note,noteExtra,time,by}] }
+// 같은 id의 방문은 건너뛰고, 같은 날 같은 아이의 체중이 다르면 기존 값을 지키고 엑셀 값은 비고에 적는다. 두 번 가져와도 중복되지 않는다.
+function mergeImport(d) {
+  const byName = n => state.pets.find(p => p.name === n);
+  const missing = [...new Set([...(d.visits || []), ...(d.weights || [])].map(x => x.pet))].filter(n => !byName(n));
+  if (missing.length) { alert('이 앱에 없는 아이 이름이 있어요: ' + missing.join(', ')); return; }
+  const newVisits = []; let skipVisits = 0;
+  for (const v of d.visits || []) {
+    const pet = byName(v.pet);
+    const row = { id: v.id, petId: pet.id, petName: pet.name, date: v.date, time: v.time || '', hospital: v.hospital || '', reason: v.reason || '', result: v.result || '', rx: v.rx || '', cost: v.cost ?? null, next: v.next || '', note: v.note || '', by: v.by || '' };
+    if (!validVisit(row)) throw new Error('방문 기록 형식 오류: ' + v.date + ' ' + v.pet);
+    if (state.visits.some(r => r.id === row.id)) skipVisits++; else newVisits.push(row);
+  }
+  const recs = JSON.parse(JSON.stringify(state.records));
+  let addW = 0, sameW = 0, noteChanged = 0; const conflicts = [];
+  const addNote = (r, pid, text) => {
+    if (!text) return;
+    r.notes = r.notes || {}; const cur = r.notes[pid] || '';
+    if (cur.includes(text)) return;
+    r.notes[pid] = cur ? cur + '\n' + text : text; noteChanged++;
+  };
+  for (const x of d.weights || []) {
+    const pet = byName(x.pet), same = recs.filter(r => r.date === x.date);
+    const both = [x.note, x.noteExtra].filter(Boolean).join('\n');
+    if (x.w == null) { const hit = same.find(r => r.notes?.[pet.id] != null || r.w[pet.id] != null); if (hit) addNote(hit, pet.id, both); continue; }
+    const hit = same.find(r => r.w[pet.id] != null);
+    if (hit) {
+      if (Math.abs(hit.w[pet.id] - x.w) < 0.005) { sameW++; if (!(hit.notes?.[pet.id])) addNote(hit, pet.id, x.note); addNote(hit, pet.id, x.noteExtra); }
+      else { conflicts.push(`${fmtDate(x.date)} ${x.pet}: 앱 ${hit.w[pet.id]}kg / 엑셀 ${x.w}kg`); addNote(hit, pet.id, `엑셀 기록 ${x.w}kg` + (both ? '\n' + both : '')); }
+      continue;
+    }
+    const target = same.find(r => !r.time || !x.time || r.time === x.time);
+    if (target) {
+      target.w[pet.id] = x.w; target.q = target.q || {}; if (x.q) target.q[pet.id] = true;
+      if (!target.time && x.time) target.time = x.time;
+      addNote(target, pet.id, both);
+    } else {
+      recs.push({ id: uid(), date: x.date, time: x.time || '', w: { [pet.id]: x.w }, q: x.q ? { [pet.id]: true } : {}, note: '', notes: both ? { [pet.id]: both } : {}, by: x.by || '' });
+    }
+    addW++;
+  }
+  const msg = `방문 기록 ${newVisits.length}건을 추가합니다. (이미 있는 ${skipVisits}건은 건너뜀)\n체중 ${addW}건을 추가하고, 같은 값 ${sameW}건은 확인만 합니다.\n비고 ${noteChanged}곳을 채웁니다.`
+    + (conflicts.length ? `\n\n값이 다른 체중 ${conflicts.length}건은 기존 값을 두고 엑셀 값을 비고에 적어요:\n` + conflicts.join('\n') : '') + '\n\n진행할까요?';
+  if (!confirm(msg)) return;
+  state.records = recs;
+  newVisits.forEach(r => { state.visits.push(r); queueVisit(r); });
+  save(); renderAll();
+  setStatus(`가져오기 완료: 방문 ${newVisits.length}건, 체중 ${addW}건`);
+}
 $('importBtn').onclick = () => $('importFile').click();
 $('importFile').onchange = async e => {
   const f = e.target.files[0]; e.target.value = '';
@@ -953,6 +1006,7 @@ $('importFile').onchange = async e => {
     const text = await f.text();
     if (f.name.endsWith('.json')) {
       const d = JSON.parse(text);
+      if (d.format === 'horibbangu-merge-v1') { mergeImport(d); return; }
       if (!d.pets || !d.records) throw 0;
       if(d.medications!==undefined&&(!Array.isArray(d.medications)||d.medications.some(r=>!validMedication(r))||new Set(d.medications.map(r=>r.id)).size!==d.medications.length))throw 0;
       if (!confirm(d.medications===undefined?'체중 데이터를 교체할까요? 투약 기록은 유지합니다.':'체중·투약 기록을 백업 데이터로 교체할까요?')) return;
@@ -1222,27 +1276,30 @@ function validVisit(r) {
   const dateOk = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
   return r && typeof r.id === 'string' && r.id.length > 0 && typeof r.petId === 'string' && r.petId.length > 0
     && dateOk(r.date) && typeof r.time === 'string' && (!r.time || /^([01]\d|2[0-3]):[0-5]\d$/.test(r.time))
-    && typeof r.hospital === 'string' && r.hospital.trim().length > 0 && r.hospital.length <= 100
-    && typeof r.reason === 'string' && r.reason.length <= 300 && typeof r.result === 'string' && r.result.length <= 500
+    && typeof r.hospital === 'string' && r.hospital.length <= 100
+    && typeof r.reason === 'string' && r.reason.length <= 300 && typeof r.result === 'string' && r.result.length <= 3000
+    && (r.rx === undefined || (typeof r.rx === 'string' && r.rx.length <= 1000))
     && (r.cost === null || (Number.isInteger(r.cost) && r.cost >= 0 && r.cost <= 1e8))
     && typeof r.next === 'string' && (r.next === '' || dateOk(r.next))
     && typeof r.note === 'string' && r.note.length <= 1000 && (r.by === undefined || (typeof r.by === 'string' && r.by.length <= 20));
 }
 const visitsOf = id => state.visits.filter(r => r.petId === id).sort((a, b) => b.date.localeCompare(a.date) || (b.time || '').localeCompare(a.time || ''));
+const costShown = new Set(); let costPet = null, lastCostTap = { id: null, at: 0 };   // 금액은 기본으로 가리고, 더블탭하면 이 화면에서만 보인다(저장 안 함)
 function renderVisits() {
   const pet = state.pets.find(p => p.id === sel);
   $('visitCard').hidden = !pet;
   if (!pet) return;
+  if (costPet !== pet.id) { costShown.clear(); costPet = pet.id; }
   const rows = visitsOf(pet.id), t = today();
   const upcoming = rows.map(r => r.next).filter(d => d && d >= t).sort()[0];
   const dd = upcoming ? Math.round(dayNum(upcoming) - dayNum(t)) : 0;
   $('visHeading').textContent = pet.name + ' 병원 방문 기록';
   $('visSummary').textContent = rows.length
-    ? `총 ${rows.length}회 · 마지막 ${fmtDate(rows[0].date)} ${rows[0].hospital}` + (upcoming ? ` · 다음 예정 ${fmtDate(upcoming)} (${dd ? 'D-' + dd : '오늘'})` : '')
+    ? `총 ${rows.length}회 · 마지막 ${fmtDate(rows[0].date)}${rows[0].hospital ? ' ' + rows[0].hospital : ''}` + (upcoming ? ` · 다음 예정 ${fmtDate(upcoming)} (${dd ? 'D-' + dd : '오늘'})` : '')
     : '아직 병원 방문 기록이 없어요';
   $('visCount').textContent = rows.length + '건';
   $('visTable').innerHTML = rows.length
-    ? '<thead><tr><th>날짜·시간</th><th>병원</th><th>방문 이유</th><th>진단·처치</th><th>비용</th><th>다음 방문</th><th>기록자</th><th>메모</th></tr></thead><tbody>' + rows.map(r => `<tr><td><button type="button" class="small" data-vis-edit="${esc(r.id)}" aria-label="${esc(r.date)} 병원 방문 기록 수정">${stamp(r.date, r.time)}</button></td><td>${esc(r.hospital)}</td><td class="vis-note">${esc(r.reason)}</td><td class="vis-note">${esc(r.result)}</td><td>${r.cost == null ? '' : r.cost.toLocaleString('ko-KR') + '원'}</td><td>${r.next ? fmtDate(r.next) : ''}</td><td class="by">${esc(r.by || '')}</td><td class="vis-note">${esc(r.note)}</td></tr>`).join('') + '</tbody>'
+    ? '<thead><tr><th>날짜·시간</th><th>병원</th><th>방문 이유</th><th>진료 내용</th><th>처방</th><th>비용</th><th>다음 방문</th><th>기록자</th><th>메모</th></tr></thead><tbody>' + rows.map(r => `<tr><td><button type="button" class="small" data-vis-edit="${esc(r.id)}" aria-label="${esc(r.date)} 병원 방문 기록 수정">${stamp(r.date, r.time)}</button></td><td>${esc(r.hospital)}</td><td class="vis-note">${esc(r.reason)}</td><td class="vis-note">${esc(r.result)}</td><td class="vis-note">${esc(r.rx || '')}</td><td>${r.cost == null ? '' : `<span class="vis-cost${costShown.has(r.id) ? '' : ' blur'}" data-vis-cost="${esc(r.id)}" role="button" tabindex="0" aria-label="${costShown.has(r.id) ? '금액 보이는 중, 두 번 누르면 가려요' : '금액이 가려져 있어요, 두 번 누르면 보여요'}">${r.cost.toLocaleString('ko-KR')}원</span>`}</td><td>${r.next ? fmtDate(r.next) : ''}</td><td class="by">${esc(r.by || '')}</td><td class="vis-note">${esc(r.note)}</td></tr>`).join('') + '</tbody>'
     : '<tbody><tr><td>아직 병원 방문 기록이 없어요.</td></tr></tbody>';
 }
 let editingVisit = null;
@@ -1253,22 +1310,32 @@ function openVisit(id = null) {
   $('visTitle').textContent = pet.name + (r ? ' 병원 방문 기록 수정' : ' 병원 방문 기록');
   $('hDate').max = today(); $('hDate').value = r?.date || today();
   $('hTime').value = r ? r.time : nowTime();
-  $('hHospital').value = r?.hospital || latest?.hospital || '';
-  $('hReason').value = r?.reason || ''; $('hResult').value = r?.result || '';
+  $('hHospital').value = r ? r.hospital : (latest?.hospital || '');
+  $('hReason').value = r?.reason || ''; $('hResult').value = r?.result || ''; $('hRx').value = r?.rx || '';
   $('hCost').value = r?.cost ?? ''; $('hNext').value = r?.next || ''; $('hNote').value = r?.note || '';
   $('hDelete').hidden = !r; $('visMsg').textContent = '';
   $('visDlg').showModal();
 }
 $('visAddBtn').onclick = () => openVisit();
-$('visTable').onclick = e => { const b = e.target.closest('[data-vis-edit]'); if (b) openVisit(b.dataset.visEdit); };
+function toggleCost(id) { if (costShown.has(id)) costShown.delete(id); else costShown.add(id); renderVisits(); }
+$('visTable').onclick = e => {
+  const c = e.target.closest('[data-vis-cost]');
+  if (c) {
+    const id = c.dataset.visCost, now = performance.now();
+    if (lastCostTap.id === id && now - lastCostTap.at < 450) { lastCostTap = { id: null, at: 0 }; toggleCost(id); } else lastCostTap = { id, at: now };
+    return;
+  }
+  const b = e.target.closest('[data-vis-edit]'); if (b) openVisit(b.dataset.visEdit);
+};
+$('visTable').onkeydown = e => { const c = e.target.closest('[data-vis-cost]'); if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleCost(c.dataset.visCost); } };
 $('hCancel').onclick = () => $('visDlg').close();
 $('visForm').onsubmit = e => {
   e.preventDefault();
   const pet = editingVisit ? state.pets.find(p => p.id === editingVisit.petId) : state.pets.find(p => p.id === sel);
   if (!pet) return;
   const costText = $('hCost').value.trim();
-  const row = { id: editingVisit?.id || 'vis-' + Date.now().toString(36) + uid(), petId: pet.id, petName: pet.name, date: $('hDate').value, time: $('hTime').value, hospital: $('hHospital').value.trim(), reason: $('hReason').value.trim(), result: $('hResult').value.trim(), cost: costText === '' ? null : Number(costText), next: $('hNext').value, note: $('hNote').value.trim(), by: editingVisit ? (editingVisit.by || '') : who };
-  if (!validVisit(row) || row.date > today()) { $('visMsg').textContent = '날짜·병원 이름·비용(0 이상 정수)을 확인해 주세요. 미래 날짜는 방문 기록으로 남길 수 없어요.'; return; }
+  const row = { id: editingVisit?.id || 'vis-' + Date.now().toString(36) + uid(), petId: pet.id, petName: pet.name, date: $('hDate').value, time: $('hTime').value, hospital: $('hHospital').value.trim(), reason: $('hReason').value.trim(), result: $('hResult').value.trim(), rx: $('hRx').value.trim(), cost: costText === '' ? null : Number(costText), next: $('hNext').value, note: $('hNote').value.trim(), by: editingVisit ? (editingVisit.by || '') : who };
+  if (!validVisit(row) || row.date > today()) { $('visMsg').textContent = '날짜·비용(0 이상 정수)을 확인해 주세요. 미래 날짜는 방문 기록으로 남길 수 없어요.'; return; }
   state.visits = state.visits.filter(r => r.id !== row.id); state.visits.push(row); queueVisit(row);
   save(); renderAll(); $('visDlg').close();
 };
