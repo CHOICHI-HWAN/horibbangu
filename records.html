@@ -304,6 +304,9 @@
   .med-calendar-nav button {min-height:40px;}
   .medication-calendar {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin:12px 0;}
   .med-weekday {text-align:center;font-size:12px;color:var(--muted);padding:5px 0;}
+  .clegend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; margin-top: 10px; color: var(--muted); }
+  .clegend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .clegend svg { width: 26px; height: 14px; flex: none; }
   .med-legend {display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin:14px 0;}
   .med-legend span {display:flex;align-items:center;gap:5px;}
   .med-key {width:10px;height:10px;border:1px solid var(--accent);border-radius:3px;}
@@ -455,7 +458,8 @@
         <option value="0">전체</option>
       </select>
     </div>
-    <p class="hint">손가락을 그래프에 대고 좌우로 움직이면 표시선이 따라와요(말풍선을 누르면 수정) · 카드 한 번: 그래프 · 카드 안 버튼: 체중·구토·병원·투약 열기/접기 · 실선: 체중 · 빨간 ▲: 구토 · 파란 ✚: 병원 · 굵은 연한 선: 최근 5회 이동평균 · 진한 실선·점선: 3주·5주 이동평균(주평균 기준) · 박스플롯: 상자=중간 50%, 굵은 가로선=중앙값, ◇=평균, 수염=최저~최고 · 점선: 전체 평균 · ◇: 메모 있음 · 빨간 동그라미: 이상치</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
+    <p class="hint">손가락을 그래프에 대고 좌우로 움직이면 표시선이 따라와요(말풍선을 누르면 수정). 카드 안 버튼: 체중·구토·병원·투약 열기/접기.</p><div id="chartBox"><svg id="chart"></svg><div id="tip"></div></div>
+    <div class="clegend" id="chartLegend" aria-label="그래프 범례"></div>
   </div>
 
   <div class="card">
@@ -591,7 +595,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.24.1';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.24.2';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -905,6 +909,28 @@ function movingWeeks(petId, k) {   // 최근 k주(기록 있는 주) 주평균�
 // 겹쳐 보기: 한 축에 모두 / 따로 보기: 아이마다 자기 축 (몸무게가 달라도 변화가 보인다)
 let chartMode = 'split';
 try { chartMode = localStorage.getItem(KEY + ':cmode') === 'overlay' ? 'overlay' : 'split'; } catch (e) {}
+function renderLegend(boxMode, detail) {   // 그래프 아래 범례
+  const c = 'var(--ink)', sv = b => `<svg viewBox="0 0 26 14" aria-hidden="true">${b}</svg>`;
+  const it = (b, t) => `<span>${sv(b)}${t}</span>`;
+  const L = [];
+  if (boxMode) {
+    L.push(it(`<line x1="13" x2="13" y1="1" y2="13" stroke="${c}" stroke-width="1.4"/><line x1="9" x2="17" y1="1" y2="1" stroke="${c}" stroke-width="1.4"/><line x1="9" x2="17" y1="13" y2="13" stroke="${c}" stroke-width="1.4"/><rect x="7" y="4" width="12" height="6" fill="${c}" fill-opacity=".25" stroke="${c}" stroke-width="1.4" rx="1.5"/><line x1="7" x2="19" y1="7" y2="7" stroke="${c}" stroke-width="2.4"/>`, '상자 = 중간 50%(Q1~Q3) · 굵은 가로선 = 중앙값 · 수염 = 최저~최고'));
+    L.push(it(`<path d="M13,3 l4,4 l-4,4 l-4,-4 Z" fill="var(--card)" stroke="${c}" stroke-width="1.4"/>`, '평균'));
+  } else {
+    L.push(it(`<polyline points="1,10 8,5 15,8 25,3" fill="none" stroke="${c}" stroke-width="2"/><circle cx="8" cy="5" r="2.4" fill="${c}"/><circle cx="15" cy="8" r="2.4" fill="${c}"/>`, '체중(점 = 기록, 같은 날은 평균을 이은 선)'));
+    L.push(it(`<path d="M13,2 l4.5,4.5 l-4.5,4.5 l-4.5,-4.5 Z" fill="var(--card)" stroke="${c}" stroke-width="2"/>`, '메모 있는 기록'));
+    L.push(it(`<circle cx="13" cy="7" r="5.5" fill="none" stroke="#d9534f" stroke-width="2"/><circle cx="13" cy="7" r="2" fill="${c}"/>`, '이상치'));
+  }
+  if (detail) {
+    if (!boxMode) L.push(it(`<line x1="1" x2="25" y1="7" y2="7" stroke="${c}" stroke-width="7" stroke-linecap="round" opacity=".22"/>`, '최근 5회 이동평균(굵은 연한 선)'));
+    L.push(it(`<line x1="1" x2="25" y1="7" y2="7" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/>`, '3주 이동평균'));
+    L.push(it(`<line x1="1" x2="25" y1="7" y2="7" stroke="${c}" stroke-width="2.8" stroke-dasharray="6 3" stroke-linecap="round" opacity=".7"/>`, '5주 이동평균'));
+    L.push(it(`<line x1="1" x2="25" y1="7" y2="7" stroke="${c}" stroke-width="1.5" stroke-dasharray="4 3" opacity=".7"/>`, '전체 평균(옅은 띠 = 이상치 경계)'));
+  }
+  L.push(it('<path d="M8,12 L18,12 L13,3 Z" fill="#d9534f" stroke="#999" stroke-width="1"/>', '구토'));
+  L.push(it('<circle cx="13" cy="7" r="6" fill="#3f7fbf"/><path d="M10,7 H16 M13,4 V10" stroke="#fff" stroke-width="1.6"/>', '병원'));
+  $('chartLegend').innerHTML = L.join('');
+}
 function renderChart() {
   const svg = $('chart');
   const W = Math.max(300, $('chartBox').clientWidth), narrow = W < 520;
@@ -918,6 +944,7 @@ function renderChart() {
   const boxMode = chartType === 'box';
   $('grpMode').hidden = boxMode;
   const split = !sel && chartMode === 'split' && series.length > 1;
+  renderLegend(boxMode, !!sel || split);
   $('chartMode').hidden = !!sel || shownPets().filter(p => p.on !== false).length < 2;
   $('chartMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === chartMode));
   svg.setAttribute('viewBox', `0 0 ${W} ${narrow ? 280 : 360}`);
