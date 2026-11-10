@@ -266,6 +266,9 @@
   .vomit-card .tablewrap {margin-top:8px;}
   .vis-cost {cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;white-space:nowrap;}
   .vis-cost.blur {filter:blur(6px);}
+  #table tr.grp {background:var(--grid);cursor:pointer;}
+  #table tr.sub td {font-size:12px;color:var(--muted);}
+  #table tr.sub td:first-child {padding-left:22px;}
   .vis-list {display:grid;gap:8px;margin-top:8px;}
   .vis-item {display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer;}
   .vis-item:hover,.vis-item:focus-visible {border-color:var(--accent);outline:none;}
@@ -399,6 +402,7 @@
     <div class="controls">
       <div class="chips" id="chips"></div>
       <span class="seg" id="chartMode" role="group" aria-label="그래프 보기 방식"><button type="button" data-m="split">따로 보기</button><button type="button" data-m="overlay">겹쳐 보기</button></span>
+      <select id="grpMode" aria-label="묶어 보기" title="같은 날 여러 번 잰 체중은 평균으로, 기록이 많으면 주별·월별 평균으로 묶어서 보여줘요"><option value="auto">묶기 · 자동</option><option value="raw">기록별 그대로</option><option value="day">일별 평균</option><option value="week">주별 평균</option><option value="month">월별 평균</option></select>
       <select id="range">
         <option value="30">최근 1개월</option>
         <option value="90">최근 3개월</option>
@@ -576,7 +580,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.20.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.21.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -785,6 +789,37 @@ function niceStep(span, n) {
   return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
 }
 
+// ---------- 묶어 보기: 같은 날 여러 번 잰 체중은 평균으로, 기록이 많으면 주별·월별 평균으로 ----------
+const UNIT_NAME = { raw: '기록별', day: '일별', week: '주별', month: '월별' };
+let grpMode = 'auto';
+try { const g = localStorage.getItem('horibbangu-grp'); if (['auto', 'raw', 'day', 'week', 'month'].includes(g)) grpMode = g; } catch (e) {}
+function weekStartOf(date) { const n = dayNum(date), dow = (new Date(n * 864e5).getUTCDay() + 6) % 7; return new Date((n - dow) * 864e5).toISOString().slice(0, 10); }   // 월요일 시작
+const groupKeyOf = (date, unit) => unit === 'month' ? date.slice(0, 7) : unit === 'week' ? weekStartOf(date) : date;
+function resolveUnit(mode, series) {
+  if (mode !== 'auto') return mode;
+  const cnt = u => new Set(series.map(q => groupKeyOf(q.date, u))).size;
+  return cnt('day') <= 45 ? 'day' : cnt('week') <= 45 ? 'week' : 'month';   // 묶음이 45개 안팎으로 보이게
+}
+// series: petSeries()와 같은 모양(날짜 오름차순). 묶음이 1건이면 원래 기록 그대로 두어 수정·툴팁이 똑같이 동작한다.
+function groupSeries(series, unit) {
+  const base = (q, extra) => ({ ...q, n: 1, unit, min: q.v, max: q.v, dateEnd: q.date, lastV: q.v, lastQ: q.q, notes: q.note ? [q.note] : [], ...extra });
+  if (unit === 'raw') return series.map(q => base(q, { key: q.rid }));
+  const m = new Map();
+  series.forEach(q => { const k = groupKeyOf(q.date, unit); if (!m.has(k)) m.set(k, []); m.get(k).push(q); });
+  return [...m.entries()].map(([k, pts]) => {
+    if (pts.length === 1) return base(pts[0], { key: k, pts });
+    const n = pts.length, vs = pts.map(q => q.v), notes = pts.map(q => q.note).filter(Boolean), last = pts[n - 1];
+    return { date: pts[0].date, dateEnd: last.date, time: '', tn: pts.reduce((a, q) => a + q.tn, 0) / n, v: +(vs.reduce((a, b) => a + b, 0) / n).toFixed(2), min: Math.min(...vs), max: Math.max(...vs), q: false, note: [...new Set(notes)].join(' / '), notes, rid: pts[0].rid, by: '', n, unit, key: k, lastV: last.v, lastQ: last.q, pts };
+  });
+}
+const groupLabel = g => g.unit === 'month' ? g.key.replace('-', '.') + '월' : g.unit === 'week' ? fmtDate(g.key) + ' ~ ' + fmtDate(medAddDays(g.key, 6)).slice(5) : fmtDate(g.date);
+$('grpMode').value = grpMode;
+$('grpMode').onchange = () => {
+  grpMode = $('grpMode').value;
+  try { localStorage.setItem('horibbangu-grp', grpMode); } catch (e) {}
+  renderChart(); renderTable();
+};
+const expandedGroups = new Set();
 let chartPoints = [];
 // 겹쳐 보기: 한 축에 모두 / 따로 보기: 아이마다 자기 축 (몸무게가 달라도 변화가 보인다)
 let chartMode = 'split';
@@ -794,9 +829,10 @@ function renderChart() {
   const W = Math.max(300, $('chartBox').clientWidth), narrow = W < 520;
   const m = { l: 44, r: 14 };
   const cutoff = rangeDays ? dayNum(today()) - rangeDays : -Infinity;
-  const series = shownPets().filter(p => sel ? p.id === sel : p.on !== false).map(p => ({
-    p, pts: petSeries(p.id).filter(pt => dayNum(pt.date) >= cutoff)
-  })).filter(s => s.pts.length);
+  const series = shownPets().filter(p => sel ? p.id === sel : p.on !== false).map(p => {
+    const raw = petSeries(p.id).filter(pt => dayNum(pt.date) >= cutoff);
+    return { p, pts: groupSeries(raw, resolveUnit(grpMode, raw)), rawN: raw.length };
+  }).filter(s => s.pts.length);
   const split = !sel && chartMode === 'split' && series.length > 1;
   $('chartMode').hidden = !!sel || shownPets().filter(p => p.on !== false).length < 2;
   $('chartMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === chartMode));
@@ -854,14 +890,15 @@ function renderChart() {
       if (o.title) {
         const last = ps[ps.length - 1];
         out += `<text x="${m.l}" y="${top + 14}" font-size="13" font-weight="700" fill="${p.color}">${esc(p.name)}</text>`;
-        out += `<text x="${m.l + 8 + esc(p.name).length * 13}" y="${top + 14}" font-size="12" fill="var(--muted)">지금 ${last.v}kg${last.q ? '?' : ''} · 기록 ${ps.length}회</text>`;
+        out += `<text x="${m.l + 8 + esc(p.name).length * 13}" y="${top + 14}" font-size="12" fill="var(--muted)">지금 ${last.lastV}kg${last.lastQ ? '?' : ''} · 기록 ${ps.reduce((a, q) => a + q.n, 0)}회${ps.some(q => q.n > 1) ? ' · ' + UNIT_NAME[ps[0].unit] + ' 평균' : ''}</text>`;
       }
       if (o.ma) {
         // Trailing five measurements, computed from full history before range clipping.
         const history = petSeries(p.id);
-        const moving = ps.map(pt => {
+        const grouped = ps.some(q => q.n > 1);
+        const moving = ps.map((pt, gi) => {
           const i = history.findIndex(h => h.rid === pt.rid);
-          const win = history.slice(Math.max(0, i - 4), i + 1);
+          const win = grouped ? ps.slice(Math.max(0, gi - 4), gi + 1) : history.slice(Math.max(0, i - 4), i + 1);
           return { tn: pt.tn, v: win.reduce((sum, h) => sum + h.v, 0) / win.length };
         });
         const ma = moving.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.tn).toFixed(1)},${Y(pt.v).toFixed(1)}`).join('');
@@ -925,7 +962,7 @@ $('chart').addEventListener('pointermove', e => {
   const h = $('hover');
   if (!best || bd > 40 * 40) { tip.style.display = 'none'; h.style.display = 'none'; return; }
   h.setAttribute('cx', best.x); h.setAttribute('cy', best.y); h.style.display = '';
-  tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.time ? ' ' + esc(best.pt.time) : ''}${best.pt.by ? '<br>기록자 ' + esc(best.pt.by) : ''}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}`;
+  tip.innerHTML = `<b>${esc(best.p.name)}</b> ${best.pt.v}kg${best.pt.q ? '?' : ''} <small>(평균 ${best.mean.toFixed(2)})</small>${best.bad ? ' ⚠이상치' : ''}<br>${fmtDate(best.pt.date)}${best.pt.time ? ' ' + esc(best.pt.time) : ''}${best.pt.n > 1 ? `<br>${UNIT_NAME[best.pt.unit]} 평균 · ${best.pt.n}회 (${best.pt.min}~${best.pt.max}kg)<br>${fmtDate(best.pt.date)} ~ ${fmtDate(best.pt.dateEnd).slice(5)}` : ''}${best.pt.by ? '<br>기록자 ' + esc(best.pt.by) : ''}${best.pt.note ? '<br>' + esc(best.pt.note) : ''}`;
   tip.style.left = best.x / sx + 'px'; tip.style.top = best.y / sx + 'px'; tip.style.display = 'block';
 });
 $('chart').addEventListener('pointerleave', () => { tip.style.display = 'none'; const h = $('hover'); if (h) h.style.display = 'none'; });
@@ -934,7 +971,7 @@ $('chart').addEventListener('click', e => {
   const mx = (e.clientX - r.left) * sx, my = (e.clientY - r.top) * sx;
   let best = null, bd = Infinity;
   for (const c of chartPoints) { const d = (c.x - mx) ** 2 + (c.y - my) ** 2; if (d < bd) { bd = d; best = c; } }
-  if (best && bd <= 20 * 20) openRecord(best.pt.rid);
+  if (best && bd <= 20 * 20 && best.pt.n === 1) openRecord(best.pt.rid);
 });
 new ResizeObserver(() => renderChart()).observe($('chartBox'));
 
@@ -942,31 +979,60 @@ new ResizeObserver(() => renderChart()).observe($('chartBox'));
 function renderTable() {
   if (sel) {
     const p = state.pets.find(x => x.id === sel);
-    const s = petSeries(sel), st = petStats(sel);
-    $('tableTitle').innerHTML = `${esc(p.name)} 체중 기록 (${s.length}건) · 평균 <b>${st.mean.toFixed(2)}kg</b> · 최저 ${st.min} · 최고 ${st.max} <span class="out">⚠ 평균에서 ±${st.th.toFixed(2)}kg 넘게 벗어나면 이상치</span>`;
-    $('table').innerHTML = `<tr><th>날짜</th><th style="color:${p.color}">체중(kg)</th><th>증감</th><th>평균 대비</th><th>기록자</th><th style="text-align:left">비고</th><th></th></tr>` +
-      s.map((pt, i) => {
-        const d = i ? pt.v - s[i - 1].v : null;
-        const dc = d == null ? '' : d > 0.004 ? 'up' : d < -0.004 ? 'down' : '';
-        const ds = d == null ? '–' : (d > 0 ? '+' : '') + d.toFixed(2);
-        const dm = pt.v - st.mean, bad = st.isOut(pt.v);
-        return `<tr class="${bad ? 'outrow' : ''}"><td>${stamp(pt.date, pt.time)}</td><td class="${pt.q ? 'q' : ''}"><b>${pt.v}${pt.q ? '?' : ''}</b></td><td class="${dc}">${ds}</td><td class="${bad ? 'out' : ''}">${bad ? '⚠ ' : ''}${dm > 0 ? '+' : ''}${dm.toFixed(2)}</td><td class="by">${esc(pt.by || '')}</td><td class="note">${esc(pt.note)}</td><td><button class="small" data-edit="${pt.rid}">수정</button></td></tr>`;
+    const s = petSeries(sel), st = petStats(sel), unit = resolveUnit(grpMode, s), groups = groupSeries(s, unit);
+    const anyGroup = groups.some(g => g.n > 1);
+    $('tableTitle').innerHTML = `${esc(p.name)} 체중 기록 (${s.length}건${anyGroup ? ' · ' + UNIT_NAME[unit] + ' 평균으로 묶음' : ''}) · 평균 <b>${st.mean.toFixed(2)}kg</b> · 최저 ${st.min} · 최고 ${st.max} <span class="out">⚠ 평균에서 ±${st.th.toFixed(2)}kg 넘게 벗어나면 이상치</span>`;
+    const dcls = d => d == null ? '' : d > 0.004 ? 'up' : d < -0.004 ? 'down' : '';
+    const dtxt = d => d == null ? '–' : (d > 0 ? '+' : '') + d.toFixed(2);
+    const rawRow = (pt, d, cls) => { const dm = pt.v - st.mean, bad = st.isOut(pt.v); return `<tr class="${bad ? 'outrow' : ''} ${cls || ''}"><td>${stamp(pt.date, pt.time)}</td><td class="${pt.q ? 'q' : ''}"><b>${pt.v}${pt.q ? '?' : ''}</b></td><td class="${dcls(d)}">${dtxt(d)}</td><td class="${bad ? 'out' : ''}">${bad ? '⚠ ' : ''}${dm > 0 ? '+' : ''}${dm.toFixed(2)}</td><td class="by">${esc(pt.by || '')}</td><td class="note">${esc(pt.note)}</td><td><button class="small" data-edit="${pt.rid}">수정</button></td></tr>`; };
+    $('table').innerHTML = `<tr><th>${anyGroup ? '날짜·기간' : '날짜'}</th><th style="color:${p.color}">체중(kg)</th><th>증감</th><th>평균 대비</th><th>기록자</th><th style="text-align:left">비고</th><th></th></tr>` +
+      groups.map((g, i) => {
+        const d = i ? g.v - groups[i - 1].v : null;
+        if (g.n === 1) return rawRow(g, d);
+        const gk = `${sel}|${unit}|${g.key}`, open = expandedGroups.has(gk), dm = g.v - st.mean, bad = st.isOut(g.v);
+        let html = `<tr class="grp ${bad ? 'outrow' : ''}" data-grp="${esc(gk)}"><td>${esc(groupLabel(g))} <span class="tm">${g.n}회</span></td><td><b>${g.v.toFixed(2)}</b> <small class="tm">${g.min}~${g.max}</small></td><td class="${dcls(d)}">${dtxt(d)}</td><td class="${bad ? 'out' : ''}">${bad ? '⚠ ' : ''}${dm > 0 ? '+' : ''}${dm.toFixed(2)}</td><td class="by"></td><td class="note">${UNIT_NAME[unit]} 평균${g.note ? ' · ' + esc(g.note) : ''}</td><td><button class="small" data-grp="${esc(gk)}" aria-expanded="${open}">${open ? '접기' : '펼치기'}</button></td></tr>`;
+        if (open) html = html + g.pts.map(pt => { const j = s.findIndex(x => x.rid === pt.rid); return rawRow(pt, j > 0 ? pt.v - s[j - 1].v : null, 'sub'); }).reverse().join('');
+        return html;
       }).reverse().join('');
     return;
   }
   $('tableTitle').textContent = '전체 기록';
-  const head = `<tr><th>날짜</th>${shownPets().map(p => `<th style="color:${p.color}">${esc(p.name)}</th>`).join('')}<th style="text-align:left">비고</th><th></th></tr>`;
-  const rows = sorted().reverse().filter(r => shownPets().some(p => r.w[p.id] != null)).map(r => {
-    const cells = shownPets().map(p => {
+  const pets = shownPets(), recsAll = sorted().filter(r => pets.some(p => r.w[p.id] != null));
+  const unit = resolveUnit(grpMode, recsAll), anyGroup = unit !== 'raw' && new Set(recsAll.map(r => groupKeyOf(r.date, unit))).size < recsAll.length;
+  $('tableTitle').textContent = '전체 기록' + (anyGroup ? ` (${UNIT_NAME[unit]} 평균으로 묶음)` : '');
+  const head = `<tr><th>${anyGroup ? '날짜·기간' : '날짜'}</th>${pets.map(p => `<th style="color:${p.color}">${esc(p.name)}</th>`).join('')}<th style="text-align:left">비고</th><th></th></tr>`;
+  const noteHtml = r => noteGroups(r, pets).map(({ t, ps }) => `<div><b style="color:${ps[0].color}">${ps.map(x => esc(x.name)).join('·')}</b> ${esc(t)}</div>`).join('');
+  const rawRec = (r, cls) => {
+    const cells = pets.map(p => {
       const v = r.w[p.id];
       const bad = v != null && petStats(p.id).isOut(v);
       return v == null ? `<td class="none">–</td>` : `<td class="${r.q?.[p.id] ? 'q' : ''} ${bad ? 'out' : ''}">${bad ? '⚠' : ''}${v}${r.q?.[p.id] ? '?' : ''}</td>`;
     }).join('');
-    return `<tr><td>${stamp(r.date, r.time)}${byTag(r)}</td>${cells}<td class="note">${noteGroups(r, shownPets()).map(({ t, ps }) => `<div><b style="color:${ps[0].color}">${ps.map(x => esc(x.name)).join('·')}</b> ${esc(t)}</div>`).join('')}</td><td><button class="small" data-edit="${r.id}">수정</button></td></tr>`;
+    return `<tr class="${cls || ''}"><td>${stamp(r.date, r.time)}${byTag(r)}</td>${cells}<td class="note">${noteHtml(r)}</td><td><button class="small" data-edit="${r.id}">수정</button></td></tr>`;
+  };
+  const buckets = new Map();
+  recsAll.forEach(r => { const k = unit === 'raw' ? r.id : groupKeyOf(r.date, unit); if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push(r); });
+  const rows = [...buckets.entries()].reverse().map(([k, rs]) => {
+    if (rs.length === 1) return rawRec(rs[0]);
+    const gk = `all|${unit}|${k}`, open = expandedGroups.has(gk);
+    const cells = pets.map(p => {
+      const vs = rs.map(r => r.w[p.id]).filter(v => v != null);
+      if (!vs.length) return `<td class="none">–</td>`;
+      const mean = +(vs.reduce((a, b) => a + b, 0) / vs.length).toFixed(2), bad = petStats(p.id).isOut(mean);
+      return `<td class="${bad ? 'out' : ''}">${bad ? '⚠' : ''}${mean.toFixed(2)}${vs.length > 1 ? ` <small class="tm">${vs.length}회</small>` : ''}</td>`;
+    }).join('');
+    const label = unit === 'month' ? k.replace('-', '.') + '월' : unit === 'week' ? fmtDate(k) + ' ~ ' + fmtDate(medAddDays(k, 6)).slice(5) : fmtDate(rs[0].date);
+    const nn = rs.filter(r => noteGroups(r, pets).length).length;
+    let html = `<tr class="grp" data-grp="${esc(gk)}"><td>${esc(label)} <span class="tm">${rs.length}건</span></td>${cells}<td class="note">${UNIT_NAME[unit]} 평균${nn ? ` · 비고 ${nn}건` : ''}</td><td><button class="small" data-grp="${esc(gk)}" aria-expanded="${open}">${open ? '접기' : '펼치기'}</button></td></tr>`;
+    if (open) html += rs.slice().reverse().map(r => rawRec(r, 'sub')).join('');
+    return html;
   }).join('');
   $('table').innerHTML = head + rows;
 }
-$('table').onclick = e => { const b = e.target.closest('[data-edit]'); if (b) openRecord(b.dataset.edit); };
+$('table').onclick = e => {
+  const b = e.target.closest('[data-edit]'); if (b) { openRecord(b.dataset.edit); return; }
+  const g = e.target.closest('[data-grp]'); if (g) { const k = g.dataset.grp; if (expandedGroups.has(k)) expandedGroups.delete(k); else expandedGroups.add(k); renderTable(); }
+};
 
 // ---------- 기록 추가/수정 ----------
 let editing = null;
@@ -1743,6 +1809,10 @@ function buildReport() {
   if ($('rpWeight').checked) {
     const x0 = days ? from : (series[0]?.tn ?? 0), x1 = days ? dayNum(today()) : (series[series.length - 1]?.tn ?? 1);
     h += `<h2>체중</h2>${reportChart(series, $('rpVomit').checked ? vom : [], $('rpVisit').checked ? vis : [], x0, x1)}`;
+    const rUnit = resolveUnit(grpMode, series), rGroups = groupSeries(series, rUnit);
+    if (series.length && rGroups.some(g => g.n > 1)) {
+      h += `<p class="rp-sub" style="margin:6px 0 4px">${UNIT_NAME[rUnit]} 평균으로 묶어 정리했어요. (기록 ${series.length}건)</p><table><thead><tr><th>${rUnit === 'month' ? '월' : rUnit === 'week' ? '주(월~일)' : '날짜'}</th><th>평균(kg)</th><th>최저~최고</th><th>횟수</th><th>증감</th><th>비고</th></tr></thead><tbody>` + rGroups.map((g, i) => { const d = i ? g.v - rGroups[i - 1].v : null; return `<tr><td>${esc(groupLabel(g))}</td><td class="n">${g.n > 1 ? g.v.toFixed(2) : g.v}${g.q ? '?' : ''}</td><td class="n">${g.n > 1 ? g.min + '~' + g.max : '–'}</td><td class="n">${g.n}</td><td class="n">${d == null ? '–' : (d > 0 ? '+' : '') + f2(d)}</td><td style="white-space:pre-wrap">${esc(g.note)}</td></tr>`; }).join('') + `</tbody></table>`;
+    } else
     if (series.length) h += `<table style="margin-top:8px"><thead><tr><th>날짜·시간</th><th>체중(kg)</th><th>증감</th><th>비고</th><th>기록자</th></tr></thead><tbody>` + series.map((pt, i) => { const d = i ? pt.v - series[i - 1].v : null; return `<tr><td>${esc(fmtDate(pt.date))}${pt.time ? ' ' + esc(pt.time) : ''}</td><td class="n">${pt.v}${pt.q ? '?' : ''}</td><td class="n">${d == null ? '–' : (d > 0 ? '+' : '') + f2(d)}</td><td style="white-space:pre-wrap">${esc(pt.note)}</td><td>${esc(pt.by)}</td></tr>`; }).join('') + `</tbody></table>`;
   }
   if ($('rpVomit').checked) {
