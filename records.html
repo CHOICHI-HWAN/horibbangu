@@ -580,7 +580,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.21.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.22.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -731,6 +731,27 @@ function petStats(id) {
   return { n, mean, sd, min: Math.min(...vs), max: Math.max(...vs), th, isOut: v => n >= 5 && Math.abs(v - mean) > th };
 }
 
+// 나이: p.birth = 'YYYY-MM' 또는 'YYYY-MM-DD' (추정 생일)
+const BIRTH_DEFAULTS = { '건빵': '2015-04', '보리': '2015-04', '호야': '2012-05-12', '살구': '2018-09-21' };
+const validBirth = b => /^\d{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?$/.test(b || '');
+function ageText(birth) {
+  if (!validBirth(birth)) return '';
+  const [y, m, d] = birth.split('-').map(Number), n = new Date();
+  let months = (n.getFullYear() - y) * 12 + (n.getMonth() + 1 - m);
+  if (d && n.getDate() < d) months--;
+  if (months < 0) return '';
+  const yy = Math.floor(months / 12), mm = months % 12;
+  return yy ? `${yy}살${mm ? ' ' + mm + '개월' : ''}` : `${mm}개월`;
+}
+function fillBirths() {   // 생일이 비어 있는 아이에게 알려진 추정 생일을 한 번 채운다
+  let ch = false;
+  state.pets.forEach(p => { if (!p.birth && BIRTH_DEFAULTS[p.name]) { p.birth = BIRTH_DEFAULTS[p.name]; ch = true; } });
+  return ch;
+}
+const ageLine = p => { const a = ageText(p.birth); return a ? `<div class="meta">🎂 ${a} · ${p.birth.replace(/-/g, '.')} 추정</div>` : ''; };
+
+if (fillBirths()) save();
+
 function renderSummary() {
   $('count').textContent = state.records.length + '건의 기록';
   if (!showHidden && sel && HIDDEN_PETS[state.pets.find(x => x.id === sel)?.name]) sel = null;
@@ -739,7 +760,7 @@ function renderSummary() {
   $('summary').innerHTML = shownPets().map(p => {
     const s = petSeries(p.id), st = petStats(p.id);
     const cls = 'pet' + (sel === p.id ? ' sel' : '');
-    if (!s.length) return `<div class="${cls}" data-id="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)} 그래프 보기, 두 번 누르면 체중 입력" style="--c:${p.color}"><div class="name">${esc(p.name)}</div><div class="meta">기록 없음</div></div>`;
+    if (!s.length) return `<div class="${cls}" data-id="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)} 그래프 보기, 두 번 누르면 체중 입력" style="--c:${p.color}"><div class="name">${esc(p.name)}</div><div class="meta">기록 없음</div>${ageLine(p)}</div>`;
     const last = s[s.length - 1], prev = s[s.length - 2];
     let delta = '';
     if (prev) {
@@ -753,7 +774,7 @@ function renderSummary() {
       <div class="name">${esc(p.name)}</div>
       <div class="w">${last.v}<span> kg${last.q ? '?' : ''}</span>${flag}</div>
       <div class="meta">${delta}${fmtDate(last.date).slice(2)}</div>
-      <div class="meta">평균 <b>${st.mean.toFixed(2)}</b> · ${st.min}~${st.max}${outCount ? ` · <span class="out">이상치 ${outCount}</span>` : ''}</div></div>`;
+      <div class="meta">평균 <b>${st.mean.toFixed(2)}</b> · ${st.min}~${st.max}${outCount ? ` · <span class="out">이상치 ${outCount}</span>` : ''}</div>${ageLine(p)}</div>`;
   }).join('');
 }
 
@@ -1082,6 +1103,7 @@ function renderPetList() {
   $('petList').innerHTML = state.pets.map(p => `<div class="petrow">
     <input type="color" value="${p.color}" data-color="${p.id}">
     <input type="text" value="${esc(p.name)}" data-name="${p.id}">
+    <input type="text" value="${esc(p.birth || '')}" data-birth="${p.id}" placeholder="생일 2015-04" inputmode="numeric" maxlength="10" style="width:112px" title="추정 생일: 2015-04 또는 2015-04-12">
     <button class="small danger" data-del="${p.id}">삭제</button></div>`).join('');
 }
 $('petsBtn').onclick = () => { renderPetList(); $('petDlg').showModal(); };
@@ -1091,6 +1113,10 @@ $('petList').oninput = e => {
   const t = e.target;
   if (t.dataset.color) state.pets.find(p => p.id === t.dataset.color).color = t.value;
   if (t.dataset.name) state.pets.find(p => p.id === t.dataset.name).name = t.value.trim() || '이름없음';
+  if (t.dataset.birth) {
+    const p = state.pets.find(x => x.id === t.dataset.birth), v = t.value.trim();
+    if (!v || validBirth(v)) { p.birth = v; t.style.outline = ''; } else { t.style.outline = '2px solid #d33'; return; }
+  }
   save();
 };
 $('petList').onclick = e => {
@@ -2826,7 +2852,7 @@ renderAll();
 const CFG = window.APP_CONFIG || {};
 const cloud = CFG.apiKey && CFG.projectId && window.firebase ? firebase.initializeApp(CFG) : null;
 const auth = cloud && firebase.auth(), db = cloud && firebase.firestore();
-const petRow = (p, i) => ({ id: p.id, name: p.name, color: p.color, sort: i });
+const petRow = (p, i) => ({ id: p.id, name: p.name, color: p.color, sort: i, birth: p.birth || '' });
 const recRow = r => ({ id: r.id, date: r.date, time: r.time || '', w: r.w, q: r.q || {}, note: r.notes ? '' : (r.note || ''), notes: r.notes || {}, by: r.by || '' });
 let snap = { pets: {}, records: {} };   // 서버에 마지막으로 반영된 JSON
 let pushTimer = null, pushing = false, synced = false, unsubs = [];
@@ -2911,7 +2937,8 @@ function applyRemote() {
   if (petsSnap.metadata.hasPendingWrites || recsSnap.metadata.hasPendingWrites || pushTimer || pushing) return;
   const on = Object.fromEntries(state.pets.map(p => [p.id, p.on]));
   state.pets = petsSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.sort - b.sort)
-    .map(p => ({ id: p.id, name: p.name, color: p.color, on: on[p.id] !== false }));
+    .map(p => ({ id: p.id, name: p.name, color: p.color, birth: p.birth || '', on: on[p.id] !== false }));
+  if (fillBirths()) { save(); }
   state.records = recsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   takeSnap();
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
