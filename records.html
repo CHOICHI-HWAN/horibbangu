@@ -595,7 +595,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 <script>
-const VERSION = '3.24.2';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
+const VERSION = '3.25.0';   // 배포 전에 CHANGELOG.md, git 태그와 함께 올린다
 const KEY = 'horibbangu-weights-v1';
 const COLORS = ['#E4572E', '#2E86AB', '#F5A623', '#E8739B', '#6A994E', '#7D5BA6', '#2A9D8F', '#8D6E63'];
 const $ = id => document.getElementById(id);
@@ -783,11 +783,14 @@ const ageLine = p => {
 };
 if (fillBirths()) { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }   // 로드 중에는 save()(동기화)를 부르지 않는다
 
+const SEED_WEIGHTS = { '동글이': [['2019-02-21', 4.4], ['2020-07-16', 5.3], ['2020-11-14', 5.1], ['2021-07-08', 4.02]] };   // 사람 몸무게는 공개 코드에 넣지 않고 앱에서 직접 입력한다
+const PERSON_NAMES = ['치치박사'];   // 사람 몸무게도 같은 기록으로 관리한다(고양이 방에는 나오지 않고, 체중 버튼만 있다)
+const isPerson = p => !!p && (p.person || PERSON_NAMES.includes(p.name));
 const PANEL_ID = { w: 'weightPanel', v: 'vomitCard', h: 'visitCard', m: 'medicationCard' };
 function actBtns(p) {
   const b = (k, t) => `<button type="button" class="act${sel === p.id && panel === k ? ' on' : ''}" data-act="${k}" aria-pressed="${sel === p.id && panel === k}">${t}</button>`;
   let mp = null; try { mp = medPet(); } catch (e) {}   // 처음 그릴 때는 아직 정의 전일 수 있다
-  return `<div class="acts">${b('w', '체중')}${b('v', '구토')}${b('h', '병원')}${p.id === mp?.id ? b('m', '투약') : ''}</div>`;
+  return `<div class="acts">${b('w', '체중')}${isPerson(p) ? '' : b('v', '구토') + b('h', '병원')}${p.id === mp?.id ? b('m', '투약') : ''}</div>`;
 }
 
 function renderSummary() {
@@ -2656,7 +2659,8 @@ function installCatPointer(c) {
 function renderCats() {
   $('cats').hidden = !catsOn;
   $('catBtn').style.opacity = catsOn ? 1 : .45;
-  let companions = state.pets.some(p => p.name === '동글이') ? state.pets : [...state.pets, { id: 'companion-dongle', name: '동글이', color: '#b7a690', memorial: true }];
+  const catPets = state.pets.filter(p => !isPerson(p));
+  let companions = catPets.some(p => p.name === '동글이') ? catPets : [...catPets, { id: 'companion-dongle', name: '동글이', color: '#b7a690', memorial: true }];
   if (typeof roomGuestPets === 'function') companions = [...companions, ...roomGuestPets()];
   if(typeof petSeries==='function') {
     try { localStorage.setItem('horibbangu-cat-sizes-v1',JSON.stringify(Object.fromEntries(companions.map((p,i)=>[p.name,catScaleFor(p,lookFor(p,i))])))); } catch(e) {}
@@ -3074,15 +3078,17 @@ function applyRemote() {
   state.records = recsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   takeSnap();
   if (!state.pets.some(p => p.name === '동글이')) state.pets.push({ id: 'p-dongle', name: '동글이', color: '#b7a690', on: true });   // 무지개다리를 건넌 동글이(기록 없음)
-  let seeded = false;   // 동글이의 예전 체중 4건을 한 번만 넣는다(이미 있거나 지운 기록은 다시 넣지 않는다)
-  const dg = state.pets.find(p => p.name === '동글이');
-  if (dg && !dg.seedW) {
-    [['2019-02-21', 4.4], ['2020-07-16', 5.3], ['2020-11-14', 5.1], ['2021-07-08', 4.02]].forEach(([date, kg]) => {
-      const id = 'r-dongle-' + date.replace(/-/g, '');
-      if (!state.records.some(r => r.id === id || (r.date === date && r.w[dg.id] != null))) state.records.push({ id, date, time: '', w: { [dg.id]: kg }, q: {}, note: '', notes: {}, by: '' });
+  let seeded = false;   // 예전 체중을 한 번만 넣는다(이미 있거나 지운 기록은 다시 넣지 않는다)
+  if (!state.pets.some(p => p.name === '치치박사')) state.pets.push({ id: 'p-chichi', name: '치치박사', color: '#5b7fa6', on: true });
+  Object.entries(SEED_WEIGHTS).forEach(([name, list]) => {
+    const pp = state.pets.find(p => p.name === name);
+    if (!pp || pp.seedW) return;
+    list.forEach(([date, kg, by]) => {
+      const id = 'r-' + (name === '동글이' ? 'dongle' : 'chichi') + '-' + date.replace(/-/g, '');
+      if (!state.records.some(r => r.id === id || (r.date === date && r.w[pp.id] != null))) state.records.push({ id, date, time: '', w: { [pp.id]: kg }, q: {}, note: '', notes: {}, by: by || '' });
     });
-    dg.seedW = true; seeded = true;
-  }
+    pp.seedW = true; seeded = true;
+  });
   if (fillBirths() || seeded) save();   // takeSnap 뒤에 바꿔야 서버로 올라간다
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
   renderAll();

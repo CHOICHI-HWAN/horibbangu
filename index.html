@@ -1560,7 +1560,8 @@ function installCatPointer(c) {
 function renderCats() {
   $('cats').hidden = !catsOn;
   $('catBtn').style.opacity = catsOn ? 1 : .45;
-  let companions = state.pets.some(p => p.name === '동글이') ? state.pets : [...state.pets, { id: 'companion-dongle', name: '동글이', color: '#b7a690', memorial: true }];
+  const catPets = state.pets.filter(p => !isPerson(p));
+  let companions = catPets.some(p => p.name === '동글이') ? catPets : [...catPets, { id: 'companion-dongle', name: '동글이', color: '#b7a690', memorial: true }];
   if (typeof roomGuestPets === 'function') companions = [...companions, ...roomGuestPets()];
   if(typeof petSeries==='function') {
     try { localStorage.setItem('horibbangu-cat-sizes-v1',JSON.stringify(Object.fromEntries(companions.map((p,i)=>[p.name,catScaleFor(p,lookFor(p,i))])))); } catch(e) {}
