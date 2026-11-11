@@ -1560,7 +1560,7 @@ function installCatPointer(c) {
 function renderCats() {
   $('cats').hidden = !catsOn;
   $('catBtn').style.opacity = catsOn ? 1 : .45;
-  const catPets = state.pets.filter(p => !isPerson(p));
+  const catPets = state.pets.filter(p => !(p.person || ['치치박사'].includes(p.name)));   // 사람은 방에 나오지 않는다(방 화면에는 isPerson이 없어서 직접 적는다)
   let companions = catPets.some(p => p.name === '동글이') ? catPets : [...catPets, { id: 'companion-dongle', name: '동글이', color: '#b7a690', memorial: true }];
   if (typeof roomGuestPets === 'function') companions = [...companions, ...roomGuestPets()];
   if(typeof petSeries==='function') {
